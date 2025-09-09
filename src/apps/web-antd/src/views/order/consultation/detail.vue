@@ -57,6 +57,16 @@ const getMethodText = (method: string): string => {
   return methodMap[method] || method;
 };
 
+// 获取订单状态文本
+const getStatusText = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    pending: '待处理',
+    completed: '已完成',
+    cancelled: '已取消',
+  };
+  return statusMap[status] || status;
+};
+
 // 获取订单详情数据
 const getOrderDetail = async (id: string) => {
   try {
@@ -99,38 +109,52 @@ onMounted(async () => {
       <Card title="订单信息">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">订单编码：</span>
-            <span class="font-medium">{{ orderDetail.order_code }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">订单编码：</span>
+            <span class="ml-2 font-medium">{{ orderDetail.order_code }}</span>
           </div>
           
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">下单时间：</span>
-            <span>{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">下单时间：</span>
+            <span class="ml-2">{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
           </div>
           
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">咨询师：</span>
-            <span>{{ orderDetail.consultant }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">咨询师：</span>
+            <span class="ml-2">{{ orderDetail.consultant }}</span>
           </div>
           
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">咨询时间：</span>
-            <span>{{ dayjs(orderDetail.appointment_time).format('YYYY-MM-DD HH:mm') }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">客户：</span>
+            <span class="ml-2">{{ orderDetail.customer }}</span>
           </div>
           
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">咨询方式：</span>
-            <span>{{ getMethodText(orderDetail.consultation_method) }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">订单状态：</span>
+            <span class="ml-2" :class="{
+              'text-orange-600': orderDetail.status === 'pending',
+              'text-green-600': orderDetail.status === 'completed',
+              'text-red-600': orderDetail.status === 'cancelled'
+            }">{{ getStatusText(orderDetail.status) }}</span>
           </div>
           
           <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">咨询地址：</span>
-            <span>{{ orderDetail.consultation_address || '-' }}</span>
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">咨询时间：</span>
+            <span class="ml-2">{{ dayjs(orderDetail.appointment_time).format('YYYY-MM-DD HH:mm') }}</span>
           </div>
           
-          <div class="flex items-start col-span-full">
-            <span class="w-32 text-gray-600 dark:text-gray-300 mt-1">咨询适用情况说明：</span>
-            <span class="flex-1">{{ orderDetail.situation }}</span>
+          <div class="flex items-center">
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">咨询方式：</span>
+            <span class="ml-2">{{ getMethodText(orderDetail.consultation_method) }}</span>
+          </div>
+          
+          <div class="flex items-center">
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">咨询地址：</span>
+            <span class="ml-2">{{ orderDetail.consultation_address || '-' }}</span>
+          </div>
+          
+          <div class="flex items-center col-span-full">
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300">咨询适用情况说明：</span>
+            <span class="ml-2 flex-1">{{ orderDetail.situation }}</span>
           </div>
         </div>
       </Card>

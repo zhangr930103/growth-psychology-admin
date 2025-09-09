@@ -115,7 +115,7 @@ export interface ConsultationOrderDetailData {
   consultation_address: string;
   situation: string;
   customer: string;
-  customer_id: number;
+  customer_id: number | null;
   status: 'pending' | 'completed' | 'cancelled';
   created_at: string; // ISO 字符串格式
   updated_at: string; // ISO 字符串格式
