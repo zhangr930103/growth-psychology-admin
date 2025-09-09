@@ -48,3 +48,57 @@ export async function getConsultationOrderListApi(
 ): Promise<ConsultationOrderListResponse> {
   return requestClient.post<ConsultationOrderListResponse>('/orders/consultation/list', params);
 }
+
+/**
+ * 团队活动订单列表查询参数类型
+ */
+export interface ActivityOrderListParams {
+  page: number;
+  size: number;
+  order_code?: string;
+  activity_name?: string;
+  status?: string;
+  create_start_time?: number;
+  create_end_time?: number;
+}
+
+/**
+ * 团队活动订单数据类型
+ */
+export interface ActivityOrderData {
+  id: number;
+  order_code: string;
+  activity_name: string;
+  activity_time: string; // ISO 字符串格式
+  activity_method: 'online' | 'offline' | 'hybrid';
+  activity_address?: string;
+  registrant: string;
+  registrant_id: number;
+  status: 'waiting' | 'formed' | 'completed' | 'cancelled';
+  created_at: string; // ISO 字符串格式
+  updated_at: string; // ISO 字符串格式
+  registration_time: number; // 时间戳
+  create_time: number; // 时间戳
+}
+
+/**
+ * 团队活动订单列表响应类型
+ */
+export interface ActivityOrderListResponse {
+  code: number;
+  message: string;
+  rid: string;
+  data: {
+    list: ActivityOrderData[];
+    total: number;
+  };
+}
+
+/**
+ * 获取团队活动订单列表
+ */
+export async function getActivityOrderListApi(
+  params: ActivityOrderListParams
+): Promise<ActivityOrderListResponse> {
+  return requestClient.post<ActivityOrderListResponse>('/orders/activity/list', params);
+}

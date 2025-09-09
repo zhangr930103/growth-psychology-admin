@@ -9,39 +9,21 @@ import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { 
+  getActivityOrderListApi,
+  type ActivityOrderListParams,
+  type ActivityOrderData,
+  type ActivityOrderListResponse 
+} from '#/api/core/order';
 
 defineOptions({
   name: 'ActivityOrderList',
 });
 
-// 类型定义
-interface ActivityOrder {
-  id: number;
-  orderCode: string;
-  activityName: string;
-  activityTime: number;
-  activityMethod: 'online' | 'offline' | 'hybrid';
-  activityAddress?: string;
-  registrationTime: number;
-  registrant: string;
-  status: 'waiting' | 'formed' | 'completed' | 'cancelled';
-  createTime: number;
-}
-
-interface SearchParams {
-  page?: number;
-  size?: number;
-  orderCode?: string;
-  activityName?: string;
-  status?: string;
-  createStartTime?: number;
-  createEndTime?: number;
-}
-
-interface ApiResponse {
-  list: ActivityOrder[];
-  total: number;
-}
+// 使用从API导入的类型别名
+type ActivityOrder = ActivityOrderData;
+type SearchParams = ActivityOrderListParams;
+type ApiResponse = ActivityOrderListResponse;
 
 // 状态选项卡
 const statusTabs = [
@@ -61,11 +43,11 @@ const formOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['rangePicker', ['createStartTime', 'createEndTime']]],
+  fieldMappingTime: [['rangePicker', ['create_start_time', 'create_end_time']]],
   schema: [
     {
       component: 'Input',
-      fieldName: 'orderCode',
+      fieldName: 'order_code',
       label: '订单编码',
       componentProps: {
         placeholder: '请输入',
@@ -73,7 +55,7 @@ const formOptions: VbenFormProps = {
     },
     {
       component: 'Input',
-      fieldName: 'activityName',
+      fieldName: 'activity_name',
       label: '活动名称',
       componentProps: {
         placeholder: '请输入',
@@ -109,123 +91,14 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟API
+// API调用函数
 const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockData: ActivityOrder[] = [
-    {
-      id: 1,
-      orderCode: 'TA20241201001',
-      activityName: '企业团建户外拓展训练',
-      activityTime: dayjs().add(3, 'day').unix(),
-      activityMethod: 'offline',
-      activityAddress: '北京市怀柔区红螺寺拓展基地',
-      registrationTime: dayjs().subtract(1, 'hour').unix(),
-      registrant: '张总',
-      status: 'waiting',
-      createTime: dayjs().subtract(2, 'hour').unix(),
-    },
-    {
-      id: 2,
-      orderCode: 'TA20241201002',
-      activityName: '线上团队协作工作坊',
-      activityTime: dayjs().add(1, 'day').unix(),
-      activityMethod: 'online',
-      activityAddress: '',
-      registrationTime: dayjs().subtract(3, 'hour').unix(),
-      registrant: '李经理',
-      status: 'formed',
-      createTime: dayjs().subtract(4, 'hour').unix(),
-    },
-    {
-      id: 3,
-      orderCode: 'TA20241201003',
-      activityName: '企业年会策划与执行',
-      activityTime: dayjs().subtract(1, 'week').unix(),
-      activityMethod: 'offline',
-      activityAddress: '上海市浦东新区国际会议中心',
-      registrationTime: dayjs().subtract(2, 'week').unix(),
-      registrant: '王主管',
-      status: 'completed',
-      createTime: dayjs().subtract(3, 'week').unix(),
-    },
-    {
-      id: 4,
-      orderCode: 'TA20241201004',
-      activityName: '团队沟通技巧培训',
-      activityTime: dayjs().add(5, 'day').unix(),
-      activityMethod: 'hybrid',
-      activityAddress: '深圳市南山区科技园培训中心',
-      registrationTime: dayjs().subtract(30, 'minute').unix(),
-      registrant: '陈部长',
-      status: 'waiting',
-      createTime: dayjs().subtract(1, 'hour').unix(),
-    },
-    {
-      id: 5,
-      orderCode: 'TA20241201005',
-      activityName: '公司团建聚餐活动',
-      activityTime: dayjs().subtract(3, 'day').unix(),
-      activityMethod: 'offline',
-      activityAddress: '广州市天河区某酒店',
-      registrationTime: dayjs().subtract(1, 'week').unix(),
-      registrant: '赵秘书',
-      status: 'cancelled',
-      createTime: dayjs().subtract(1, 'week').unix(),
-    },
-    {
-      id: 6,
-      orderCode: 'TA20241201006',
-      activityName: '领导力提升训练营',
-      activityTime: dayjs().subtract(2, 'week').unix(),
-      activityMethod: 'offline',
-      activityAddress: '杭州市西湖区企业培训基地',
-      registrationTime: dayjs().subtract(3, 'week').unix(),
-      registrant: '孙总监',
-      status: 'completed',
-      createTime: dayjs().subtract(4, 'week').unix(),
-    },
-  ];
-
-  // 过滤数据
-  let filteredData = mockData;
-
-  if (params.orderCode) {
-    filteredData = filteredData.filter(item => 
-      item.orderCode.includes(params.orderCode!)
-    );
-  }
-
-  if (params.activityName) {
-    filteredData = filteredData.filter(item => 
-      item.activityName.includes(params.activityName!)
-    );
-  }
-
-  if (params.status) {
-    filteredData = filteredData.filter(item => item.status === params.status);
-  }
-
-  if (currentStatus.value) {
-    filteredData = filteredData.filter(item => item.status === currentStatus.value);
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(item =>
-      item.createTime >= params.createStartTime! &&
-      item.createTime <= params.createEndTime!
-    );
-  }
-
-  // 分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return { list, total };
+  // 如果有状态选项卡选择，将其添加到查询参数中
+  const queryParams = {
+    ...params,
+    status: currentStatus.value || params.status
+  };
+  return await getActivityOrderListApi(queryParams);
 };
 
 // 工具函数
@@ -282,37 +155,37 @@ const gridOptions: VxeTableGridOptions = {
   columns: [
     { title: '序号', type: 'seq', width: 60 },
     {
-      field: 'orderCode',
+      field: 'order_code',
       title: '订单编码',
       minWidth: 120,
       slots: { default: 'orderCode' },
     },
     {
-      field: 'activityName',
+      field: 'activity_name',
       title: '活动名称',
       minWidth: 150,
       slots: { default: 'activityName' },
     },
     {
-      field: 'activityTime',
+      field: 'activity_time',
       title: '活动时间',
       minWidth: 140,
       slots: { default: 'activityTime' },
     },
     {
-      field: 'activityMethod',
+      field: 'activity_method',
       title: '活动方式',
       minWidth: 90,
       slots: { default: 'activityMethod' },
     },
     {
-      field: 'activityAddress',
+      field: 'activity_address',
       title: '活动地点',
       minWidth: 150,
       showOverflow: 'tooltip',
     },
     {
-      field: 'registrationTime',
+      field: 'registration_time',
       title: '报名时间',
       minWidth: 140,
       slots: { default: 'registrationTime' },
@@ -341,9 +214,9 @@ const gridOptions: VxeTableGridOptions = {
   pagerConfig: {},
   proxyConfig: {
     response: {
-      result: 'list',
-      total: 'total',
-      list: 'list',
+      result: 'data.list',
+      total: 'data.total',
+      list: 'data.list',
     },
     ajax: {
       query: async ({ page }, formValues) => {
@@ -351,11 +224,11 @@ const gridOptions: VxeTableGridOptions = {
           page: page.currentPage,
           size: page.pageSize,
           ...formValues,
-          createStartTime: formValues.createStartTime
-            ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
+          create_start_time: formValues.create_start_time
+            ? (Date.parse(formValues.create_start_time) - 28800000) / 1000
             : undefined,
-          createEndTime: formValues.createEndTime
-            ? (Date.parse(formValues.createEndTime) - 28800000) / 1000 + 86399
+          create_end_time: formValues.create_end_time
+            ? (Date.parse(formValues.create_end_time) - 28800000) / 1000 + 86399
             : undefined,
         });
         return result;
@@ -401,24 +274,24 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #orderCode="{ row }">
-        <span class="font-medium text-blue-600 dark:text-blue-400">{{ row.orderCode }}</span>
+        <span class="font-medium text-blue-600 dark:text-blue-400">{{ row.order_code }}</span>
       </template>
 
       <template #activityName="{ row }">
-        <span class="font-medium" :title="row.activityName">{{ row.activityName }}</span>
+        <span class="font-medium" :title="row.activity_name">{{ row.activity_name }}</span>
       </template>
 
       <template #activityTime="{ row }">
-        <span>{{ dayjs(row.activityTime * 1000).format('YYYY-MM-DD HH:mm') }}</span>
+        <span>{{ dayjs(row.activity_time).format('YYYY-MM-DD HH:mm') }}</span>
       </template>
 
       <template #registrationTime="{ row }">
-        <span>{{ dayjs(row.registrationTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
+        <span>{{ dayjs(row.registration_time * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
       </template>
 
       <template #activityMethod="{ row }">
-        <span :class="getMethodColor(row.activityMethod)">
-          {{ getMethodText(row.activityMethod) }}
+        <span :class="getMethodColor(row.activity_method)">
+          {{ getMethodText(row.activity_method) }}
         </span>
       </template>
 
