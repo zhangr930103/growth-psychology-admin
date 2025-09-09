@@ -57,8 +57,31 @@ export async function getUserInfoApi(): Promise<UserInfo> {
 }
 
 /**
+ * 禁用用户参数类型
+ */
+export interface DisableUserParams {
+  user_id: number;
+}
+
+/**
+ * 禁用用户响应类型
+ */
+export interface DisableUserResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * 获取用户列表
  */
 export async function getUserListApi(params: UserListParams): Promise<UserListResponse> {
   return requestClient.post<UserListResponse>('/users/list', params);
+}
+
+/**
+ * 禁用用户
+ */
+export async function disableUserApi(params: DisableUserParams): Promise<DisableUserResponse> {
+  return requestClient.post<DisableUserResponse>(`/users/disable/${params.user_id}`);
 }
