@@ -33,8 +33,9 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { token } = await loginApi(params);
-      const accessToken = token;
+      const { access_token } = await loginApi(params);
+      const accessToken = access_token;
+      
       // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
@@ -55,11 +56,13 @@ export const useAuthStore = defineStore('auth', () => {
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
         } else {
-          onSuccess
-            ? await onSuccess?.()
-            : await router.push(
-                userInfo.homePath || preferences.app.defaultHomePath,
-              );
+          const redirectPath = preferences.app.defaultHomePath || userInfo.homePath;
+          
+          if (onSuccess) {
+            await onSuccess?.();
+          } else {
+            await router.push(redirectPath);
+          }
         }
 
         if (userInfo?.realName) {
@@ -70,7 +73,9 @@ export const useAuthStore = defineStore('auth', () => {
           });
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('登录失败:', error);
+      // 可以在这里添加具体的错误提示
     } finally {
       loginLoading.value = false;
     }
