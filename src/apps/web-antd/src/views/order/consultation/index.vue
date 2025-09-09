@@ -9,24 +9,15 @@ import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import type { ConsultationOrderData } from '#/api/core/order';
+import { getConsultationOrderListApi } from '#/api/core/order';
 
 defineOptions({
   name: 'ConsultationOrderList',
 });
 
-// 类型定义
-interface ConsultationOrder {
-  id: number;
-  orderCode: string;
-  consultant: string;
-  appointmentTime: number;
-  consultationMethod: 'online' | 'offline' | 'phone';
-  consultationAddress?: string;
-  situation: string;
-  createTime: number;
-  customer: string;
-  status: 'pending' | 'completed' | 'cancelled';
-}
+// 类型定义 - 使用API返回的数据结构
+type ConsultationOrder = ConsultationOrderData;
 
 interface SearchParams {
   page?: number;
@@ -60,11 +51,11 @@ const formOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['rangePicker', ['createStartTime', 'createEndTime']]],
+  fieldMappingTime: [['rangePicker', ['create_start_time', 'create_end_time']]],
   schema: [
     {
       component: 'Input',
-      fieldName: 'orderCode',
+      fieldName: 'order_code',
       label: '订单编码',
       componentProps: {
         placeholder: '请输入',
@@ -107,111 +98,33 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟API
+// 真实API调用
 const getConsultationList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  // 构造API参数，映射字段名
+  const apiParams = {
+    page: params.page || 1,
+    size: params.size || 10,
+    order_code: params.orderCode,
+    consultant: params.consultant,
+    status: currentStatus.value || params.status,
+    create_start_time: params.createStartTime,
+    create_end_time: params.createEndTime,
+  };
 
-  const mockData: ConsultationOrder[] = [
-    {
-      id: 1,
-      orderCode: 'CO20241201001',
-      consultant: '张医生',
-      appointmentTime: dayjs().add(1, 'day').unix(),
-      consultationMethod: 'online',
-      consultationAddress: '',
-      situation: '患者有高血压病史，需要咨询用药方案和日常注意事项',
-      createTime: dayjs().subtract(1, 'hour').unix(),
-      customer: '王小明',
-      status: 'pending',
-    },
-    {
-      id: 2,
-      orderCode: 'CO20241201002',
-      consultant: '李主任',
-      appointmentTime: dayjs().subtract(1, 'day').unix(),
-      consultationMethod: 'offline',
-      consultationAddress: '北京市朝阳区医院门诊部3楼',
-      situation: '儿童发热咨询，已持续2天，体温38.5度',
-      createTime: dayjs().subtract(2, 'hour').unix(),
-      customer: '刘女士',
-      status: 'completed',
-    },
-    {
-      id: 3,
-      orderCode: 'CO20241201003',
-      consultant: '陈教授',
-      appointmentTime: dayjs().subtract(3, 'day').unix(),
-      consultationMethod: 'phone',
-      consultationAddress: '',
-      situation: '糖尿病患者血糖控制不佳，需要调整治疗方案',
-      createTime: dayjs().subtract(5, 'hour').unix(),
-      customer: '赵大爷',
-      status: 'cancelled',
-    },
-    {
-      id: 4,
-      orderCode: 'CO20241201004',
-      consultant: '吴医生',
-      appointmentTime: dayjs().add(2, 'day').unix(),
-      consultationMethod: 'online',
-      consultationAddress: '',
-      situation: '产后抑郁症状咨询，情绪低落，睡眠质量差',
-      createTime: dayjs().subtract(30, 'minute').unix(),
-      customer: '孙女士',
-      status: 'pending',
-    },
-    {
-      id: 5,
-      orderCode: 'CO20241201005',
-      consultant: '马主任',
-      appointmentTime: dayjs().subtract(2, 'day').unix(),
-      consultationMethod: 'offline',
-      consultationAddress: '上海市浦东新区人民医院骨科',
-      situation: '腰椎间盘突出术后康复指导和功能锻炼方案制定',
-      createTime: dayjs().subtract(1, 'day').unix(),
-      customer: '周师傅',
-      status: 'completed',
-    },
-  ];
+  // 过滤掉未定义的参数，保留必需的page和size
+  const filteredParams = {
+    page: apiParams.page,
+    size: apiParams.size,
+  } as any;
+  
+  // 只添加有值的可选参数
+  if (apiParams.order_code) filteredParams.order_code = apiParams.order_code;
+  if (apiParams.consultant) filteredParams.consultant = apiParams.consultant;
+  if (apiParams.status) filteredParams.status = apiParams.status;
+  if (apiParams.create_start_time) filteredParams.create_start_time = apiParams.create_start_time;
+  if (apiParams.create_end_time) filteredParams.create_end_time = apiParams.create_end_time;
 
-  // 过滤数据
-  let filteredData = mockData;
-
-  if (params.orderCode) {
-    filteredData = filteredData.filter(item => 
-      item.orderCode.includes(params.orderCode!)
-    );
-  }
-
-  if (params.consultant) {
-    filteredData = filteredData.filter(item => 
-      item.consultant.includes(params.consultant!)
-    );
-  }
-
-  if (params.status) {
-    filteredData = filteredData.filter(item => item.status === params.status);
-  }
-
-  if (currentStatus.value) {
-    filteredData = filteredData.filter(item => item.status === currentStatus.value);
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(item =>
-      item.createTime >= params.createStartTime! &&
-      item.createTime <= params.createEndTime!
-    );
-  }
-
-  // 分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return { list, total };
+  return await getConsultationOrderListApi(filteredParams);
 };
 
 // 工具函数
@@ -266,7 +179,7 @@ const gridOptions: VxeTableGridOptions = {
   columns: [
     { title: '序号', type: 'seq', width: 60 },
     {
-      field: 'orderCode',
+      field: 'order_code',
       title: '订单编码',
       minWidth: 120,
       slots: { default: 'orderCode' },
@@ -277,19 +190,19 @@ const gridOptions: VxeTableGridOptions = {
       minWidth: 80,
     },
     {
-      field: 'appointmentTime',
+      field: 'appointment_time',
       title: '预约时间',
       minWidth: 140,
       slots: { default: 'appointmentTime' },
     },
     {
-      field: 'consultationMethod',
+      field: 'consultation_method',
       title: '咨询方式',
       minWidth: 90,
       slots: { default: 'consultationMethod' },
     },
     {
-      field: 'consultationAddress',
+      field: 'consultation_address',
       title: '咨询地址',
       minWidth: 150,
       showOverflow: 'tooltip',
@@ -301,7 +214,7 @@ const gridOptions: VxeTableGridOptions = {
       slots: { default: 'situation' },
     },
     {
-      field: 'createTime',
+      field: 'create_time',
       title: '下单时间',
       minWidth: 150,
       slots: { default: 'createTime' },
@@ -340,11 +253,11 @@ const gridOptions: VxeTableGridOptions = {
           page: page.currentPage,
           size: page.pageSize,
           ...formValues,
-          createStartTime: formValues.createStartTime
-            ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
+          createStartTime: formValues.create_start_time
+            ? (Date.parse(formValues.create_start_time) - 28800000) / 1000
             : undefined,
-          createEndTime: formValues.createEndTime
-            ? (Date.parse(formValues.createEndTime) - 28800000) / 1000 + 86399
+          createEndTime: formValues.create_end_time
+            ? (Date.parse(formValues.create_end_time) - 28800000) / 1000 + 86399
             : undefined,
         });
         return result;
@@ -390,20 +303,20 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #orderCode="{ row }">
-        <span class="font-medium text-blue-600 dark:text-blue-400">{{ row.orderCode }}</span>
+        <span class="font-medium text-blue-600 dark:text-blue-400">{{ row.order_code }}</span>
       </template>
 
       <template #appointmentTime="{ row }">
-        <span>{{ dayjs(row.appointmentTime * 1000).format('YYYY-MM-DD HH:mm') }}</span>
+        <span>{{ dayjs(row.appointment_time).format('YYYY-MM-DD HH:mm') }}</span>
       </template>
 
       <template #createTime="{ row }">
-        <span>{{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
+        <span>{{ dayjs(row.create_time * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
       </template>
 
       <template #consultationMethod="{ row }">
-        <span :class="getMethodColor(row.consultationMethod)">
-          {{ getMethodText(row.consultationMethod) }}
+        <span :class="getMethodColor(row.consultation_method)">
+          {{ getMethodText(row.consultation_method) }}
         </span>
       </template>
 

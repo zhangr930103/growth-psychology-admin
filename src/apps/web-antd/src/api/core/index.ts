@@ -3,4 +3,5 @@ export * from './business';
 export * from './company';
 export * from './feedback';
 export * from './menu';
+export * from './order';
 export * from './user';
