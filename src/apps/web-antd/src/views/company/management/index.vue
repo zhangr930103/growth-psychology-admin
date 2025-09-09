@@ -95,13 +95,13 @@ const transformRechargeData = (apiData: ApiRechargeRecord): RechargeRecord => {
     id: apiData.id,
     companyId: apiData.company_id,
     companyName: apiData.company_name,
-    rechargeAmount: apiData.recharge_amount,
+    rechargeAmount: parseFloat(apiData.recharge_amount) || 0,
     rechargeTime: apiData.recharge_time,
     operator: apiData.operator,
     operatorId: apiData.operator_id,
     status: apiData.status,
-    remark: apiData.remark,
-    certificate: apiData.certificate,
+    remark: apiData.remark || '',
+    certificate: apiData.certificate || '',
   };
 };
 
@@ -307,6 +307,9 @@ const rechargeFormSchema = [
   },
   {
     component: 'Upload',
+    fieldName: 'certificate',
+    label: '充值凭证',
+    rules: z.array(z.any()).min(1, '请上传充值凭证'),
     componentProps: {
       customRequest: upload_file,
       disabled: false,
@@ -330,22 +333,10 @@ const rechargeFormSchema = [
         return true;
       },
     },
-    fieldName: 'certificate',
-    label: '充值凭证',
     renderComponentContent: () => {
       return {
         default: () => '上传凭证',
       };
-    },
-  },
-  {
-    component: 'Input',
-    fieldName: 'remark',
-    label: '备注',
-    componentProps: {
-      placeholder: '请输入备注信息（可选）',
-      type: 'textarea',
-      rows: 3,
     },
   },
 ];
@@ -400,11 +391,15 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           // 获取上传文件URL
           const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
 
+          if (!certificateUrl) {
+            message.error('请上传充值凭证');
+            return;
+          }
+
           const rechargeParams: CreateRechargeParams = {
-            company_id: currentCompany.value.id,
             recharge_amount: formValues.rechargeAmount,
             certificate: certificateUrl,
-            remark: formValues.remark || undefined,
+            company_id: currentCompany.value.id,
           };
 
           await createRechargeApi(rechargeParams);
@@ -551,7 +546,8 @@ const handleEdit = (row: CompanyData) => {
     notificationMethod: row.notificationMethod || '',
     banner: row.banner ? [
       {
-        name: '商家公钥证书.key',
+        uid: Date.now().toString(),
+        status: 'done',
         url: row.banner,
         response: {
           file_url: row.banner,
@@ -646,6 +642,10 @@ const [RechargeGrid, rechargeGridApi] = useVbenVxeGrid({
 // 创建充值记录弹窗
 const [RechargeModal, rechargeModalApi] = useVbenModal({
   title: '充值记录',
+  onConfirm: () => {
+    rechargeModalApi.close();
+    currentCompany.value = null;
+  },
   onCancel: () => {
     rechargeModalApi.close();
     currentCompany.value = null;

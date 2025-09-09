@@ -75,6 +75,15 @@ export interface UpdateCompanyParams extends CompanyFormParams {
 }
 
 /**
+ * 编辑公司响应类型
+ */
+export interface UpdateCompanyResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * 充值记录查询参数类型
  */
 export interface RechargeListParams {
@@ -90,13 +99,14 @@ export interface RechargeRecord {
   id: number;
   company_id: number;
   company_name: string;
-  recharge_amount: number;
+  recharge_amount: string;
   recharge_time: number;
   operator: string;
   operator_id: number;
   status: 'success' | 'pending' | 'failed';
-  remark?: string;
-  certificate?: string;
+  remark: string;
+  certificate: string;
+  created_at: string;
 }
 
 /**
@@ -111,10 +121,18 @@ export interface RechargeListResponse {
  * 新增充值记录参数类型
  */
 export interface CreateRechargeParams {
-  company_id: number;
   recharge_amount: number;
-  certificate?: string;
-  remark?: string;
+  certificate: string;
+  company_id: number;
+}
+
+/**
+ * 新增充值记录响应类型
+ */
+export interface CreateRechargeResponse {
+  code: number;
+  message: string;
+  rid: string;
 }
 
 /**
@@ -134,8 +152,8 @@ export async function createCompanyApi(params: CreateCompanyParams): Promise<Cre
 /**
  * 更新公司
  */
-export async function updateCompanyApi(params: UpdateCompanyParams) {
-  return requestClient.post('/companies/update', params);
+export async function updateCompanyApi(params: UpdateCompanyParams): Promise<UpdateCompanyResponse> {
+  return requestClient.post<UpdateCompanyResponse>('/companies/edit', params);
 }
 
 /**
@@ -155,6 +173,6 @@ export async function getRechargeListApi(params: RechargeListParams): Promise<Re
 /**
  * 新增充值记录
  */
-export async function createRechargeApi(params: CreateRechargeParams) {
-  return requestClient.post('/companies/recharge/create', params);
+export async function createRechargeApi(params: CreateRechargeParams): Promise<CreateRechargeResponse> {
+  return requestClient.post<CreateRechargeResponse>('/companies/recharge/create', params);
 }
