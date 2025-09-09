@@ -6,14 +6,14 @@ import { Image } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getFeedbackListApi } from '#/api/core';
+import { getFeedbackListApi, type FeedbackListResponse } from '#/api/core';
 
 defineOptions({
   name: 'FeedbackManagement',
 });
 
 // 获取意见反馈列表
-async function getFeedbackList(params: any) {
+async function getFeedbackList(params: { page?: number; size?: number }): Promise<FeedbackListResponse> {
   const { page = 1, size = 10 } = params;
   return await getFeedbackListApi({ page, size });
 }
