@@ -4,24 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 import { Card, Rate, Button } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import { getConsultationOrderDetailApi, type ConsultationOrderDetailData } from '#/api/core/order';
 
 defineOptions({
   name: 'ConsultationOrderDetail',
 });
-
-// 类型定义
-interface ConsultationOrder {
-  id: number;
-  orderCode: string;
-  consultant: string;
-  appointmentTime: number;
-  consultationMethod: 'online' | 'offline' | 'phone';
-  consultationAddress?: string;
-  situation: string;
-  createTime: number;
-  customer: string;
-  status: 'pending' | 'completed' | 'cancelled';
-}
 
 interface EvaluationItem {
   title: string;
@@ -31,7 +18,7 @@ interface EvaluationItem {
 
 const route = useRoute();
 const router = useRouter();
-const orderDetail = ref<ConsultationOrder | null>(null);
+const orderDetail = ref<ConsultationOrderDetailData | null>(null);
 const evaluations = ref<EvaluationItem[]>([
   {
     title: '信任与连接',
@@ -70,26 +57,15 @@ const getMethodText = (method: string): string => {
   return methodMap[method] || method;
 };
 
-// 模拟获取订单详情数据
+// 获取订单详情数据
 const getOrderDetail = async (id: string) => {
-  // 模拟API调用
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  
-  // 模拟数据
-  const mockDetail: ConsultationOrder = {
-    id: Number(id),
-    orderCode: 'CO20241201001',
-    consultant: '我是名称',
-    appointmentTime: dayjs().subtract(1, 'day').unix(),
-    consultationMethod: 'online',
-    consultationAddress: '我是名称',
-    situation: '我不存在以上情况',
-    createTime: dayjs().subtract(2, 'hour').unix(),
-    customer: '王小明',
-    status: 'completed',
-  };
-  
-  return mockDetail;
+  try {
+    const data = await getConsultationOrderDetailApi(id);
+    return data;
+  } catch (error) {
+    console.error('获取订单详情失败:', error);
+    throw error;
+  }
 };
 
 // 返回上一页
@@ -124,12 +100,12 @@ onMounted(async () => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">订单编码：</span>
-            <span class="font-medium">{{ orderDetail.orderCode }}</span>
+            <span class="font-medium">{{ orderDetail.order_code }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">下单时间：</span>
-            <span>{{ dayjs(orderDetail.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
+            <span>{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
           </div>
           
           <div class="flex items-center">
@@ -139,17 +115,17 @@ onMounted(async () => {
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">咨询时间：</span>
-            <span>{{ dayjs(orderDetail.appointmentTime * 1000).format('YYYY-MM-DD HH:mm') }}</span>
+            <span>{{ dayjs(orderDetail.appointment_time).format('YYYY-MM-DD HH:mm') }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">咨询方式：</span>
-            <span>{{ getMethodText(orderDetail.consultationMethod) }}</span>
+            <span>{{ getMethodText(orderDetail.consultation_method) }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">咨询地址：</span>
-            <span>{{ orderDetail.consultationAddress || '-' }}</span>
+            <span>{{ orderDetail.consultation_address || '-' }}</span>
           </div>
           
           <div class="flex items-start col-span-full">

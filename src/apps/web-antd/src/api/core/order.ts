@@ -102,3 +102,31 @@ export async function getActivityOrderListApi(
 ): Promise<ActivityOrderListResponse> {
   return requestClient.post<ActivityOrderListResponse>('/orders/activity/list', params);
 }
+
+/**
+ * 咨询订单详情数据类型
+ */
+export interface ConsultationOrderDetailData {
+  id: number;
+  order_code: string;
+  consultant: string;
+  appointment_time: string; // ISO 字符串格式
+  consultation_method: 'online' | 'offline' | 'phone';
+  consultation_address: string;
+  situation: string;
+  customer: string;
+  customer_id: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string; // ISO 字符串格式
+  updated_at: string; // ISO 字符串格式
+  create_time: number; // 时间戳
+}
+
+/**
+ * 获取咨询订单详情
+ */
+export async function getConsultationOrderDetailApi(
+  orderId: string | number
+): Promise<ConsultationOrderDetailData> {
+  return requestClient.get<ConsultationOrderDetailData>(`/orders/consultation/${orderId}`);
+}

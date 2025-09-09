@@ -214,9 +214,9 @@ const gridOptions: VxeTableGridOptions = {
   pagerConfig: {},
   proxyConfig: {
     response: {
-      result: 'data.list',
-      total: 'data.total',
-      list: 'data.list',
+      result: 'list',
+      total: 'total',
+      list: 'list',
     },
     ajax: {
       query: async ({ page }, formValues) => {
