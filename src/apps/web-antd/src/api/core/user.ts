@@ -73,6 +73,22 @@ export interface DisableUserResponse {
 }
 
 /**
+ * 启用用户参数类型
+ */
+export interface EnableUserParams {
+  user_id: number;
+}
+
+/**
+ * 启用用户响应类型
+ */
+export interface EnableUserResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * 获取用户列表
  */
 export async function getUserListApi(params: UserListParams): Promise<UserListResponse> {
@@ -83,5 +99,16 @@ export async function getUserListApi(params: UserListParams): Promise<UserListRe
  * 禁用用户
  */
 export async function disableUserApi(params: DisableUserParams): Promise<DisableUserResponse> {
-  return requestClient.post<DisableUserResponse>(`/users/disable/${params.user_id}`);
+  return requestClient.post<DisableUserResponse>('/users/disable', {}, {
+    params: { user_id: params.user_id }
+  });
+}
+
+/**
+ * 启用用户
+ */
+export async function enableUserApi(params: EnableUserParams): Promise<EnableUserResponse> {
+  return requestClient.post<EnableUserResponse>('/users/enable', {}, {
+    params: { user_id: params.user_id }
+  });
 }

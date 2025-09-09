@@ -9,7 +9,7 @@ import { Avatar, Button, message, Popconfirm, Space, Spin } from 'ant-design-vue
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { disableUserApi, getUserListApi } from '#/api/core/user';
+import { disableUserApi, enableUserApi, getUserListApi } from '#/api/core/user';
 
 defineOptions({
   name: 'UserManagement',
@@ -61,23 +61,28 @@ const formOptions: VbenFormProps = {
 
 
 // 用户操作函数
-const handleEnable = (row: UserData) => {
+const handleEnable = async (row: UserData) => {
   console.log('启用用户:', row);
   
-  // 开启全屏loading
-  spinning.value = true;
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用启用API
+    await enableUserApi({ user_id: row.id });
     
     message.success({
       content: '用户启用成功',
     });
+    
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    console.error('启用用户失败:', error);
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleDisable = async (row: UserData) => {
