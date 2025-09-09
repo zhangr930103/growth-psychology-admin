@@ -39,7 +39,26 @@ export interface CompanyListResponse {
 }
 
 /**
- * 创建/编辑公司参数类型
+ * 创建公司参数类型
+ */
+export interface CreateCompanyParams {
+  company_name: string;
+  notification_method?: string;
+  banner?: string;
+  recharge_amount?: number;
+}
+
+/**
+ * 创建公司响应类型
+ */
+export interface CreateCompanyResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
+ * 编辑公司参数类型（保留原有的可选字段逻辑）
  */
 export interface CompanyFormParams {
   company_name: string;
@@ -47,11 +66,6 @@ export interface CompanyFormParams {
   notification_method?: string;
   banner?: string;
 }
-
-/**
- * 创建公司参数类型
- */
-export interface CreateCompanyParams extends CompanyFormParams {}
 
 /**
  * 编辑公司参数类型
@@ -113,8 +127,8 @@ export async function getCompanyListApi(params: CompanyListParams): Promise<Comp
 /**
  * 创建公司
  */
-export async function createCompanyApi(params: CreateCompanyParams) {
-  return requestClient.post('/companies/create', params);
+export async function createCompanyApi(params: CreateCompanyParams): Promise<CreateCompanyResponse> {
+  return requestClient.post<CreateCompanyResponse>('/companies/create', params);
 }
 
 /**

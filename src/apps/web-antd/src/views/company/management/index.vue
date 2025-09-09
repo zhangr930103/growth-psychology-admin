@@ -242,6 +242,8 @@ const editFormSchema = [
   },
   {
     component: 'Upload',
+    fieldName: 'banner',
+    label: '上传凭证',
     componentProps: {
       // 自动携带认证信息
       customRequest: upload_file,
@@ -271,8 +273,6 @@ const editFormSchema = [
         return true;
       },
     },
-    fieldName: 'banner',
-    label: '上传凭证',
     renderComponentContent: () => {
       return {
         default: () => '上传图片',
@@ -467,10 +467,21 @@ const [EditModal, editModalApi] = useVbenModal({
             // 新增模式
             const createParams: CreateCompanyParams = {
               company_name: formValues.companyName,
-              recharge_amount: formValues.rechargeAmount,
-              notification_method: formValues.notificationMethod || '',
-              banner: bannerUrl,
             };
+            
+            // 只有在有值时才添加可选字段
+            if (formValues.rechargeAmount && formValues.rechargeAmount > 0) {
+              createParams.recharge_amount = formValues.rechargeAmount;
+            }
+            
+            if (formValues.notificationMethod && formValues.notificationMethod.trim()) {
+              createParams.notification_method = formValues.notificationMethod.trim();
+            }
+            
+            if (bannerUrl) {
+              createParams.banner = bannerUrl;
+            }
+            
             await createCompanyApi(createParams);
           }
 
