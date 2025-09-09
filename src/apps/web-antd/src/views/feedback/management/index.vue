@@ -6,75 +6,16 @@ import { Image } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { getFeedbackListApi } from '#/api/core';
 
 defineOptions({
   name: 'FeedbackManagement',
 });
 
-// 模拟意见反馈数据API
+// 获取意见反馈列表
 async function getFeedbackList(params: any) {
-  // 模拟API延迟
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockData = [
-    {
-      id: 1,
-      title: '系统登录问题',
-      content: '登录时页面卡顿，希望能够优化登录流程和响应速度',
-      image:
-        'https://bkimg.cdn.bcebos.com/pic/94cad1c8a786c9177f3e0b45ff6867cf3bc79f3df908',
-      feedback_user: '张三',
-      feedback_time: dayjs().subtract(1, 'day').unix(),
-    },
-    {
-      id: 2,
-      title: '功能建议',
-      content: '希望能够增加数据导出功能，方便用户进行数据分析和备份',
-      image:
-      'https://bkimg.cdn.bcebos.com/pic/94cad1c8a786c9177f3e0b45ff6867cf3bc79f3df908',
-      feedback_user: '李四',
-      feedback_time: dayjs().subtract(2, 'day').unix(),
-    },
-    {
-      id: 3,
-      title: '界面优化建议',
-      content: '当前界面色彩搭配不够美观，建议采用更加现代化的设计风格',
-      image:
-      'https://bkimg.cdn.bcebos.com/pic/94cad1c8a786c9177f3e0b45ff6867cf3bc79f3df908',
-      feedback_user: '王五',
-      feedback_time: dayjs().subtract(3, 'day').unix(),
-    },
-    {
-      id: 4,
-      title: '性能问题反馈',
-      image:
-      'https://bkimg.cdn.bcebos.com/pic/94cad1c8a786c9177f3e0b45ff6867cf3bc79f3df908',
-      feedback_user: '赵六',
-      feedback_time: dayjs().subtract(5, 'day').unix(),
-    },
-    {
-      id: 5,
-      title: '移动端适配',
-      content:
-        '手机端使用体验不佳，部分功能无法正常使用，希望能够优化移动端界面',
-      image:
-      'https://bkimg.cdn.bcebos.com/pic/94cad1c8a786c9177f3e0b45ff6867cf3bc79f3df908',
-      feedback_user: '孙七',
-      feedback_time: dayjs().subtract(7, 'day').unix(),
-    },
-  ];
-
-  // 模拟分页
   const { page = 1, size = 10 } = params;
-  const total = mockData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = mockData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
+  return await getFeedbackListApi({ page, size });
 }
 
 const gridOptions: VxeTableGridOptions = {
