@@ -8,6 +8,20 @@ import { Button, message, Space,Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { upload_file } from '#/api/examples/upload';
+import { 
+  getCompanyListApi,
+  getRechargeListApi,
+  createCompanyApi,
+  updateCompanyApi,
+  createRechargeApi,
+  type CompanyData as ApiCompanyData,
+  type CompanyListParams,
+  type RechargeRecord as ApiRechargeRecord,
+  type RechargeListParams,
+  type CreateCompanyParams,
+  type UpdateCompanyParams,
+  type CreateRechargeParams
+} from '#/api/core/company';
 
 import { useVbenForm, z } from '#/adapter/form';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
@@ -16,7 +30,7 @@ defineOptions({
   name: 'CompanyManagement',
 });
 
-// 类型定义
+// 页面使用的类型定义（从API类型转换而来）
 interface CompanyData {
   id: number;
   companyName: string;
@@ -30,6 +44,23 @@ interface CompanyData {
   banner?: string;
 }
 
+// 将API数据转换为页面数据的函数
+const transformCompanyData = (apiData: ApiCompanyData): CompanyData => {
+  return {
+    id: apiData.id,
+    companyName: apiData.company_name,
+    rechargeAmount: parseFloat(apiData.recharge_amount) || 0,
+    balance: parseFloat(apiData.balance) || 0,
+    creator: apiData.creator,
+    creatorId: apiData.creator_id,
+    createTime: apiData.create_time,
+    status: apiData.status,
+    notificationMethod: apiData.notification_method,
+    banner: apiData.banner,
+  };
+};
+
+// 搜索参数接口保持兼容性
 interface SearchParams {
   page?: number;
   size?: number;
@@ -57,6 +88,22 @@ interface RechargeRecord {
   remark?: string;
   certificate?: string;
 }
+
+// 将API充值数据转换为页面数据的函数
+const transformRechargeData = (apiData: ApiRechargeRecord): RechargeRecord => {
+  return {
+    id: apiData.id,
+    companyId: apiData.company_id,
+    companyName: apiData.company_name,
+    rechargeAmount: apiData.recharge_amount,
+    rechargeTime: apiData.recharge_time,
+    operator: apiData.operator,
+    operatorId: apiData.operator_id,
+    status: apiData.status,
+    remark: apiData.remark,
+    certificate: apiData.certificate,
+  };
+};
 
 interface RechargeSearchParams {
   page?: number;
@@ -113,195 +160,61 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟公司数据API
+// 获取公司列表API调用
 const getCompanyList = async (params: SearchParams): Promise<ApiResponse> => {
-  // 模拟API延迟
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    const apiParams: CompanyListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      company_name: params.companyName,
+      creator: params.creator,
+      create_start_time: params.createStartTime,
+      create_end_time: params.createEndTime,
+    };
 
-  const mockData: CompanyData[] = [
-    {
-      id: 1,
-      companyName: '阿里巴巴集团',
-      rechargeAmount: 100000,
-      balance: 85000,
-      creator: '张三',
-      creatorId: 1,
-      createTime: dayjs().subtract(30, 'day').unix(),
-      status: 'active',
-      notificationMethod: 'admin@alibaba.com',
-      banner: 'https://example.com/banners/alibaba.jpg',
-    },
-    {
-      id: 2,
-      companyName: '腾讯科技',
-      rechargeAmount: 80000,
-      balance: 65000,
-      creator: '李四',
-      creatorId: 2,
-      createTime: dayjs().subtract(25, 'day').unix(),
-      status: 'active',
-      notificationMethod: '13800138000',
-      banner: 'https://example.com/banners/tencent.png',
-    },
-    {
-      id: 3,
-      companyName: '百度公司',
-      rechargeAmount: 60000,
-      balance: 45000,
-      creator: '王五',
-      creatorId: 3,
-      createTime: dayjs().subtract(20, 'day').unix(),
-      status: 'active',
-      notificationMethod: 'contact@baidu.com',
-    },
-    {
-      id: 4,
-      companyName: '字节跳动',
-      rechargeAmount: 120000,
-      balance: 95000,
-      creator: '赵六',
-      creatorId: 4,
-      createTime: dayjs().subtract(15, 'day').unix(),
-      status: 'active',
-      notificationMethod: 'service@bytedance.com',
-    },
-    {
-      id: 5,
-      companyName: '华为技术',
-      rechargeAmount: 150000,
-      balance: 120000,
-      creator: '孙七',
-      creatorId: 5,
-      createTime: dayjs().subtract(10, 'day').unix(),
-      status: 'inactive',
-      notificationMethod: '18888888888',
-    },
-    {
-      id: 6,
-      companyName: '小米科技',
-      rechargeAmount: 70000,
-      balance: 50000,
-      creator: '周八',
-      creatorId: 6,
-      createTime: dayjs().subtract(8, 'day').unix(),
-      status: 'active',
-      notificationMethod: 'notify@xiaomi.com',
-    },
-    {
-      id: 7,
-      companyName: '京东集团',
-      rechargeAmount: 90000,
-      balance: 70000,
-      creator: '吴九',
-      creatorId: 7,
-      createTime: dayjs().subtract(5, 'day').unix(),
-      status: 'active',
-      notificationMethod: '13600136000',
-    },
-  ];
-
-  // 模拟搜索过滤
-  let filteredData = mockData;
-
-  if (params.companyName) {
-    filteredData = filteredData.filter((item) =>
-      item.companyName.includes(params.companyName!),
-    );
+    const response = await getCompanyListApi(apiParams);
+    
+    return {
+      list: response.list.map(transformCompanyData),
+      total: response.total,
+    };
+  } catch (error) {
+    console.error('获取公司列表失败:', error);
+    message.error('获取公司列表失败，请重试');
+    return {
+      list: [],
+      total: 0,
+    };
   }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creator.includes(params.creator!),
-    );
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.createTime >= params.createStartTime! &&
-        item.createTime <= params.createEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
 };
 
-// 模拟充值记录API
+// 获取充值记录列表API调用
 const getRechargeList = async (params: RechargeSearchParams): Promise<RechargeApiResponse> => {
-  // 模拟API延迟
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    if (!params.companyId) {
+      throw new Error('公司ID不能为空');
+    }
 
-  const mockRechargeData: RechargeRecord[] = [
-    {
-      id: 1,
-      companyId: params.companyId || 1,
-      companyName: '阿里巴巴集团',
-      rechargeAmount: 50000,
-      rechargeTime: dayjs().subtract(1, 'day').unix(),
-      operator: '管理员',
-      operatorId: 1,
-      status: 'success',
-      remark: '定期充值',
-      certificate: 'https://example.com/certificates/cert1.jpg',
-    },
-    {
-      id: 2,
-      companyId: params.companyId || 1,
-      companyName: '阿里巴巴集团',
-      rechargeAmount: 30000,
-      rechargeTime: dayjs().subtract(3, 'day').unix(),
-      operator: '财务专员',
-      operatorId: 2,
-      status: 'success',
-      remark: '项目费用充值',
-      certificate: 'https://example.com/certificates/cert2.png',
-    },
-    {
-      id: 3,
-      companyId: params.companyId || 1,
-      companyName: '阿里巴巴集团',
-      rechargeAmount: 20000,
-      rechargeTime: dayjs().subtract(7, 'day').unix(),
-      operator: '管理员',
-      operatorId: 1,
-      status: 'pending',
-      remark: '待审核充值',
-      certificate: 'https://example.com/certificates/cert3.jpg',
-    },
-    {
-      id: 4,
-      companyId: params.companyId || 1,
-      companyName: '阿里巴巴集团',
-      rechargeAmount: 15000,
-      rechargeTime: dayjs().subtract(10, 'day').unix(),
-      operator: '财务主管',
-      operatorId: 3,
-      status: 'failed',
-      remark: '充值失败，已退款',
-    },
-  ];
+    const apiParams: RechargeListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      company_id: params.companyId,
+    };
 
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = mockRechargeData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = mockRechargeData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
+    const response = await getRechargeListApi(apiParams);
+    
+    return {
+      list: response.list.map(transformRechargeData),
+      total: response.total,
+    };
+  } catch (error) {
+    console.error('获取充值记录失败:', error);
+    message.error('获取充值记录失败，请重试');
+    return {
+      list: [],
+      total: 0,
+    };
+  }
 };
 
 // 编辑表单配置
@@ -425,6 +338,16 @@ const rechargeFormSchema = [
       };
     },
   },
+  {
+    component: 'Input',
+    fieldName: 'remark',
+    label: '备注',
+    componentProps: {
+      placeholder: '请输入备注信息（可选）',
+      type: 'textarea',
+      rows: 3,
+    },
+  },
 ];
 
 // 编辑模式状态
@@ -462,11 +385,10 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
       if (validationResult.valid) {
         const formValues = await rechargeFormApi.getValues();
 
-        console.log('新增充值记录:', {
-          ...formValues,
-          companyId: currentCompany.value?.id,
-          companyName: currentCompany.value?.companyName,
-        });
+        if (!currentCompany.value) {
+          message.error('公司信息丢失，请重新打开充值窗口');
+          return;
+        }
 
         message.loading({
           content: '正在添加充值记录，请稍等...',
@@ -474,8 +396,19 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           key: 'add_recharge_msg',
         });
 
-        // 模拟API调用
-        setTimeout(() => {
+        try {
+          // 获取上传文件URL
+          const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
+
+          const rechargeParams: CreateRechargeParams = {
+            company_id: currentCompany.value.id,
+            recharge_amount: formValues.rechargeAmount,
+            certificate: certificateUrl,
+            remark: formValues.remark || undefined,
+          };
+
+          await createRechargeApi(rechargeParams);
+
           message.success({
             content: '充值记录添加成功',
             key: 'add_recharge_msg',
@@ -483,7 +416,13 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           rechargeAddModalApi.close();
           // 刷新充值记录列表
           rechargeGridApi.query();
-        }, 1000);
+        } catch (error) {
+          console.error('添加充值记录失败:', error);
+          message.error({
+            content: '添加充值记录失败，请重试',
+            key: 'add_recharge_msg',
+          });
+        }
       }
     } catch (error) {
       console.error('表单验证失败:', error);
@@ -504,16 +443,37 @@ const [EditModal, editModalApi] = useVbenModal({
       if (validationResult.valid) {
         const formValues = await editFormApi.getValues();
 
-        console.log('保存的表单数据:', formValues, '模式:', isEditMode.value ? '编辑' : '新增');
-
         message.loading({
           content: isEditMode.value ? '正在保存，请稍等...' : '正在新增，请稍等...',
           duration: 0,
           key: 'save_msg',
         });
 
-        // 模拟API调用
-        setTimeout(() => {
+        try {
+          // 获取上传文件URL
+          const bannerUrl = formValues.banner?.[0]?.response?.file_url || '';
+
+          if (isEditMode.value && currentEditId.value) {
+            // 编辑模式
+            const updateParams: UpdateCompanyParams = {
+              id: currentEditId.value,
+              company_name: formValues.companyName,
+              recharge_amount: formValues.rechargeAmount,
+              notification_method: formValues.notificationMethod || '',
+              banner: bannerUrl,
+            };
+            await updateCompanyApi(updateParams);
+          } else {
+            // 新增模式
+            const createParams: CreateCompanyParams = {
+              company_name: formValues.companyName,
+              recharge_amount: formValues.rechargeAmount,
+              notification_method: formValues.notificationMethod || '',
+              banner: bannerUrl,
+            };
+            await createCompanyApi(createParams);
+          }
+
           message.success({
             content: isEditMode.value ? '保存成功' : '新增成功',
             key: 'save_msg',
@@ -521,7 +481,13 @@ const [EditModal, editModalApi] = useVbenModal({
           editModalApi.close();
           // 刷新列表
           gridApi.query();
-        }, 1000);
+        } catch (error) {
+          console.error('保存失败:', error);
+          message.error({
+            content: isEditMode.value ? '保存失败，请重试' : '新增失败，请重试',
+            key: 'save_msg',
+          });
+        }
       }
     } catch (error) {
       console.error('表单验证失败:', error);
