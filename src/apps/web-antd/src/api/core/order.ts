@@ -130,3 +130,12 @@ export async function getConsultationOrderDetailApi(
 ): Promise<ConsultationOrderDetailData> {
   return requestClient.get<ConsultationOrderDetailData>(`/orders/consultation/${orderId}`);
 }
+
+/**
+ * 获取团队活动订单详情
+ */
+export async function getActivityOrderDetailApi(
+  orderId: string | number
+): Promise<ActivityOrderData> {
+  return requestClient.get<ActivityOrderData>(`/orders/activity/${orderId}`);
+}

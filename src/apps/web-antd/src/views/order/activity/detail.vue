@@ -3,25 +3,12 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 import { Card, Rate, Button } from 'ant-design-vue';
+import { getActivityOrderDetailApi, type ActivityOrderData } from '#/api/core/order';
 import dayjs from 'dayjs';
 
 defineOptions({
   name: 'ActivityOrderDetail',
 });
-
-// 类型定义
-interface ActivityOrder {
-  id: number;
-  orderCode: string;
-  activityName: string;
-  activityTime: number;
-  activityMethod: 'online' | 'offline' | 'hybrid';
-  activityAddress?: string;
-  registrationTime: number;
-  registrant: string;
-  status: 'waiting' | 'formed' | 'completed' | 'cancelled';
-  createTime: number;
-}
 
 interface EvaluationItem {
   title: string;
@@ -31,7 +18,7 @@ interface EvaluationItem {
 
 const route = useRoute();
 const router = useRouter();
-const orderDetail = ref<ActivityOrder | null>(null);
+const orderDetail = ref<ActivityOrderData | null>(null);
 const evaluations = ref<EvaluationItem[]>([
   {
     title: '信任与连接',
@@ -70,26 +57,15 @@ const getMethodText = (method: string): string => {
   return methodMap[method] || method;
 };
 
-// 模拟获取订单详情数据
+// 获取订单详情数据
 const getOrderDetail = async (id: string) => {
-  // 模拟API调用
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  
-  // 模拟数据 - 基于 activity/index.vue 中的数据结构
-  const mockDetail: ActivityOrder = {
-    id: Number(id),
-    orderCode: 'TA20241201001',
-    activityName: '企业团建户外拓展训练',
-    activityTime: dayjs().add(3, 'day').unix(),
-    activityMethod: 'offline',
-    activityAddress: '北京市怀柔区红螺寺拓展基地',
-    registrationTime: dayjs().subtract(1, 'hour').unix(),
-    registrant: '张总',
-    status: 'waiting',
-    createTime: dayjs().subtract(2, 'hour').unix(),
-  };
-  
-  return mockDetail;
+  try {
+    const data = await getActivityOrderDetailApi(id);
+    return data;
+  } catch (error) {
+    console.error('获取订单详情失败:', error);
+    return null;
+  }
 };
 
 // 返回上一页
@@ -122,32 +98,32 @@ onMounted(async () => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">订单编号：</span>
-            <span class="font-medium">{{ orderDetail.orderCode }}</span>
+            <span class="font-medium">{{ orderDetail.order_code }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">下单时间：</span>
-            <span>{{ dayjs(orderDetail.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
+            <span>{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">课程名字：</span>
-            <span>{{ orderDetail.activityName }}</span>
+            <span>{{ orderDetail.activity_name }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">课程时间：</span>
-            <span>{{ dayjs(orderDetail.activityTime * 1000).format('YYYY-MM-DD HH:mm') }}</span>
+            <span>{{ dayjs(orderDetail.activity_time).format('YYYY-MM-DD HH:mm') }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">活动方式：</span>
-            <span>{{ getMethodText(orderDetail.activityMethod) }}</span>
+            <span>{{ getMethodText(orderDetail.activity_method) }}</span>
           </div>
           
           <div class="flex items-center">
             <span class="w-32 text-gray-600 dark:text-gray-300">课程地址：</span>
-            <span>{{ orderDetail.activityAddress || '-' }}</span>
+            <span>{{ orderDetail.activity_address || '-' }}</span>
           </div>
         </div>
       </Card>
