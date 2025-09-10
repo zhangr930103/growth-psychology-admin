@@ -515,8 +515,14 @@ const [DurationModal, durationModalApi] = useVbenModal({
     if (durationModalMode.value === 'view') return;
 
     try {
+      // 开启loading
+      durationModalApi.setState({ loading: true });
+
       const validationResult = await durationFormApi.validate();
-      if (!validationResult.valid) return;
+      if (!validationResult.valid) {
+        durationModalApi.setState({ loading: false });
+        return;
+      }
 
       const formValues = await durationFormApi.getValues();
 
@@ -545,6 +551,9 @@ const [DurationModal, durationModalApi] = useVbenModal({
     } catch (error) {
       console.error('提交失败:', error);
       message.error({ content: '提交失败，请重试', key: 'add_duration' });
+    } finally {
+      // 关闭loading
+      durationModalApi.setState({ loading: false });
     }
   },
   onCancel: () => {
@@ -567,8 +576,14 @@ const [AuditModal, auditModalApi] = useVbenModal({
   title: '审核',
   onConfirm: async () => {
     try {
+      // 开启loading
+      auditModalApi.setState({ loading: true });
+
       const validationResult = await auditFormApi.validate();
-      if (!validationResult.valid) return;
+      if (!validationResult.valid) {
+        auditModalApi.setState({ loading: false });
+        return;
+      }
 
       const formValues = await auditFormApi.getValues();
 
@@ -595,6 +610,9 @@ const [AuditModal, auditModalApi] = useVbenModal({
     } catch (error) {
       console.error('审核失败:', error);
       message.error({ content: '审核失败，请重试', key: 'audit' });
+    } finally {
+      // 关闭loading
+      auditModalApi.setState({ loading: false });
     }
   },
   onCancel: () => {
@@ -1014,7 +1032,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
       v-model:open="durationModalVisible"
       :title="`${currentCounselorName} - 咨询时长`"
       :footer="null"
-      width="80vw"
+      width="70vw"
       @cancel="closeDurationModal"
     >
       <div style="padding: 20px 0; min-height: 65vh">
