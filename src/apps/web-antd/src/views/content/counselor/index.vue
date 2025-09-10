@@ -4,7 +4,22 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, Tag, Textarea, Select, Upload, Alert } from 'ant-design-vue';
+import {
+  Button,
+  Form,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Space,
+  Spin,
+  Switch,
+  Tag,
+  Textarea,
+  Select,
+  Upload,
+  Alert,
+} from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
@@ -156,7 +171,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       counselorName: '姓名',
       school: '北京师范大学',
       major: '心理学',
-      personalIntro: '拥有多年心理咨询经验，擅长认知行为疗法，专注于青少年心理健康问题的治疗和干预。',
+      personalIntro:
+        '拥有多年心理咨询经验，擅长认知行为疗法，专注于青少年心理健康问题的治疗和干预。',
       counselingDuration: 120,
       specialization: '认知行为疗法',
       expertise: '青少年心理、认知行为疗法',
@@ -174,7 +190,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       counselorName: '李心理师',
       school: '华东师范大学',
       major: '应用心理学',
-      personalIntro: '国家二级心理咨询师，专注于婚姻家庭治疗和情绪管理，帮助客户建立健康的人际关系。',
+      personalIntro:
+        '国家二级心理咨询师，专注于婚姻家庭治疗和情绪管理，帮助客户建立健康的人际关系。',
       counselingDuration: 85,
       specialization: '家庭系统治疗',
       expertise: '婚姻家庭、情绪管理',
@@ -192,7 +209,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       counselorName: '王咨询师',
       school: '中南大学',
       major: '临床心理学',
-      personalIntro: '临床心理学硕士，擅长焦虑症、抑郁症的心理治疗，采用整合性治疗方法。',
+      personalIntro:
+        '临床心理学硕士，擅长焦虑症、抑郁症的心理治疗，采用整合性治疗方法。',
       counselingDuration: 95,
       specialization: '整合式治疗',
       expertise: '焦虑症、抑郁症治疗',
@@ -209,7 +227,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       counselorName: '赵心理',
       school: '西南大学',
       major: '发展与教育心理学',
-      personalIntro: '儿童青少年心理专家，在学习障碍、注意力缺陷等方面有丰富经验。',
+      personalIntro:
+        '儿童青少年心理专家，在学习障碍、注意力缺陷等方面有丰富经验。',
       counselingDuration: 75,
       specialization: '游戏治疗',
       expertise: '儿童心理、学习障碍',
@@ -227,7 +246,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       counselorName: '孙老师',
       school: '华中师范大学',
       major: '心理健康教育',
-      personalIntro: '学校心理健康教育专家，专注于学生心理危机干预和心理健康促进工作。',
+      personalIntro:
+        '学校心理健康教育专家，专注于学生心理危机干预和心理健康促进工作。',
       counselingDuration: 110,
       specialization: '危机干预',
       expertise: '危机干预、心理健康教育',
@@ -257,11 +277,8 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
   }
 
   if (params.status) {
-    filteredData = filteredData.filter((item) =>
-      item.status === params.status,
-    );
+    filteredData = filteredData.filter((item) => item.status === params.status);
   }
-
 
   // 模拟分页
   const { page = 1, size = 10 } = params;
@@ -277,7 +294,9 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
 };
 
 // 模拟咨询记录数据API
-const getCounselingRecordList = async (params: CounselingRecordSearchParams): Promise<CounselingRecordApiResponse> => {
+const getCounselingRecordList = async (
+  params: CounselingRecordSearchParams,
+): Promise<CounselingRecordApiResponse> => {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const mockDataList: CounselingRecord[] = [
@@ -510,8 +529,10 @@ const customUpload = async (options: any) => {
   const { file, onSuccess, onError } = options;
 
   // 验证文件类型
-  const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                  file.type === 'application/vnd.ms-excel';
+  const isExcel =
+    file.type ===
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    file.type === 'application/vnd.ms-excel';
 
   if (!isExcel) {
     message.error('只能上传Excel文件(.xlsx, .xls)!');
@@ -535,7 +556,7 @@ const customUpload = async (options: any) => {
     formData.append('file', file);
 
     // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // 在实际项目中，这里应该调用真实的导入接口
     // const response = await fetch('/api/counselor/import', {
@@ -561,7 +582,6 @@ const customUpload = async (options: any) => {
     uploadLoading.value = false;
   }
 };
-
 
 // 获取在线状态
 const getOnlineStatus = (isOnline: boolean) => {
@@ -675,7 +695,9 @@ const durationFormOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['sessionRangePicker', ['sessionStartTime', 'sessionEndTime']]],
+  fieldMappingTime: [
+    ['sessionRangePicker', ['sessionStartTime', 'sessionEndTime']],
+  ],
   schema: [
     {
       component: 'Input',
@@ -772,269 +794,262 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
 <template>
   <Spin :spinning="spinning" tip="正在处理，请稍候...">
     <Page auto-content-height title="咨询师管理">
-    <Grid>
-      <template #toolbar-actions>
-        <Button type="primary" class="mr-4" @click="handleCreate">
-          新建
-        </Button>
-        <Button class="mr-4" @click="handleExcelImport">
-          excel导入
-        </Button>
-      </template>
-
-      <template #counselingDuration="{ row }">
-        <span>{{ row.counselingDuration }}小时</span>
-      </template>
-
-      <template #settlementPrice="{ row }">
-        <span class="font-medium text-green-600">
-          ¥{{ row.settlementPrice }}
-        </span>
-      </template>
-
-      <template #isOnline="{ row }">
-        <Tag :color="getOnlineStatus(row.isOnline).color">
-          {{ getOnlineStatus(row.isOnline).text }}
-        </Tag>
-      </template>
-
-      <template #actions="{ row }">
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            @click="handleViewDuration(row)"
-          >
-            咨询时长
+      <Grid>
+        <template #toolbar-actions>
+          <Button type="primary" class="mr-4" @click="handleCreate">
+            新建
           </Button>
-          <Button
-            v-if="row.status === 'enabled'"
-            type="link"
-            size="small"
-            @click="handleToggleStatus(row)"
-          >
-            停用
-          </Button>
-          <Button
-            v-else
-            type="link"
-            size="small"
-            @click="handleToggleStatus(row)"
-          >
-            启用
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            @click="handleEdit(row)"
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除这个咨询师吗？"
-            ok-text="确定"
-            cancel-text="取消"
-            @confirm="handleDelete(row)"
-          >
-            <Button type="link" danger size="small"> 删除 </Button>
-          </Popconfirm>
-        </Space>
-      </template>
-    </Grid>
-  </Page>
+          <Button class="mr-4" @click="handleExcelImport"> excel导入 </Button>
+        </template>
 
-  <!-- 新增/编辑弹窗 -->
-  <Modal
-    v-model:open="modalVisible"
-    :title="editingId ? '编辑咨询师' : '新增咨询师'"
-    :confirm-loading="modalLoading"
-    width="800px"
-    @ok="handleSubmit"
-    @cancel="closeModal"
-  >
-    <Form
-      ref="formRef"
-      :model="formData"
-      layout="vertical"
-      style="padding: 20px 0"
+        <template #counselingDuration="{ row }">
+          <span>{{ row.counselingDuration }}小时</span>
+        </template>
+
+        <template #settlementPrice="{ row }">
+          <span class="font-medium text-green-600">
+            ¥{{ row.settlementPrice }}
+          </span>
+        </template>
+
+        <template #isOnline="{ row }">
+          <Tag :color="getOnlineStatus(row.isOnline).color">
+            {{ getOnlineStatus(row.isOnline).text }}
+          </Tag>
+        </template>
+
+        <template #actions="{ row }">
+          <Space>
+            <Button type="link" size="small" @click="handleViewDuration(row)">
+              咨询时长
+            </Button>
+            <Button
+              v-if="row.status === 'enabled'"
+              type="link"
+              size="small"
+              @click="handleToggleStatus(row)"
+            >
+              停用
+            </Button>
+            <Button
+              v-else
+              type="link"
+              size="small"
+              @click="handleToggleStatus(row)"
+            >
+              启用
+            </Button>
+            <Button type="link" size="small" @click="handleEdit(row)">
+              编辑
+            </Button>
+            <Popconfirm
+              title="确定要删除这个咨询师吗？"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="handleDelete(row)"
+            >
+              <Button type="link" danger size="small"> 删除 </Button>
+            </Popconfirm>
+          </Space>
+        </template>
+      </Grid>
+    </Page>
+
+    <!-- 新增/编辑弹窗 -->
+    <Modal
+      v-model:open="modalVisible"
+      :title="editingId ? '编辑咨询师' : '新增咨询师'"
+      :confirm-loading="modalLoading"
+      width="800px"
+      @ok="handleSubmit"
+      @cancel="closeModal"
     >
-      <Form.Item
-        label="咨询师名称"
-        name="counselorName"
-        :rules="[{ required: true, message: '请输入咨询师名称' }]"
+      <Form
+        ref="formRef"
+        :model="formData"
+        layout="vertical"
+        style="padding: 20px 0"
       >
-        <Input
-          v-model:value="formData.counselorName"
-          placeholder="请输入咨询师名称"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="学校"
-        name="school"
-        :rules="[{ required: true, message: '请输入学校名称' }]"
-      >
-        <Input
-          v-model:value="formData.school"
-          placeholder="请输入学校名称"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="专业"
-        name="major"
-        :rules="[{ required: true, message: '请输入专业' }]"
-      >
-        <Input
-          v-model:value="formData.major"
-          placeholder="请输入专业"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="个人简介"
-        name="personalIntro"
-        :rules="[{ required: true, message: '请输入个人简介' }]"
-      >
-        <Textarea
-          v-model:value="formData.personalIntro"
-          placeholder="请输入个人简介（不超过500个字）"
-          :rows="4"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="擅长流派"
-        name="specialization"
-        :rules="[{ required: true, message: '请输入擅长流派' }]"
-      >
-        <Input
-          v-model:value="formData.specialization"
-          placeholder="请输入擅长流派"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="擅长领域"
-        name="expertise"
-        :rules="[{ required: true, message: '请输入擅长领域' }]"
-      >
-        <Input
-          v-model:value="formData.expertise"
-          placeholder="请输入擅长领域，多个用逗号分隔"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="咨询方式"
-        name="counselingMethod"
-        :rules="[{ required: true, message: '请选择咨询方式' }]"
-      >
-        <Select
-          v-model:value="formData.counselingMethod"
-          placeholder="请选择咨询方式"
+        <Form.Item
+          label="咨询师名称"
+          name="counselorName"
+          :rules="[{ required: true, message: '请输入咨询师名称' }]"
         >
-          <Select.Option value="online">线上</Select.Option>
-          <Select.Option value="offline">线下</Select.Option>
-          <Select.Option value="both">线上+线下</Select.Option>
-        </Select>
-      </Form.Item>
+          <Input
+            v-model:value="formData.counselorName"
+            placeholder="请输入咨询师名称"
+          />
+        </Form.Item>
 
-      <Form.Item
-        label="所在位置"
-        name="location"
-        :rules="[{ required: true, message: '请输入所在位置' }]"
-      >
-        <Input
-          v-model:value="formData.location"
-          placeholder="请输入所在位置"
-        />
-      </Form.Item>
+        <Form.Item
+          label="学校"
+          name="school"
+          :rules="[{ required: true, message: '请输入学校名称' }]"
+        >
+          <Input v-model:value="formData.school" placeholder="请输入学校名称" />
+        </Form.Item>
 
-      <Form.Item
-        label="结算价格"
-        name="settlementPrice"
-        :rules="[
-          { required: true, message: '请输入结算价格' },
-          { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格' }
-        ]"
-      >
-        <Input
-          v-model:value="formData.settlementPrice"
-          placeholder="请输入结算价格"
-          addonBefore="¥"
-        />
-      </Form.Item>
+        <Form.Item
+          label="专业"
+          name="major"
+          :rules="[{ required: true, message: '请输入专业' }]"
+        >
+          <Input v-model:value="formData.major" placeholder="请输入专业" />
+        </Form.Item>
 
-      <Form.Item label="是否在线">
-        <Switch v-model:checked="formData.isOnline" />
-      </Form.Item>
-    </Form>
-  </Modal>
+        <Form.Item
+          label="个人简介"
+          name="personalIntro"
+          :rules="[{ required: true, message: '请输入个人简介' }]"
+        >
+          <Textarea
+            v-model:value="formData.personalIntro"
+            placeholder="请输入个人简介（不超过500个字）"
+            :rows="4"
+          />
+        </Form.Item>
 
-  <!-- 咨询时长查看弹窗 -->
-  <Modal
-    v-model:open="durationModalVisible"
-    :title="`${currentCounselorName} - 咨询时长`"
-    :footer="null"
-    width="80vw"
-    @cancel="closeDurationModal"
-  >
-      <div style="padding: 20px 0; min-height: 65vh;">
+        <Form.Item
+          label="擅长流派"
+          name="specialization"
+          :rules="[{ required: true, message: '请输入擅长流派' }]"
+        >
+          <Input
+            v-model:value="formData.specialization"
+            placeholder="请输入擅长流派"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="擅长领域"
+          name="expertise"
+          :rules="[{ required: true, message: '请输入擅长领域' }]"
+        >
+          <Input
+            v-model:value="formData.expertise"
+            placeholder="请输入擅长领域，多个用逗号分隔"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="咨询方式"
+          name="counselingMethod"
+          :rules="[{ required: true, message: '请选择咨询方式' }]"
+        >
+          <Select
+            v-model:value="formData.counselingMethod"
+            placeholder="请选择咨询方式"
+          >
+            <Select.Option value="online">线上</Select.Option>
+            <Select.Option value="offline">线下</Select.Option>
+            <Select.Option value="both">线上+线下</Select.Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item
+          label="所在位置"
+          name="location"
+          :rules="[{ required: true, message: '请输入所在位置' }]"
+        >
+          <Input
+            v-model:value="formData.location"
+            placeholder="请输入所在位置"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="结算价格"
+          name="settlementPrice"
+          :rules="[
+            { required: true, message: '请输入结算价格' },
+            { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格' },
+          ]"
+        >
+          <Input
+            v-model:value="formData.settlementPrice"
+            placeholder="请输入结算价格"
+            addonBefore="¥"
+          />
+        </Form.Item>
+
+        <Form.Item label="是否在线">
+          <Switch v-model:checked="formData.isOnline" />
+        </Form.Item>
+      </Form>
+    </Modal>
+
+    <!-- 咨询时长查看弹窗 -->
+    <Modal
+      v-model:open="durationModalVisible"
+      :title="`${currentCounselorName} - 咨询时长`"
+      :footer="null"
+      width="80vw"
+      @cancel="closeDurationModal"
+    >
+      <div style="padding: 20px 0; min-height: 65vh">
         <DurationGrid>
-        <template #sessionDate="{ row }">
-          <span>
-            {{ dayjs(row.sessionDate * 1000).format('YYYY-MM-DD HH:mm:ss') }}
-          </span>
-        </template>
+          <template #sessionDate="{ row }">
+            <span>
+              {{ dayjs(row.sessionDate * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+            </span>
+          </template>
 
-        <template #duration="{ row }">
-          <span class="font-medium text-blue-600">
-            {{ row.duration }}分钟
-          </span>
-        </template>
+          <template #duration="{ row }">
+            <span class="font-medium text-blue-600">
+              {{ row.duration }}分钟
+            </span>
+          </template>
         </DurationGrid>
       </div>
-  </Modal>
+    </Modal>
 
-  <!-- Excel导入弹窗 -->
-  <Modal
-    v-model:open="importModalVisible"
-    title="Excel批量导入咨询师"
-    :footer="null"
-    width="600px"
-    @cancel="closeImportModal"
-  >
-    <div style="padding: 20px 0;">
-      <Alert
-        message="导入说明"
-        description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过5MB"
-        type="info"
-        show-icon
-        class="mb-4"
-      />
+    <!-- Excel导入弹窗 -->
+    <Modal
+      v-model:open="importModalVisible"
+      title="Excel批量导入咨询师"
+      :footer="null"
+      width="600px"
+      @cancel="closeImportModal"
+    >
+      <div style="padding: 20px 0">
+        <Alert
+          message="导入说明"
+          description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过5MB"
+          type="info"
+          show-icon
+          class="mb-4"
+        />
 
-      <Upload.Dragger
-        :custom-request="customUpload"
-        :multiple="false"
-        accept=".xlsx,.xls"
-        :show-upload-list="false"
-      >
-        <div class="p-8">
-          <div class="mb-4">
-            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+        <Upload.Dragger
+          :custom-request="customUpload"
+          :multiple="false"
+          accept=".xlsx,.xls"
+          :show-upload-list="false"
+        >
+          <div class="p-8">
+            <div class="mb-4">
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 48 48"
+              >
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <p class="text-lg">
+              <span v-if="uploadLoading">正在导入...</span>
+              <span v-else>点击或拖拽Excel文件到此处导入</span>
+            </p>
+            <p class="text-gray-500">支持 .xlsx、.xls 格式，最大5MB</p>
           </div>
-          <p class="text-lg">
-            <span v-if="uploadLoading">正在导入...</span>
-            <span v-else>点击或拖拽Excel文件到此处导入</span>
-          </p>
-          <p class="text-gray-500">支持 .xlsx、.xls 格式，最大5MB</p>
-        </div>
-      </Upload.Dragger>
-    </div>
-  </Modal>
+        </Upload.Dragger>
+      </div>
+    </Modal>
   </Spin>
-
 </template>
