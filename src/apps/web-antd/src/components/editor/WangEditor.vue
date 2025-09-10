@@ -187,6 +187,17 @@ const toolbarConfig: Partial<IToolbarConfig> = {
     'group-video', // 排除视频相关菜单
     'insertVideo',
     'uploadVideo',
+    // 排除表格相关菜单
+    'insertTable',
+    'deleteTable',
+    'insertTableRow',
+    'deleteTableRow',
+    'insertTableCol',
+    'deleteTableCol',
+    'tableHeader',
+    'tableFullWidth',
+    // 排除全屏功能
+    'fullScreen',
   ],
 };
 
