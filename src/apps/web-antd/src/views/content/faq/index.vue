@@ -15,9 +15,9 @@ import {
   Space,
   Spin,
   Tag,
-  Textarea,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 
@@ -416,6 +416,12 @@ const gridOptions: VxeTableGridOptions = {
       showOverflow: 'tooltip',
     },
     {
+      field: 'answer',
+      title: '问题答案',
+      minWidth: 250,
+      slots: { default: 'answer' },
+    },
+    {
       field: 'isTop',
       title: '是否置顶',
       width: 120,
@@ -534,6 +540,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </Tag>
         </template>
 
+        <template #answer="{ row }">
+          <div
+            class="answer-content"
+            v-html="row.answer"
+            style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;"
+          />
+        </template>
+
         <template #actions="{ row }">
           <Space>
             <Button type="link" size="small" @click="handleEdit(row)">
@@ -605,12 +619,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
           name="answer"
           :rules="[{ required: true, message: '请输入问题答案' }]"
         >
-          <Textarea
-            v-model:value="formData.answer"
+          <WangEditor
+            v-model:model-value="formData.answer"
             placeholder="请输入问题的详细回答"
-            :rows="8"
-            show-count
-            :maxlength="2000"
+            :height="300"
+            mode="default"
+            @upload-success="(data, url, file) => console.log('上传成功:', { data, url, file })"
+            @upload-error="(error, file) => console.error('上传失败:', { error, file })"
           />
         </Form.Item>
 
@@ -643,3 +658,33 @@ const [Grid, gridApi] = useVbenVxeGrid({
     </Modal>
   </Spin>
 </template>
+
+<style scoped>
+.answer-content {
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.answer-content :deep(p) {
+  margin: 0 0 8px 0;
+}
+
+.answer-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.answer-content :deep(ul),
+.answer-content :deep(ol) {
+  margin: 0 0 8px 0;
+  padding-left: 20px;
+}
+
+.answer-content :deep(blockquote) {
+  margin: 0 0 8px 0;
+  padding: 8px 12px;
+  border-left: 4px solid #d9d9d9;
+  background-color: #f6f6f6;
+}
+</style>
