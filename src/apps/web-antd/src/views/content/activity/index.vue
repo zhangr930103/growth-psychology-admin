@@ -4,8 +4,9 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Space, Spin, Tag, Textarea } from 'ant-design-vue';
+import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Space, Spin, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 
@@ -595,12 +596,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
           name="activityContent"
           :rules="[{ required: true, message: '请输入活动内容' }]"
         >
-          <Textarea
+          <WangEditor
             v-model:value="formData.activityContent"
-            placeholder="请输入活动的详细内容"
-            :rows="8"
-            show-count
-            :maxlength="1000"
+            placeholder="请输入活动的详细内容，支持富文本格式和图片上传"
+            :height="300"
+            mode="default"
+            url-field="fileUrl"
           />
         </Form.Item>
 

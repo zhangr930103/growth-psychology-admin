@@ -1,1 +1,1 @@
-export { default as WangEditor } from './WangEditor.vue';
+export { WangEditor } from './editor';
