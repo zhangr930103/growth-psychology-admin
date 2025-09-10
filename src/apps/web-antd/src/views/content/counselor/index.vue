@@ -2,7 +2,7 @@
 import type { VbenFormProps } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { Page, useVbenModal } from '@vben/common-ui';
 import { useVbenForm, z } from '#/adapter/form';
 import { upload_file } from '#/api/examples/upload';
@@ -500,7 +500,10 @@ const handleEdit = (row: CounselorData) => {
   counselorAvailableTimeSlots.value = row.availableTimeSlots || [];
 
   // 设置表单值并打开弹窗
-  counselorFormApi.setValues(formData);
+  counselorFormApi.setValues({
+    ...formData,
+    availableTimeSlots: counselorAvailableTimeSlots.value,
+  });
   counselorModalApi.open();
 
   // 设置弹窗标题
@@ -695,6 +698,13 @@ const counselorFormSchema = [
     },
   },
   {
+    component: 'Slot',
+    fieldName: 'availableTimeSlots',
+    label: '可咨询时间',
+    slot: 'availableTimeSlots',
+    rules: z.array(z.any()).min(1, '请选择可咨询时间'),
+  },
+  {
     component: 'InputNumber',
     fieldName: 'consultingPrice',
     label: '咨询价格设置',
@@ -879,13 +889,6 @@ const counselorFormSchema = [
       };
     },
   },
-  {
-    component: 'Slot',
-    fieldName: 'availableTimeSlots',
-    label: '可咨询时间',
-    slot: 'availableTimeSlots',
-
-  },
 ];
 
 // 创建咨询时长表单（动态模式）
@@ -1013,6 +1016,11 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
       // 开启loading
       counselorModalApi.setState({ loading: true });
 
+      // 在验证前设置可咨询时间数据到表单中
+      counselorFormApi.setValues({
+        availableTimeSlots: counselorAvailableTimeSlots.value,
+      });
+
       const validationResult = await counselorFormApi.validate();
       if (!validationResult.valid) {
         counselorModalApi.setState({ loading: false });
@@ -1069,6 +1077,12 @@ const handleCreate = () => {
   // 重置表单并打开弹窗
   counselorFormApi.resetForm();
   counselorAvailableTimeSlots.value = [];
+  
+  // 初始化可咨询时间字段用于验证
+  counselorFormApi.setValues({
+    availableTimeSlots: [],
+  });
+  
   counselorModalApi.open();
 
   // 设置弹窗标题
@@ -1409,6 +1423,16 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
   formOptions: durationFormOptions,
   gridOptions: durationGridOptions,
 });
+
+// 监听可咨询时间变化，同步到表单用于验证
+watch(() => counselorAvailableTimeSlots.value, (newValue) => {
+  // 只有在表单已经初始化时才设置值
+  if (counselorFormApi) {
+    counselorFormApi.setValues({
+      availableTimeSlots: newValue,
+    });
+  }
+}, { deep: true });
 </script>
 
 <template>
@@ -1606,13 +1630,13 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
                 :current-week="new Date()"
               >
                 <template #extra="{ selectedTimeSlots }">
-                  <div v-if="selectedTimeSlots.length > 0" class="mt-4 p-4 w-full max-w-none bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <div  class="mt-4 p-4 w-full max-w-none bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                     <div class="text-sm text-green-700 dark:text-green-300">
                       <p class="mb-2 font-medium">已选择时间段：</p>
                       <div class="space-y-1 text-xs">
                         <div v-for="slot in selectedTimeSlots" :key="`${slot.day}-${slot.startHour}-${slot.endHour}`">
                           {{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][slot.day] }}：
-                          {{ String(slot.startHour).padStart(2, '0') }}:00 - {{ String(Math.max(0, slot.endHour - 1)).padStart(2, '0') }}:00
+                          {{ String(slot.startHour).padStart(2, '0') }}:{{ String(slot.startMinute || 0).padStart(2, '0') }} - {{ String(slot.endHour).padStart(2, '0') }}:{{ String(slot.endMinute || 0).padStart(2, '0') }}
                         </div>
                       </div>
                     </div>
