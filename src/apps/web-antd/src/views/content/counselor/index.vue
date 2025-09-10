@@ -35,6 +35,9 @@ const durationModalVisible = ref(false);
 const currentCounselorId = ref<number | null>(null);
 const currentCounselorName = ref('');
 
+// 咨询时长弹窗模式状态
+const durationModalMode = ref<'add' | 'view'>('add');
+
 // 审核弹窗相关状态
 const currentAuditRecord = ref<CounselingDurationRecord | null>(null);
 
@@ -415,18 +418,19 @@ const handleEdit = (row: CounselorData) => {
   message.info('编辑功能已禁用');
 };
 
-// 新增咨询时长表单 Schema 配置
-const addDurationFormSchema = [
+// 咨询时长表单 Schema 配置（动态配置）
+const getDurationFormSchema = (isReadonly = false) => [
   {
     component: 'InputNumber',
     fieldName: 'duration',
     label: '时长',
-    rules: z.number().min(0.1, '请输入有效的时长'),
+    rules: isReadonly ? undefined : z.number().min(0.1, '请输入有效的时长'),
     componentProps: {
       placeholder: '请输入咨询时长',
       min: 0,
       step: 0.5,
       style: { width: '100%' },
+      disabled: isReadonly,
     },
   },
   {
@@ -435,12 +439,13 @@ const addDurationFormSchema = [
     label: '上传凭证',
     componentProps: {
       customRequest: upload_file,
-      disabled: false,
+      disabled: isReadonly,
       maxCount: 1,
       multiple: false,
       showUploadList: true,
       listType: 'picture-card',
       beforeUpload: (file: File) => {
+        if (isReadonly) return false;
         const isValidSize = file.size / 1024 / 1024 < 10;
         const validExtensions = ['jpg', 'png', 'jpeg'];
         const fileExtension = file.name?.split('.').pop()?.toLowerCase();
@@ -458,7 +463,7 @@ const addDurationFormSchema = [
     },
     renderComponentContent: () => {
       return {
-        default: () => '上传图片',
+        default: () => isReadonly ? '查看图片' : '上传图片',
       };
     },
   },
@@ -494,24 +499,26 @@ const auditFormSchema = [
   },
 ];
 
-// 创建新增咨询时长表单
-const [AddDurationForm, addDurationFormApi] = useVbenForm({
-  schema: addDurationFormSchema,
+// 创建咨询时长表单（动态模式）
+const [DurationForm, durationFormApi] = useVbenForm({
+  schema: getDurationFormSchema(false), // 默认为编辑模式
   showDefaultActions: false,
   commonConfig: {
     labelWidth: 120,
   },
 });
 
-// 创建新增咨询时长弹窗
-const [AddDurationModal, addDurationModalApi] = useVbenModal({
-  title: '新增咨询时长',
+// 创建咨询时长弹窗（统一处理新增和查看）
+const [DurationModal, durationModalApi] = useVbenModal({
+  title: '咨询时长',
   onConfirm: async () => {
+    if (durationModalMode.value === 'view') return;
+
     try {
-      const validationResult = await addDurationFormApi.validate();
+      const validationResult = await durationFormApi.validate();
       if (!validationResult.valid) return;
 
-      const formValues = await addDurationFormApi.getValues();
+      const formValues = await durationFormApi.getValues();
 
       // 模拟API请求
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -528,10 +535,10 @@ const [AddDurationModal, addDurationModalApi] = useVbenModal({
       message.success('新增咨询时长成功');
 
       // 关闭弹窗
-      addDurationModalApi.close();
+      durationModalApi.close();
 
       // 重置表单
-      addDurationFormApi.resetForm();
+      durationFormApi.resetForm();
 
       // 刷新列表
       durationGridApi.query();
@@ -541,8 +548,8 @@ const [AddDurationModal, addDurationModalApi] = useVbenModal({
     }
   },
   onCancel: () => {
-    addDurationFormApi.resetForm();
-    addDurationModalApi.close();
+    durationFormApi.resetForm();
+    durationModalApi.close();
   },
 });
 
@@ -564,12 +571,6 @@ const [AuditModal, auditModalApi] = useVbenModal({
       if (!validationResult.valid) return;
 
       const formValues = await auditFormApi.getValues();
-
-      // 额外验证：如果选择审核不通过，必须填写不通过原因
-      if (formValues.auditStatus === 'rejected' && !formValues.auditComment?.trim()) {
-        message.error('请输入不通过原因');
-        return;
-      }
 
       // 模拟API请求
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -615,8 +616,22 @@ const handleAddDuration = () => {
     return;
   }
 
-  addDurationFormApi.resetForm();
-  addDurationModalApi.open();
+  // 设置为新增模式
+  durationModalMode.value = 'add';
+
+  // 更新表单Schema为编辑模式
+  durationFormApi.updateSchema(getDurationFormSchema(false));
+
+  // 重置表单并打开弹窗
+  durationFormApi.resetForm();
+  durationModalApi.open();
+
+  // 动态设置弹窗标题和按钮
+  durationModalApi.setState({
+    title: '新增咨询时长',
+    showConfirmButton: true,
+    cancelText: '取消'
+  });
 };
 
 // 移除重复定义
@@ -647,9 +662,9 @@ const customUpload = async (options: any) => {
   }
 
   // 验证文件大小
-  const isLt5M = file.size / 1024 / 1024 < 5;
+  const isLt5M = file.size / 1024 / 1024 < 10;
   if (!isLt5M) {
-    message.error('文件大小不能超过 5MB!');
+    message.error('文件大小不能超过 10MB!');
     onError(new Error('文件大小超限'));
     return;
   }
@@ -715,10 +730,37 @@ const handleAudit = (row: CounselingDurationRecord) => {
   auditModalApi.open();
 };
 
-// 查看审核不通过原因
+// 查看咨询时长详情
 const handleView = (row: CounselingDurationRecord) => {
-  console.log('查看审核不通过原因', row.id);
-  message.info(row.auditComment || '无审核备注');
+  console.log('查看咨询时长详情', row.id);
+
+  // 设置为查看模式
+  durationModalMode.value = 'view';
+
+  // 更新表单Schema为只读模式
+  durationFormApi.updateSchema(getDurationFormSchema(true));
+
+  // 准备表单数据
+  const formData = {
+    duration: row.duration,
+    certificate: row.certificate ? [{
+      url: row.certificate,
+      name: '凭证图片',
+      status: 'done',
+      response: { file_url: row.certificate }
+    }] : [],
+  };
+
+  // 设置表单值并打开弹窗
+  durationFormApi.setValues(formData);
+  durationModalApi.open();
+
+  // 动态设置弹窗标题和按钮
+  durationModalApi.setState({
+    title: '查看咨询时长',
+    showConfirmButton: false,
+    cancelText: '关闭'
+  });
 };
 
 // 表格配置
@@ -1012,13 +1054,12 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
 
           <template #durationActions="{ row }">
             <Space>
+              <Button type="link" size="small" @click="handleView(row)">
+                查看
+              </Button>
               <Button v-if="row.auditStatus === 'pending'" type="link" size="small"
                      @click="handleAudit(row)">
                 审核
-              </Button>
-              <Button v-if="row.auditStatus === 'rejected'" type="link" size="small"
-                     @click="handleView(row)">
-                查看
               </Button>
             </Space>
           </template>
@@ -1074,10 +1115,10 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
         </Upload.Dragger>
       </div>
     </Modal>
-    <!-- 新增咨询时长弹窗 -->
-    <AddDurationModal class="w-[500px]" :z-index="9999">
-      <AddDurationForm />
-    </AddDurationModal>
+    <!-- 咨询时长弹窗（统一处理新增和查看） -->
+    <DurationModal class="w-[500px]" :z-index="9999">
+      <DurationForm />
+    </DurationModal>
 
     <!-- 审核弹窗 -->
     <AuditModal class="w-[40vw]" :z-index="9999">
