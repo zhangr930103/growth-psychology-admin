@@ -1606,13 +1606,13 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
                 :current-week="new Date()"
               >
                 <template #extra="{ selectedTimeSlots }">
-                  <div v-if="selectedTimeSlots.length > 0" class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <div v-if="selectedTimeSlots.length > 0" class="mt-4 p-4 w-full max-w-none bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                     <div class="text-sm text-green-700 dark:text-green-300">
                       <p class="mb-2 font-medium">已选择时间段：</p>
                       <div class="space-y-1 text-xs">
                         <div v-for="slot in selectedTimeSlots" :key="`${slot.day}-${slot.startHour}-${slot.endHour}`">
-                          {{ ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][slot.day] }}：
-                          {{ String(slot.startHour).padStart(2, '0') }}:00 - {{ String(slot.endHour).padStart(2, '0') }}:00
+                          {{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][slot.day] }}：
+                          {{ String(slot.startHour).padStart(2, '0') }}:00 - {{ String(Math.max(0, slot.endHour - 1)).padStart(2, '0') }}:00
                         </div>
                       </div>
                     </div>

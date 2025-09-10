@@ -43,8 +43,8 @@ dayjs.locale('zh-cn');
 // 选中的时间段
 const selectedTimeSlots = ref<TimeSlot[]>(props.modelValue || []);
 
-// 当前查看的周起始日期（周日）
-const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('week'));
+// 当前查看的周起始日期（周一）
+const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('week').add(1, 'day'));
 
 // 拖拽选择状态
 const isDragging = ref(false);
@@ -55,6 +55,7 @@ const dragEnd = ref<{ day: number; hour: number } | null>(null);
 const isMoveMode = ref(false);
 const moveSourceSlot = ref<TimeSlot | null>(null);
 const moveTargetDay = ref<number | null>(null);
+const moveTargetHour = ref<number | null>(null);
 
 // 当前周的日期数组
 const weekDates = computed(() => {
@@ -64,6 +65,20 @@ const weekDates = computed(() => {
   }
   return dates;
 });
+
+// 格式化时间显示
+const formatTimeRange = (slot: TimeSlot) => {
+  const startTime = String(slot.startHour).padStart(2, '0') + ':00';
+  // 用户选择的实际结束时间应该是endHour-1，因为endHour表示不包含的下一小时
+  const actualEndHour = Math.max(0, slot.endHour - 1);
+  const endTime = String(actualEndHour).padStart(2, '0') + ':00';
+  return `${startTime} - ${endTime}`;
+};
+
+// 获取周几显示文本
+const getWeekDayText = (day: number) => {
+  return weekLabels[day];
+};
 
 // 当前周的日期范围文本
 const weekRangeText = computed(() => {
@@ -88,8 +103,8 @@ const timeSlots = computed(() => {
   return slots;
 });
 
-// 周几的标签
-const weekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+// 周几的标签（从周一开始）
+const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 // 上一周
 const handlePrevWeek = () => {
@@ -105,7 +120,7 @@ const handleNextWeek = () => {
 
 // 回到本周
 const handleToday = () => {
-  currentWeekStart.value = dayjs().startOf('week');
+  currentWeekStart.value = dayjs().startOf('week').add(1, 'day');
   emitWeekChange();
 };
 
@@ -138,11 +153,16 @@ const isTimeSlotInDragRange = (day: number, hour: number) => {
 
 // 检查是否在移动模式的预览范围内
 const isTimeSlotInMovePreview = (day: number, hour: number) => {
-  if (!isMoveMode.value || !moveSourceSlot.value || moveTargetDay.value === null) return false;
+  if (!isMoveMode.value || !moveSourceSlot.value || moveTargetDay.value === null || moveTargetHour.value === null) return false;
   
   if (day !== moveTargetDay.value) return false;
   
-  return hour >= moveSourceSlot.value.startHour && hour < moveSourceSlot.value.endHour;
+  // 计算移动后的时间段范围
+  const duration = moveSourceSlot.value.endHour - moveSourceSlot.value.startHour;
+  const newStartHour = moveTargetHour.value;
+  const newEndHour = newStartHour + duration;
+  
+  return hour >= newStartHour && hour < newEndHour;
 };
 
 // 开始拖拽选择或移动
@@ -158,6 +178,7 @@ const handleMouseDown = (day: number, hour: number) => {
       isMoveMode.value = true;
       moveSourceSlot.value = sourceSlot;
       moveTargetDay.value = day;
+      moveTargetHour.value = hour;
     }
   } else {
     // 如果点击的是空白区域，进入选择模式
@@ -175,8 +196,9 @@ const handleMouseEnter = (day: number, hour: number) => {
       dragEnd.value = { day, hour };
     }
   } else if (isMoveMode.value && moveSourceSlot.value) {
-    // 移动模式：可以跨天移动
+    // 移动模式：可以跨天移动并且可以改变时间位置
     moveTargetDay.value = day;
+    moveTargetHour.value = hour;
   }
 };
 
@@ -188,13 +210,13 @@ const handleMouseUp = () => {
     const minHour = Math.min(dragStart.value.hour, dragEnd.value.hour);
     const maxHour = Math.max(dragStart.value.hour, dragEnd.value.hour);
     
-    // 添加新的时间段选择
+    // 修复：结束时间应该是maxHour + 1，表示到下一个小时的开始
     addTimeSlot(day, minHour, maxHour + 1);
-  } else if (isMoveMode.value && moveSourceSlot.value && moveTargetDay.value !== null) {
+  } else if (isMoveMode.value && moveSourceSlot.value && moveTargetDay.value !== null && moveTargetHour.value !== null) {
     // 移动模式
-    if (moveTargetDay.value !== moveSourceSlot.value.day) {
-      // 只有当移动到不同的天时才执行移动
-      moveTimeSlot(moveSourceSlot.value, moveTargetDay.value);
+    if (moveTargetDay.value !== moveSourceSlot.value.day || moveTargetHour.value !== moveSourceSlot.value.startHour) {
+      // 当移动到不同的天或不同的时间时才执行移动
+      moveTimeSlot(moveSourceSlot.value, moveTargetDay.value, moveTargetHour.value);
     }
   }
   
@@ -205,16 +227,13 @@ const handleMouseUp = () => {
   isMoveMode.value = false;
   moveSourceSlot.value = null;
   moveTargetDay.value = null;
+  moveTargetHour.value = null;
 };
 
 // 添加时间段
 const addTimeSlot = (day: number, startHour: number, endHour: number) => {
-  // 移除该天该时间段的现有选择
-  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => 
-    !(slot.day === day && ((slot.startHour <= startHour && slot.endHour > startHour) || 
-      (slot.startHour < endHour && slot.endHour >= endHour) ||
-      (slot.startHour >= startHour && slot.endHour <= endHour)))
-  );
+  // 清空所有现有选择，只允许一个时间段
+  selectedTimeSlots.value = [];
   
   // 添加新的时间段
   selectedTimeSlots.value.push({
@@ -225,38 +244,10 @@ const addTimeSlot = (day: number, startHour: number, endHour: number) => {
     endMinute: 0,
   });
   
-  // 合并相邻的时间段
-  mergeAdjacentTimeSlots(day);
-  
   emit('update:modelValue', selectedTimeSlots.value);
 };
 
 
-// 合并相邻的时间段
-const mergeAdjacentTimeSlots = (day: number) => {
-  const daySlots = selectedTimeSlots.value
-    .filter(slot => slot.day === day)
-    .sort((a, b) => a.startHour - b.startHour);
-  
-  const merged: TimeSlot[] = [];
-  
-  for (const slot of daySlots) {
-    if (merged.length === 0) {
-      merged.push(slot);
-    } else {
-      const last = merged[merged.length - 1];
-      if (last && last.endHour === slot.startHour) {
-        last.endHour = slot.endHour;
-      } else {
-        merged.push(slot);
-      }
-    }
-  }
-  
-  // 移除该天的所有时间段，然后添加合并后的时间段
-  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => slot.day !== day);
-  selectedTimeSlots.value.push(...merged);
-};
 
 // 检查是否为今天
 const isToday = (date: Dayjs) => {
@@ -264,30 +255,23 @@ const isToday = (date: Dayjs) => {
 };
 
 // 移动时间段
-const moveTimeSlot = (sourceSlot: TimeSlot, targetDay: number) => {
-  // 移除原位置的时间段
-  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => slot !== sourceSlot);
+const moveTimeSlot = (sourceSlot: TimeSlot, targetDay: number, targetHour: number) => {
+  // 计算时间段的持续时长
+  const duration = sourceSlot.endHour - sourceSlot.startHour;
   
-  // 在目标位置添加时间段
-  const newSlot: TimeSlot = {
+  // 确保目标时间不会超出24小时范围
+  const maxStartHour = 24 - duration;
+  const finalStartHour = Math.min(targetHour, maxStartHour);
+  const finalEndHour = finalStartHour + duration;
+  
+  // 清空所有现有选择并添加新位置的时间段
+  selectedTimeSlots.value = [{
     day: targetDay,
-    startHour: sourceSlot.startHour,
-    endHour: sourceSlot.endHour,
+    startHour: finalStartHour,
+    endHour: finalEndHour,
     startMinute: sourceSlot.startMinute || 0,
     endMinute: sourceSlot.endMinute || 0,
-  };
-  
-  // 移除目标天该时间段的现有选择
-  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => 
-    !(slot.day === targetDay && ((slot.startHour <= newSlot.startHour && slot.endHour > newSlot.startHour) || 
-      (slot.startHour < newSlot.endHour && slot.endHour >= newSlot.endHour) ||
-      (slot.startHour >= newSlot.startHour && slot.endHour <= newSlot.endHour)))
-  );
-  
-  selectedTimeSlots.value.push(newSlot);
-  
-  // 合并目标天的相邻时间段
-  mergeAdjacentTimeSlots(targetDay);
+  }];
   
   emit('update:modelValue', selectedTimeSlots.value);
 };
@@ -307,7 +291,7 @@ watch(() => props.modelValue, (newValue) => {
 
 watch(() => props.currentWeek, (newValue) => {
   if (newValue) {
-    currentWeekStart.value = dayjs(newValue).startOf('week');
+    currentWeekStart.value = dayjs(newValue).startOf('week').add(1, 'day');
   }
 });
 
@@ -316,7 +300,7 @@ emitWeekChange();
 </script>
 
 <template>
-  <div class="week-date-picker" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
+  <div class="week-date-picker min-w-[900px]" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
     <!-- 头部导航 -->
     <div class="flex items-center justify-between mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm">
       <div class="flex items-center space-x-4">
@@ -348,28 +332,28 @@ emitWeekChange();
     </div>
     
     <!-- 周视图时间选择器 -->
-    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <!-- 日期头部 -->
-      <div class="grid grid-cols-8 border-b border-blue-200 dark:border-blue-700">
+      <div class="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
         <!-- 时间轴列头 -->
-        <div class="h-20 border-r border-blue-200 dark:border-blue-700 flex items-center justify-center bg-blue-100 dark:bg-blue-800/30">
-          <span class="text-lg font-medium text-blue-700 dark:text-blue-300">时间</span>
+        <div class="h-20 border-r border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+          <span class="text-lg font-medium text-gray-700 dark:text-gray-300">时间</span>
         </div>
         
         <!-- 日期列头 -->
         <div 
           v-for="(date, index) in weekDates" 
           :key="date.format('YYYY-MM-DD')"
-          class="h-20 border-r border-blue-200 dark:border-blue-700 last:border-r-0 flex flex-col items-center justify-center bg-blue-100 dark:bg-blue-800/30"
+          class="h-20 min-w-[100px] border-r border-gray-200 dark:border-gray-700 last:border-r-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-700"
         >
-          <div class="text-sm text-blue-600 dark:text-blue-400">
+          <div class="text-sm text-gray-600 dark:text-gray-400">
             {{ weekLabels[index] }}
           </div>
           <div 
             class="text-xl font-medium"
             :class="{
               'text-orange-600 dark:text-orange-400': isToday(date),
-              'text-blue-700 dark:text-blue-300': !isToday(date)
+              'text-gray-700 dark:text-gray-300': !isToday(date)
             }"
           >
             {{ date.date() }}
@@ -378,13 +362,13 @@ emitWeekChange();
       </div>
       
       <!-- 时间轴和选择内容 -->
-      <div class="grid grid-cols-8 select-none">
+      <div class="grid grid-cols-8 select-none max-h-[528px] overflow-y-auto relative">
         <!-- 时间轴 -->
-        <div class="border-r border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-800/30">
+        <div class="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
           <div 
             v-for="time in timeSlots" 
             :key="time"
-            class="h-12 border-b border-blue-200 dark:border-blue-700 last:border-b-0 flex items-center justify-center text-sm font-medium text-blue-700 dark:text-blue-300"
+            class="h-12 border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center justify-center text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             {{ time }}
           </div>
@@ -394,24 +378,35 @@ emitWeekChange();
         <div 
           v-for="(date, dayIndex) in weekDates" 
           :key="date.format('YYYY-MM-DD')"
-          class="border-r border-blue-200 dark:border-blue-700 last:border-r-0"
+          class="border-r border-gray-200 dark:border-gray-700 last:border-r-0 min-w-[100px]"
         >
           <!-- 时间格子 -->
           <div 
             v-for="(time, hour) in timeSlots" 
             :key="`${date.format('YYYY-MM-DD')}-${time}`"
-            class="h-12 border-b border-blue-200 dark:border-blue-700 last:border-b-0 cursor-pointer transition-all duration-150 relative"
+            class="h-12 min-w-[100px] border-b border-gray-200 dark:border-gray-700 last:border-b-0 cursor-pointer transition-all duration-150 relative"
             :class="{
               'bg-blue-300 dark:bg-blue-600 hover:bg-blue-400 dark:hover:bg-blue-500': isTimeSlotSelected(dayIndex, hour),
               'bg-blue-200 dark:bg-blue-700/50': isTimeSlotInDragRange(dayIndex, hour) && !isTimeSlotSelected(dayIndex, hour),
               'bg-green-200 dark:bg-green-700/50 border-2 border-green-400 dark:border-green-500': isTimeSlotInMovePreview(dayIndex, hour),
               'hover:bg-blue-100 dark:hover:bg-blue-800/50': !isTimeSlotSelected(dayIndex, hour) && !isTimeSlotInDragRange(dayIndex, hour) && !isTimeSlotInMovePreview(dayIndex, hour),
-              'cursor-move': isTimeSlotSelected(dayIndex, hour),
-              'cursor-grabbing': isMoveMode && moveSourceSlot && moveSourceSlot.day === dayIndex
+              'cursor-move': isTimeSlotSelected(dayIndex, hour) && !isMoveMode,
+              'cursor-grabbing': isMoveMode && moveSourceSlot && moveSourceSlot.day === dayIndex,
+              'cursor-crosshair': isMoveMode && !isTimeSlotInMovePreview(dayIndex, hour)
             }"
             @mousedown.prevent="handleMouseDown(dayIndex, hour)"
             @mouseenter="handleMouseEnter(dayIndex, hour)"
           >
+            <!-- 时间段标签显示 -->
+            <div 
+              v-for="slot in selectedTimeSlots" 
+              :key="`label-${slot.day}-${slot.startHour}-${slot.endHour}`"
+              v-show="slot.day === dayIndex && hour === slot.startHour"
+              class="absolute top-1 left-1 right-1 z-20 bg-blue-600/90 text-white text-xs px-2 py-1 rounded shadow-lg text-center backdrop-blur-sm"
+            >
+              <div class="font-medium">{{ getWeekDayText(slot.day) }}</div>
+              <div>{{ formatTimeRange(slot) }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -429,7 +424,7 @@ emitWeekChange();
 
 /* 确保网格布局正确 */
 .grid-cols-8 {
-  grid-template-columns: 100px repeat(7, 1fr);
+  grid-template-columns: 120px repeat(7, 1fr);
 }
 
 /* 禁用文本选择，防止拖拽时选中文本 */
