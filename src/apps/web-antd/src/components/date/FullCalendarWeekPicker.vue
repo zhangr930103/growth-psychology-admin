@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
-import { Button } from 'ant-design-vue';
+import { Button, DatePicker } from 'ant-design-vue';
 import { ChevronLeft, ChevronRight } from '@vben/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -8,7 +8,7 @@ import 'dayjs/locale/zh-cn';
 
 // FullCalendar imports
 import FullCalendar from '@fullcalendar/vue3';
-import type { CalendarOptions, EventInput, DateSelectArg, EventClickArg } from '@fullcalendar/core';
+import type { CalendarOptions, EventInput, DateSelectArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -60,19 +60,16 @@ const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('isoWeek'))
 // FullCalendar 引用
 const calendarRef = ref<InstanceType<typeof FullCalendar>>();
 
-// 当前周的日期范围文本
-const weekRangeText = computed(() => {
+// 日期选择器的值
+const selectedWeekDate = ref<Dayjs>(currentWeekStart.value);
+
+// DatePicker显示的日期范围格式
+const dateRangeFormat = computed(() => {
   const start = currentWeekStart.value;
   const end = currentWeekStart.value.add(6, 'day');
-  
-  if (start.year() === end.year() && start.month() === end.month()) {
-    return `${start.year()}年${start.month() + 1}月${start.date()}日 - ${end.date()}日`;
-  } else if (start.year() === end.year()) {
-    return `${start.year()}年${start.month() + 1}月${start.date()}日 - ${end.month() + 1}月${end.date()}日`;
-  } else {
-    return `${start.format('YYYY年M月D日')} - ${end.format('YYYY年M月D日')}`;
-  }
+  return `${start.format('YYYY-MM-DD')} - ${end.format('MM-DD')}`;
 });
+
 
 // 周几的标签（从周一开始）
 const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
@@ -225,7 +222,7 @@ const handleDateSelect = (selectInfo: DateSelectArg) => {
 };
 
 // 处理事件点击
-const handleEventClick = (clickInfo: EventClickArg) => {
+const handleEventClick = () => {
   // 删除事件
   selectedTimeSlots.value = [];
   emit('update:modelValue', selectedTimeSlots.value);
@@ -285,6 +282,7 @@ const refreshEvents = () => {
 // 上一周
 const handlePrevWeek = () => {
   currentWeekStart.value = currentWeekStart.value.subtract(1, 'week');
+  selectedWeekDate.value = currentWeekStart.value;
   const calendar = calendarRef.value?.getApi();
   if (calendar) {
     calendar.gotoDate(currentWeekStart.value.toDate());
@@ -295,6 +293,7 @@ const handlePrevWeek = () => {
 // 下一周
 const handleNextWeek = () => {
   currentWeekStart.value = currentWeekStart.value.add(1, 'week');
+  selectedWeekDate.value = currentWeekStart.value;
   const calendar = calendarRef.value?.getApi();
   if (calendar) {
     calendar.gotoDate(currentWeekStart.value.toDate());
@@ -305,6 +304,7 @@ const handleNextWeek = () => {
 // 回到本周
 const handleToday = () => {
   currentWeekStart.value = dayjs().startOf('isoWeek');
+  selectedWeekDate.value = currentWeekStart.value;
   const calendar = calendarRef.value?.getApi();
   if (calendar) {
     calendar.gotoDate(currentWeekStart.value.toDate());
@@ -319,6 +319,22 @@ const emitWeekChange = () => {
   emit('weekChange', start, end);
 };
 
+// 处理日期选择器变化
+const handleDatePickerChange = (value: string | Dayjs) => {
+  if (value) {
+    const date = typeof value === 'string' ? dayjs(value) : value;
+    const weekStart = date.startOf('isoWeek');
+    currentWeekStart.value = weekStart;
+    selectedWeekDate.value = weekStart;
+    
+    const calendar = calendarRef.value?.getApi();
+    if (calendar) {
+      calendar.gotoDate(weekStart.toDate());
+    }
+    emitWeekChange();
+  }
+};
+
 // 清空所有选择
 const clearAllSelections = () => {
   selectedTimeSlots.value = [];
@@ -326,19 +342,6 @@ const clearAllSelections = () => {
   refreshEvents();
 };
 
-// 格式化时间显示
-const formatTimeRange = (slot: TimeSlot) => {
-  const startTime = String(slot.startHour).padStart(2, '0') + ':00';
-  // 用户选择的实际结束时间应该是endHour-1，因为endHour表示不包含的下一小时
-  const actualEndHour = Math.max(0, slot.endHour - 1);
-  const endTime = String(actualEndHour).padStart(2, '0') + ':00';
-  return `${startTime} - ${endTime}`;
-};
-
-// 获取周几显示文本
-const getWeekDayText = (day: number) => {
-  return weekLabels[day];
-};
 
 // 监听props变化
 watch(() => props.modelValue, (newValue) => {
@@ -353,6 +356,7 @@ watch(() => props.modelValue, (newValue) => {
 watch(() => props.currentWeek, (newValue) => {
   if (newValue) {
     currentWeekStart.value = dayjs(newValue).startOf('isoWeek');
+    selectedWeekDate.value = currentWeekStart.value;
     const calendar = calendarRef.value?.getApi();
     if (calendar) {
       calendar.gotoDate(currentWeekStart.value.toDate());
@@ -386,9 +390,19 @@ onMounted(() => {
           </Button>
         </div>
         
-        <!-- 日期范围 -->
-        <div class="text-lg font-medium text-blue-900 dark:text-blue-100">
-          {{ weekRangeText }}
+        <!-- 日期范围选择器 -->
+        <div class="flex items-center">
+          <DatePicker 
+            v-model:value="selectedWeekDate"
+            picker="date"
+            :placeholder="'选择开始日期'"
+            :format="dateRangeFormat"
+            :value-format="'YYYY-MM-DD'"
+            :allow-clear="false"
+            @change="handleDatePickerChange"
+            class="week-date-picker"
+            :get-popup-container="(triggerNode: HTMLElement) => triggerNode.parentElement as HTMLElement"
+          />
         </div>
       </div>
       
@@ -414,6 +428,24 @@ onMounted(() => {
 <style scoped>
 .fullcalendar-week-picker {
   @apply w-full;
+}
+
+.week-date-picker {
+  min-width: 220px;
+}
+
+.week-date-picker :deep(.ant-picker) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.week-date-picker :deep(.ant-picker:hover) {
+  border-color: #2563eb;
+}
+
+.week-date-picker :deep(.ant-picker-focused) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 </style>
 
