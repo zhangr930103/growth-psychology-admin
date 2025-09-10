@@ -564,7 +564,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       v-model:open="modalVisible"
       :title="editingId ? '编辑团队活动' : '新建团队活动'"
       :confirm-loading="modalLoading"
-      width="800px"
+      width="70vw"
       ok-text="提交"
       cancel-text="取消"
       :style="{ top: '20px' }"
@@ -597,7 +597,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
           :rules="[{ required: true, message: '请输入活动内容' }]"
         >
           <WangEditor
-            v-model:value="formData.activityContent"
+            v-model:model-value="formData.activityContent"
             placeholder="请输入活动的详细内容，支持富文本格式和图片上传"
             :height="300"
             mode="default"
