@@ -35,6 +35,9 @@ const durationModalVisible = ref(false);
 const currentCounselorId = ref<number | null>(null);
 const currentCounselorName = ref('');
 
+// 审核弹窗相关状态
+const currentAuditRecord = ref<CounselingDurationRecord | null>(null);
+
 // 移除未使用的状态变量
 
 // Excel导入相关状态
@@ -461,6 +464,36 @@ const addDurationFormSchema = [
   },
 ];
 
+// 审核表单 Schema 配置
+const auditFormSchema = [
+  {
+    component: 'RadioGroup',
+    fieldName: 'auditStatus',
+    label: '审核',
+    rules: z.enum(['approved', 'rejected']).describe('请选择审核状态'),
+    componentProps: {
+      options: [
+        { label: '审核通过', value: 'approved' },
+        { label: '审核不通过', value: 'rejected' },
+      ],
+    },
+  },
+  {
+    component: 'Textarea',
+    fieldName: 'auditComment',
+    label: '不通过原因',
+    dependencies: {
+      triggerFields: ['auditStatus'],
+      show: (values: any) => values.auditStatus === 'rejected',
+    },
+    rules: z.string().optional().describe('审核不通过原因'),
+    componentProps: {
+      placeholder: '请输入审核不通过的原因',
+      rows: 3,
+    },
+  },
+];
+
 // 创建新增咨询时长表单
 const [AddDurationForm, addDurationFormApi] = useVbenForm({
   schema: addDurationFormSchema,
@@ -510,6 +543,62 @@ const [AddDurationModal, addDurationModalApi] = useVbenModal({
   onCancel: () => {
     addDurationFormApi.resetForm();
     addDurationModalApi.close();
+  },
+});
+
+// 创建审核表单
+const [AuditForm, auditFormApi] = useVbenForm({
+  schema: auditFormSchema,
+  showDefaultActions: false,
+  commonConfig: {
+    labelWidth: 100,
+  },
+});
+
+// 创建审核弹窗
+const [AuditModal, auditModalApi] = useVbenModal({
+  title: '审核',
+  onConfirm: async () => {
+    try {
+      const validationResult = await auditFormApi.validate();
+      if (!validationResult.valid) return;
+
+      const formValues = await auditFormApi.getValues();
+
+      // 额外验证：如果选择审核不通过，必须填写不通过原因
+      if (formValues.auditStatus === 'rejected' && !formValues.auditComment?.trim()) {
+        message.error('请输入不通过原因');
+        return;
+      }
+
+      // 模拟API请求
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      console.log('审核咨询时长:', {
+        recordId: currentAuditRecord.value?.id,
+        auditStatus: formValues.auditStatus,
+        auditComment: formValues.auditComment,
+      });
+
+      const statusText = formValues.auditStatus === 'approved' ? '审核通过' : '审核不通过';
+      message.success(`${statusText}成功`);
+
+      // 关闭弹窗
+      auditModalApi.close();
+
+      // 重置表单
+      auditFormApi.resetForm();
+
+      // 刷新列表
+      durationGridApi.query();
+    } catch (error) {
+      console.error('审核失败:', error);
+      message.error({ content: '审核失败，请重试', key: 'audit' });
+    }
+  },
+  onCancel: () => {
+    auditFormApi.resetForm();
+    auditModalApi.close();
   },
 });
 
@@ -618,10 +707,12 @@ const getAuditStatus = (status: string) => {
 };
 
 // 审核时长按钮
-const handleAudit = (row: CounselingDurationRecord, status: 'approved' | 'rejected') => {
-  console.log('审核咨询时长', row.id, status);
-  message.success('审核已通过');
-  durationGridApi.query();
+const handleAudit = (row: CounselingDurationRecord) => {
+  currentAuditRecord.value = row;
+  auditFormApi.resetForm();
+  // 设置默认审核状态为通过
+  auditFormApi.setValues({ auditStatus: 'approved' });
+  auditModalApi.open();
 };
 
 // 查看审核不通过原因
@@ -876,8 +967,6 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
       </Grid>
     </Page>
 
-    <!-- 新增/编辑弹窗已移除 -->
-
     <!-- 咨询时长查看弹窗 -->
     <Modal
       v-model:open="durationModalVisible"
@@ -924,7 +1013,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
           <template #durationActions="{ row }">
             <Space>
               <Button v-if="row.auditStatus === 'pending'" type="link" size="small"
-                     @click="handleAudit(row, 'approved')">
+                     @click="handleAudit(row)">
                 审核
               </Button>
               <Button v-if="row.auditStatus === 'rejected'" type="link" size="small"
@@ -989,5 +1078,10 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     <AddDurationModal class="w-[500px]" :z-index="9999">
       <AddDurationForm />
     </AddDurationModal>
+
+    <!-- 审核弹窗 -->
+    <AuditModal class="w-[40vw]" :z-index="9999">
+      <AuditForm />
+    </AuditModal>
   </Spin>
 </template>
