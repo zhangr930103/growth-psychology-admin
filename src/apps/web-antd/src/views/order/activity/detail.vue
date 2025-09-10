@@ -84,46 +84,46 @@ onMounted(async () => {
 <template>
   <Page auto-content-height title="详情">
     <template #extra>
-      <Button 
-        type="default" 
+      <Button
+        type="default"
         @click="handleGoBack"
       >
         返回
       </Button>
     </template>
-    
+
     <div v-if="orderDetail" class="space-y-6">
       <!-- 订单信息 -->
       <Card title="详情">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">订单编号：</span>
-            <span class="font-medium">{{ orderDetail.order_code }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">订单编号：</span>
+            <span class="font-medium flex-1">{{ orderDetail.order_code }}</span>
           </div>
-          
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">下单时间：</span>
-            <span>{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
+
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">下单时间：</span>
+            <span class="flex-1">{{ dayjs(orderDetail.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
           </div>
-          
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">课程名字：</span>
-            <span>{{ orderDetail.activity_name }}</span>
+
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">课程名字：</span>
+            <span class="flex-1">{{ orderDetail.activity_name }}</span>
           </div>
-          
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">课程时间：</span>
-            <span>{{ dayjs(orderDetail.activity_time).format('YYYY-MM-DD HH:mm') }}</span>
+
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">课程时间：</span>
+            <span class="flex-1">{{ dayjs(orderDetail.activity_time).format('YYYY-MM-DD HH:mm') }}</span>
           </div>
-          
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">活动方式：</span>
-            <span>{{ getMethodText(orderDetail.activity_method) }}</span>
+
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">活动方式：</span>
+            <span class="flex-1">{{ getMethodText(orderDetail.activity_method) }}</span>
           </div>
-          
-          <div class="flex items-center">
-            <span class="w-32 text-gray-600 dark:text-gray-300">课程地址：</span>
-            <span>{{ orderDetail.activity_address || '-' }}</span>
+
+          <div class="flex items-start">
+            <span class="w-24 text-right text-gray-600 dark:text-gray-300 mr-4 mt-1">课程地址：</span>
+            <span class="flex-1">{{ orderDetail.activity_address || '-' }}</span>
           </div>
         </div>
       </Card>
@@ -131,8 +131,8 @@ onMounted(async () => {
       <!-- 评价 -->
       <Card title="评价">
         <div class="space-y-8">
-          <div 
-            v-for="(item, index) in evaluations" 
+          <div
+            v-for="(item, index) in evaluations"
             :key="index"
             class="border-b border-gray-100 dark:border-gray-700 pb-6 last:border-b-0 last:pb-0"
           >
@@ -141,15 +141,15 @@ onMounted(async () => {
                 {{ index + 1 }}、{{ item.title }}
               </h3>
             </div>
-            
+
             <div class="mb-4">
               <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
                 问题：{{ item.question }}
               </p>
             </div>
-            
+
             <div class="flex items-center">
-              <Rate 
+              <Rate
                 :value="item.rating"
                 disabled
               />
@@ -158,7 +158,7 @@ onMounted(async () => {
         </div>
       </Card>
     </div>
-    
+
     <!-- 加载状态 -->
     <div v-else>
       <div class="flex justify-center items-center h-64">
