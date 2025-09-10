@@ -20,7 +20,7 @@ import {
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import WeekDatePicker from '#/components/date/WeekDatePicker.vue';
+import FullCalendarWeekPicker from '#/components/date/FullCalendarWeekPicker.vue';
 
 defineOptions({
   name: 'CounselorManagement',
@@ -1601,7 +1601,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
         <CounselorForm>
           <template #availableTimeSlots>
             <div class="mt-4">
-              <WeekDatePicker
+              <FullCalendarWeekPicker
                 v-model="counselorAvailableTimeSlots"
                 :current-week="new Date()"
               >
@@ -1618,7 +1618,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
                     </div>
                   </div>
                 </template>
-              </WeekDatePicker>
+              </FullCalendarWeekPicker>
             </div>
           </template>
         </CounselorForm>
