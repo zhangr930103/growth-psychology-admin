@@ -20,6 +20,7 @@ import {
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import WeekDatePicker from '#/components/date/WeekDatePicker.vue';
 
 defineOptions({
   name: 'CounselorManagement',
@@ -46,6 +47,18 @@ const uploadLoading = ref(false);
 // 咨询师表单相关状态
 const counselorModalMode = ref<'add' | 'edit'>('add');
 const currentEditCounselor = ref<CounselorData | null>(null);
+
+// 可咨询时间数据
+const counselorAvailableTimeSlots = ref<TimeSlot[]>([]);
+
+// 时间段数据结构
+interface TimeSlot {
+  day: number; // 0-6 (周日到周六)
+  startHour: number; // 0-23
+  endHour: number; // 0-23
+  startMinute?: number; // 0-59
+  endMinute?: number; // 0-59
+}
 
 // 类型定义
 interface CounselorData {
@@ -75,6 +88,7 @@ interface CounselorData {
   settlementWeight?: number; // 结算权重
   totalDuration?: number; // 总咨询时长
   otherSpecialization?: string; // 其他擅长流派
+  availableTimeSlots?: TimeSlot[]; // 可咨询时间段
 }
 
 interface SearchParams {
@@ -482,6 +496,9 @@ const handleEdit = (row: CounselorData) => {
     otherSpecialization: '',
   };
 
+  // 设置可咨询时间数据（如果有的话）
+  counselorAvailableTimeSlots.value = row.availableTimeSlots || [];
+
   // 设置表单值并打开弹窗
   counselorFormApi.setValues(formData);
   counselorModalApi.open();
@@ -862,6 +879,13 @@ const counselorFormSchema = [
       };
     },
   },
+  {
+    component: 'Slot',
+    fieldName: 'availableTimeSlots',
+    label: '可咨询时间',
+    slot: 'availableTimeSlots',
+
+  },
 ];
 
 // 创建咨询时长表单（动态模式）
@@ -889,7 +913,7 @@ const [DurationModal, durationModalApi] = useVbenModal({
         return;
       }
 
-      const formValues = await durationFormApi.getValues();
+      await durationFormApi.getValues();
 
       // 模拟API请求
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -997,6 +1021,14 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
 
       const formValues = await counselorFormApi.getValues();
 
+      // 将可咨询时间数据合并到表单数据中
+      const submitData = {
+        ...formValues,
+        availableTimeSlots: counselorAvailableTimeSlots.value,
+      };
+
+      console.log('提交的咨询师数据:', submitData);
+
       // 模拟API请求
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -1009,6 +1041,7 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
 
       // 重置表单
       counselorFormApi.resetForm();
+      counselorAvailableTimeSlots.value = [];
 
       // 刷新列表
       gridApi.query();
@@ -1024,6 +1057,7 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
     counselorFormApi.resetForm();
     counselorModalApi.close();
     currentEditCounselor.value = null;
+    counselorAvailableTimeSlots.value = [];
   },
 });
 
@@ -1034,6 +1068,7 @@ const handleCreate = () => {
 
   // 重置表单并打开弹窗
   counselorFormApi.resetForm();
+  counselorAvailableTimeSlots.value = [];
   counselorModalApi.open();
 
   // 设置弹窗标题
@@ -1561,9 +1596,32 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     </AuditModal>
 
     <!-- 咨询师弹窗 -->
-    <CounselorModal class="w-[60vw]">
+    <CounselorModal class="w-[70vw]" style="max-width: 1200px;">
       <div class="counselor-form-container">
-        <CounselorForm />
+        <CounselorForm>
+          <template #availableTimeSlots>
+            <div class="mt-4">
+              <WeekDatePicker
+                v-model="counselorAvailableTimeSlots"
+                :current-week="new Date()"
+              >
+                <template #extra="{ selectedTimeSlots }">
+                  <div v-if="selectedTimeSlots.length > 0" class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <div class="text-sm text-green-700 dark:text-green-300">
+                      <p class="mb-2 font-medium">已选择时间段：</p>
+                      <div class="space-y-1 text-xs">
+                        <div v-for="slot in selectedTimeSlots" :key="`${slot.day}-${slot.startHour}-${slot.endHour}`">
+                          {{ ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][slot.day] }}：
+                          {{ String(slot.startHour).padStart(2, '0') }}:00 - {{ String(slot.endHour).padStart(2, '0') }}:00
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </WeekDatePicker>
+            </div>
+          </template>
+        </CounselorForm>
       </div>
     </CounselorModal>
   </Spin>

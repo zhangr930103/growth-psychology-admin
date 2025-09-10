@@ -9,39 +9,30 @@ defineOptions({
   name: 'WeekDatePicker',
 });
 
+// 时间段数据结构
+interface TimeSlot {
+  day: number; // 0-6 (周日到周六)
+  startHour: number; // 0-23
+  endHour: number; // 0-23
+  startMinute?: number; // 0-59
+  endMinute?: number; // 0-59
+}
+
 interface Props {
-  /** 当前选中的日期 */
-  modelValue?: string | Date | Dayjs;
-  /** 是否显示时间轴 */
-  showTimeAxis?: boolean;
-  /** 时间轴开始时间 */
-  startHour?: number;
-  /** 时间轴结束时间 */
-  endHour?: number;
-  /** 可预约时间段数据 */
-  appointmentSlots?: Array<{
-    id: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    title?: string;
-    type?: 'available' | 'booked' | 'unavailable';
-  }>;
+  /** 选中的时间段数组 */
+  modelValue?: TimeSlot[];
+  /** 当前查看的周起始日期 */
+  currentWeek?: string | Date | Dayjs;
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void;
-  (e: 'dateChange', date: string): void;
+  (e: 'update:modelValue', value: TimeSlot[]): void;
   (e: 'weekChange', startDate: string, endDate: string): void;
-  (e: 'appointmentClick', appointment: any): void;
-  (e: 'todayClick'): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showTimeAxis: true,
-  startHour: 1,
-  endHour: 23,
-  appointmentSlots: () => [],
+  modelValue: () => [],
+  currentWeek: () => new Date(),
 });
 
 const emit = defineEmits<Emits>();
@@ -49,13 +40,16 @@ const emit = defineEmits<Emits>();
 // 设置中文
 dayjs.locale('zh-cn');
 
-// 当前选中日期
-const selectedDate = ref<Dayjs>(dayjs(props.modelValue || new Date()));
+// 选中的时间段
+const selectedTimeSlots = ref<TimeSlot[]>(props.modelValue || []);
 
-// 当前周的开始日期（周日）
-const currentWeekStart = computed(() => {
-  return selectedDate.value.startOf('week'); // dayjs的周从周日开始
-});
+// 当前查看的周起始日期（周日）
+const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('week'));
+
+// 拖拽选择状态
+const isDragging = ref(false);
+const dragStart = ref<{ day: number; hour: number } | null>(null);
+const dragEnd = ref<{ day: number; hour: number } | null>(null);
 
 // 当前周的日期数组
 const weekDates = computed(() => {
@@ -80,10 +74,10 @@ const weekRangeText = computed(() => {
   }
 });
 
-// 时间轴数组
+// 固定时间轴数组（00:00 - 23:00）
 const timeSlots = computed(() => {
   const slots = [];
-  for (let hour = props.startHour; hour <= props.endHour; hour++) {
+  for (let hour = 0; hour <= 23; hour++) {
     slots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
   return slots;
@@ -94,32 +88,20 @@ const weekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', 
 
 // 上一周
 const handlePrevWeek = () => {
-  selectedDate.value = selectedDate.value.subtract(1, 'week');
+  currentWeekStart.value = currentWeekStart.value.subtract(1, 'week');
   emitWeekChange();
 };
 
 // 下一周
 const handleNextWeek = () => {
-  selectedDate.value = selectedDate.value.add(1, 'week');
+  currentWeekStart.value = currentWeekStart.value.add(1, 'week');
   emitWeekChange();
 };
 
-// 回到今天
+// 回到本周
 const handleToday = () => {
-  selectedDate.value = dayjs();
-  const dateStr = selectedDate.value.format('YYYY-MM-DD');
-  emit('update:modelValue', dateStr);
-  emit('dateChange', dateStr);
-  emit('todayClick');
+  currentWeekStart.value = dayjs().startOf('week');
   emitWeekChange();
-};
-
-// 选择日期
-const handleDateSelect = (date: Dayjs) => {
-  selectedDate.value = date;
-  const dateStr = date.format('YYYY-MM-DD');
-  emit('update:modelValue', dateStr);
-  emit('dateChange', dateStr);
 };
 
 // 发送周变化事件
@@ -129,32 +111,151 @@ const emitWeekChange = () => {
   emit('weekChange', start, end);
 };
 
-// 获取日期对应的预约时间段
-const getDateAppointments = (date: Dayjs) => {
-  const dateStr = date.format('YYYY-MM-DD');
-  return props.appointmentSlots.filter(slot => slot.date === dateStr);
+// 检查时间格子是否被选中
+const isTimeSlotSelected = (day: number, hour: number) => {
+  return selectedTimeSlots.value.some(slot => 
+    slot.day === day && hour >= slot.startHour && hour < slot.endHour
+  );
 };
 
-// 处理预约时间段点击
-const handleAppointmentClick = (appointment: any) => {
-  emit('appointmentClick', appointment);
+// 检查时间格子是否在拖拽选择范围内
+const isTimeSlotInDragRange = (day: number, hour: number) => {
+  if (!isDragging.value || !dragStart.value || !dragEnd.value) return false;
+  
+  const minDay = Math.min(dragStart.value.day, dragEnd.value.day);
+  const maxDay = Math.max(dragStart.value.day, dragEnd.value.day);
+  const minHour = Math.min(dragStart.value.hour, dragEnd.value.hour);
+  const maxHour = Math.max(dragStart.value.hour, dragEnd.value.hour);
+  
+  return day >= minDay && day <= maxDay && hour >= minHour && hour <= maxHour;
 };
 
-// 计算时间段的位置和高度
-const getAppointmentStyle = (appointment: any) => {
-  const startHour = parseInt(appointment.startTime.split(':')[0]);
-  const startMinute = parseInt(appointment.startTime.split(':')[1]);
-  const endHour = parseInt(appointment.endTime.split(':')[0]);
-  const endMinute = parseInt(appointment.endTime.split(':')[1]);
+// 开始拖拽选择
+const handleMouseDown = (day: number, hour: number) => {
+  isDragging.value = true;
+  dragStart.value = { day, hour };
+  dragEnd.value = { day, hour };
+};
+
+// 拖拽过程中
+const handleMouseEnter = (day: number, hour: number) => {
+  if (isDragging.value && dragStart.value) {
+    dragEnd.value = { day, hour };
+  }
+};
+
+// 结束拖拽选择
+const handleMouseUp = () => {
+  if (isDragging.value && dragStart.value && dragEnd.value) {
+    const minDay = Math.min(dragStart.value.day, dragEnd.value.day);
+    const maxDay = Math.max(dragStart.value.day, dragEnd.value.day);
+    const minHour = Math.min(dragStart.value.hour, dragEnd.value.hour);
+    const maxHour = Math.max(dragStart.value.hour, dragEnd.value.hour);
+    
+    // 检查是否是取消选择（点击已选中的区域）
+    const isSelectedArea = isTimeSlotSelected(dragStart.value.day, dragStart.value.hour);
+    
+    if (isSelectedArea && dragStart.value.day === dragEnd.value.day && dragStart.value.hour === dragEnd.value.hour) {
+      // 单击已选中区域，取消选择
+      removeTimeSlot(dragStart.value.day, dragStart.value.hour);
+    } else {
+      // 添加新的时间段选择
+      for (let day = minDay; day <= maxDay; day++) {
+        addTimeSlot(day, minHour, maxHour + 1);
+      }
+    }
+  }
   
-  const startPosition = ((startHour - props.startHour) * 64) + (startMinute / 60) * 64;
-  const endPosition = ((endHour - props.startHour) * 64) + (endMinute / 60) * 64;
-  const height = endPosition - startPosition;
+  isDragging.value = false;
+  dragStart.value = null;
+  dragEnd.value = null;
+};
+
+// 添加时间段
+const addTimeSlot = (day: number, startHour: number, endHour: number) => {
+  // 移除该天该时间段的现有选择
+  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => 
+    !(slot.day === day && ((slot.startHour <= startHour && slot.endHour > startHour) || 
+      (slot.startHour < endHour && slot.endHour >= endHour) ||
+      (slot.startHour >= startHour && slot.endHour <= endHour)))
+  );
   
-  return {
-    top: `${startPosition}px`,
-    height: `${height}px`,
-  };
+  // 添加新的时间段
+  selectedTimeSlots.value.push({
+    day,
+    startHour,
+    endHour,
+    startMinute: 0,
+    endMinute: 0,
+  });
+  
+  // 合并相邻的时间段
+  mergeAdjacentTimeSlots(day);
+  
+  emit('update:modelValue', selectedTimeSlots.value);
+};
+
+// 移除时间段
+const removeTimeSlot = (day: number, hour: number) => {
+  const slotIndex = selectedTimeSlots.value.findIndex(slot => 
+    slot.day === day && hour >= slot.startHour && hour < slot.endHour
+  );
+  
+  if (slotIndex >= 0) {
+    const slot = selectedTimeSlots.value[slotIndex];
+    if (!slot) return;
+    
+    selectedTimeSlots.value.splice(slotIndex, 1);
+    
+    // 如果点击的不是时间段的边界，需要拆分时间段
+    if (hour > slot.startHour) {
+      selectedTimeSlots.value.push({
+        day,
+        startHour: slot.startHour,
+        endHour: hour,
+        startMinute: 0,
+        endMinute: 0,
+      });
+    }
+    
+    if (hour + 1 < slot.endHour) {
+      selectedTimeSlots.value.push({
+        day,
+        startHour: hour + 1,
+        endHour: slot.endHour,
+        startMinute: 0,
+        endMinute: 0,
+      });
+    }
+    
+    emit('update:modelValue', selectedTimeSlots.value);
+  }
+};
+
+// 合并相邻的时间段
+const mergeAdjacentTimeSlots = (day: number) => {
+  const daySlots = selectedTimeSlots.value
+    .filter(slot => slot.day === day)
+    .sort((a, b) => a.startHour - b.startHour);
+  
+  const merged: TimeSlot[] = [];
+  
+  for (const slot of daySlots) {
+    if (merged.length === 0) {
+      merged.push(slot);
+    } else {
+      const last = merged[merged.length - 1];
+      if (last && last.endHour === slot.startHour) {
+        last.endHour = slot.endHour;
+      } else {
+        merged.push(slot);
+      }
+    }
+  }
+  
+  // 移除该天的所有时间段，然后添加合并后的时间段
+  selectedTimeSlots.value = selectedTimeSlots.value.filter(slot => slot.day !== day);
+  selectedTimeSlots.value.push(...merged);
 };
 
 // 检查是否为今天
@@ -162,15 +263,22 @@ const isToday = (date: Dayjs) => {
   return date.isSame(dayjs(), 'day');
 };
 
-// 检查是否为选中日期
-const isSelected = (date: Dayjs) => {
-  return date.isSame(selectedDate.value, 'day');
+// 清空所有选择
+const clearAllSelections = () => {
+  selectedTimeSlots.value = [];
+  emit('update:modelValue', selectedTimeSlots.value);
 };
 
 // 监听props变化
 watch(() => props.modelValue, (newValue) => {
   if (newValue) {
-    selectedDate.value = dayjs(newValue);
+    selectedTimeSlots.value = [...newValue];
+  }
+}, { deep: true });
+
+watch(() => props.currentWeek, (newValue) => {
+  if (newValue) {
+    currentWeekStart.value = dayjs(newValue).startOf('week');
   }
 });
 
@@ -179,13 +287,13 @@ emitWeekChange();
 </script>
 
 <template>
-  <div class="week-date-picker">
+  <div class="week-date-picker" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
     <!-- 头部导航 -->
-    <div class="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm">
       <div class="flex items-center space-x-4">
-        <!-- 今天按钮 -->
+        <!-- 本周按钮 -->
         <Button @click="handleToday">
-          今天
+          本周
         </Button>
         
         <!-- 左右导航 -->
@@ -199,39 +307,40 @@ emitWeekChange();
         </div>
         
         <!-- 日期范围 -->
-        <div class="text-lg font-medium text-gray-900 dark:text-gray-100">
+        <div class="text-lg font-medium text-blue-900 dark:text-blue-100">
           {{ weekRangeText }}
         </div>
       </div>
+      
+      <!-- 清空选择按钮 -->
+      <Button @click="clearAllSelections" size="small">
+        清空选择
+      </Button>
     </div>
     
-    <!-- 周视图日历 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <!-- 周视图时间选择器 -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700">
       <!-- 日期头部 -->
-      <div class="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
+      <div class="grid grid-cols-8 border-b border-blue-200 dark:border-blue-700">
         <!-- 时间轴列头 -->
-        <div class="h-16 border-r border-gray-200 dark:border-gray-700"></div>
+        <div class="h-16 border-r border-blue-200 dark:border-blue-700 flex items-center justify-center bg-blue-100 dark:bg-blue-800/30">
+          <span class="text-sm font-medium text-blue-700 dark:text-blue-300">时间</span>
+        </div>
         
         <!-- 日期列头 -->
         <div 
           v-for="(date, index) in weekDates" 
           :key="date.format('YYYY-MM-DD')"
-          class="h-16 border-r border-gray-200 dark:border-gray-700 last:border-r-0 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          :class="{
-            'bg-blue-50 dark:bg-blue-900/20': isSelected(date),
-            'bg-orange-50 dark:bg-orange-900/20': isToday(date) && !isSelected(date)
-          }"
-          @click="handleDateSelect(date)"
+          class="h-16 border-r border-blue-200 dark:border-blue-700 last:border-r-0 flex flex-col items-center justify-center bg-blue-100 dark:bg-blue-800/30"
         >
-          <div class="text-xs text-gray-500 dark:text-gray-400">
+          <div class="text-xs text-blue-600 dark:text-blue-400">
             {{ weekLabels[index] }}
           </div>
           <div 
             class="text-lg font-medium"
             :class="{
-              'text-blue-600 dark:text-blue-400': isSelected(date),
-              'text-orange-600 dark:text-orange-400': isToday(date) && !isSelected(date),
-              'text-gray-900 dark:text-gray-100': !isSelected(date) && !isToday(date)
+              'text-orange-600 dark:text-orange-400': isToday(date),
+              'text-blue-700 dark:text-blue-300': !isToday(date)
             }"
           >
             {{ date.date() }}
@@ -239,14 +348,14 @@ emitWeekChange();
         </div>
       </div>
       
-      <!-- 时间轴和日历内容 -->
-      <div v-if="showTimeAxis" class="grid grid-cols-8">
+      <!-- 时间轴和选择内容 -->
+      <div class="grid grid-cols-8 select-none">
         <!-- 时间轴 -->
-        <div class="border-r border-gray-200 dark:border-gray-700">
+        <div class="border-r border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-800/30">
           <div 
             v-for="time in timeSlots" 
             :key="time"
-            class="h-16 border-b border-gray-200 dark:border-gray-700 last:border-b-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400"
+            class="h-8 border-b border-blue-200 dark:border-blue-700 last:border-b-0 flex items-center justify-center text-xs text-blue-700 dark:text-blue-300"
           >
             {{ time }}
           </div>
@@ -254,39 +363,30 @@ emitWeekChange();
         
         <!-- 日期列 -->
         <div 
-          v-for="date in weekDates" 
+          v-for="(date, dayIndex) in weekDates" 
           :key="date.format('YYYY-MM-DD')"
-          class="border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative"
+          class="border-r border-blue-200 dark:border-blue-700 last:border-r-0"
         >
-          <!-- 时间网格 -->
+          <!-- 时间格子 -->
           <div 
-            v-for="time in timeSlots" 
+            v-for="(time, hour) in timeSlots" 
             :key="`${date.format('YYYY-MM-DD')}-${time}`"
-            class="h-16 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-          </div>
-          
-          <!-- 预约时间段 -->
-          <div 
-            v-for="appointment in getDateAppointments(date)" 
-            :key="appointment.id"
-            class="absolute left-1 right-1 rounded cursor-pointer transition-all hover:shadow-md"
+            class="h-8 border-b border-blue-200 dark:border-blue-700 last:border-b-0 cursor-pointer transition-all duration-150"
             :class="{
-              'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200': appointment.type === 'available',
-              'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 border border-green-200': appointment.type === 'booked',
-              'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-200': appointment.type === 'unavailable'
+              'bg-blue-300 dark:bg-blue-600 hover:bg-blue-400 dark:hover:bg-blue-500': isTimeSlotSelected(dayIndex, hour),
+              'bg-blue-200 dark:bg-blue-700/50': isTimeSlotInDragRange(dayIndex, hour) && !isTimeSlotSelected(dayIndex, hour),
+              'hover:bg-blue-100 dark:hover:bg-blue-800/50': !isTimeSlotSelected(dayIndex, hour) && !isTimeSlotInDragRange(dayIndex, hour)
             }"
-            :style="getAppointmentStyle(appointment)"
-            @click="handleAppointmentClick(appointment)"
+            @mousedown.prevent="handleMouseDown(dayIndex, hour)"
+            @mouseenter="handleMouseEnter(dayIndex, hour)"
           >
-            <div class="p-2 text-xs">
-              <div class="font-medium">{{ appointment.title || '可预约时间' }}</div>
-              <div class="text-xs opacity-75">{{ appointment.startTime }} - {{ appointment.endTime }}</div>
-            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 插槽用于自定义内容 -->
+    <slot name="extra" :selectedTimeSlots="selectedTimeSlots" :clearAllSelections="clearAllSelections"></slot>
   </div>
 </template>
 
@@ -298,5 +398,18 @@ emitWeekChange();
 /* 确保网格布局正确 */
 .grid-cols-8 {
   grid-template-columns: 80px repeat(7, 1fr);
+}
+
+/* 禁用文本选择，防止拖拽时选中文本 */
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 时间格子的最小高度 */
+.h-8 {
+  min-height: 2rem;
 }
 </style>
