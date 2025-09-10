@@ -3,7 +3,11 @@ import { ref, computed, watch } from 'vue';
 import { Button } from 'ant-design-vue';
 import { ChevronLeft, ChevronRight } from '@vben/icons';
 import dayjs, { type Dayjs } from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import 'dayjs/locale/zh-cn';
+
+// 扩展dayjs插件
+dayjs.extend(isoWeek);
 
 defineOptions({
   name: 'WeekDatePicker',
@@ -44,7 +48,7 @@ dayjs.locale('zh-cn');
 const selectedTimeSlots = ref<TimeSlot[]>(props.modelValue || []);
 
 // 当前查看的周起始日期（周一）
-const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('week').add(1, 'day'));
+const currentWeekStart = ref<Dayjs>(dayjs(props.currentWeek).startOf('isoWeek'));
 
 // 拖拽选择状态
 const isDragging = ref(false);
@@ -120,7 +124,7 @@ const handleNextWeek = () => {
 
 // 回到本周
 const handleToday = () => {
-  currentWeekStart.value = dayjs().startOf('week').add(1, 'day');
+  currentWeekStart.value = dayjs().startOf('isoWeek');
   emitWeekChange();
 };
 
@@ -291,7 +295,7 @@ watch(() => props.modelValue, (newValue) => {
 
 watch(() => props.currentWeek, (newValue) => {
   if (newValue) {
-    currentWeekStart.value = dayjs(newValue).startOf('week').add(1, 'day');
+    currentWeekStart.value = dayjs(newValue).startOf('isoWeek');
   }
 });
 
