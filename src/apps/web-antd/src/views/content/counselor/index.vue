@@ -443,24 +443,40 @@ const handleEdit = (row: CounselorData) => {
     expertiseAreas: [row.expertise ? 'emotion_stress' : 'emotion_stress'], // 从现有数据映射
     consultingStatus: row.isOnline ? 'online' : 'offline',
     durationProof: [], // 时长证明，这里简化处理
-    location: 
-      row.location === '北京' ? 'beijing' :
-      row.location === '上海' ? 'shanghai' :
-      row.location === '广州' ? 'guangzhou' :
-      row.location === '深圳' ? 'shenzhen' :
-      row.location === '杭州' ? 'hangzhou' :
-      row.location === '成都' ? 'chengdu' :
-      row.location === '武汉' ? 'wuhan' :
-      row.location === '西安' ? 'xian' :
-      row.location === '南京' ? 'nanjing' :
-      row.location === '重庆' ? 'chongqing' :
-      row.location === '天津' ? 'tianjin' :
-      row.location === '苏州' ? 'suzhou' :
-      row.location === '长沙' ? 'changsha' :
-      row.location === '青岛' ? 'qingdao' :
-      row.location === '大连' ? 'dalian' :
-      row.location === '厦门' ? 'xiamen' :
-      'other', // 默认为其他
+    location:
+      row.location === '北京'
+        ? 'beijing'
+        : row.location === '上海'
+          ? 'shanghai'
+          : row.location === '广州'
+            ? 'guangzhou'
+            : row.location === '深圳'
+              ? 'shenzhen'
+              : row.location === '杭州'
+                ? 'hangzhou'
+                : row.location === '成都'
+                  ? 'chengdu'
+                  : row.location === '武汉'
+                    ? 'wuhan'
+                    : row.location === '西安'
+                      ? 'xian'
+                      : row.location === '南京'
+                        ? 'nanjing'
+                        : row.location === '重庆'
+                          ? 'chongqing'
+                          : row.location === '天津'
+                            ? 'tianjin'
+                            : row.location === '苏州'
+                              ? 'suzhou'
+                              : row.location === '长沙'
+                                ? 'changsha'
+                                : row.location === '青岛'
+                                  ? 'qingdao'
+                                  : row.location === '大连'
+                                    ? 'dalian'
+                                    : row.location === '厦门'
+                                      ? 'xiamen'
+                                      : 'other', // 默认为其他
     settlementWeight: row.settlementWeight || 0, // 结算权重
     totalDuration: row.totalDuration || row.counselingDuration || 0, // 总咨询时长
     otherSpecialization: '',
@@ -1545,7 +1561,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     </AuditModal>
 
     <!-- 咨询师弹窗 -->
-    <CounselorModal class="w-[60vw]" :z-index="9999">
+    <CounselorModal class="w-[60vw]">
       <div class="counselor-form-container">
         <CounselorForm />
       </div>
