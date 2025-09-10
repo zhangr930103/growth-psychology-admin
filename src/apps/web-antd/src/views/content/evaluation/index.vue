@@ -21,6 +21,22 @@ const modalVisible = ref(false);
 const modalLoading = ref(false);
 const editingId = ref<number | null>(null);
 
+// 数据查看弹窗相关状态
+const dataModalVisible = ref(false);
+const dataModalLoading = ref(false);
+const currentEvaluationId = ref<number | null>(null);
+const currentEvaluationName = ref('');
+
+// 评价详情弹窗相关状态
+const detailModalVisible = ref(false);
+const currentDetailData = ref<EvaluationDataRecord | null>(null);
+const currentEvaluationDimensions = ref<Array<{
+  id: number;
+  title: string;
+  question: string;
+  score: number;
+}>>([]);
+
 // 滚动容器 ref
 const modulesListRef = ref<HTMLElement>();
 
@@ -78,6 +94,33 @@ interface SearchParams {
 
 interface ApiResponse {
   list: EvaluationData[];
+  total: number;
+}
+
+// 评价数据相关类型定义
+interface EvaluationDataRecord {
+  id: number;
+  consultantName: string;
+  evaluationTime: number;
+  evaluationScore: number;
+  comment?: string;
+  evaluatorName: string;
+  evaluatorId: number;
+  evaluationId: number;
+}
+
+interface EvaluationDataSearchParams {
+  page?: number;
+  size?: number;
+  consultantName?: string;
+  evaluatorName?: string;
+  evaluationStartTime?: number;
+  evaluationEndTime?: number;
+  evaluationId: number;
+}
+
+interface EvaluationDataApiResponse {
+  list: EvaluationDataRecord[];
   total: number;
 }
 
@@ -259,10 +302,208 @@ const getEvaluationList = async (params: SearchParams): Promise<ApiResponse> => 
   };
 };
 
+// 模拟评价数据API
+const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const mockDataList: EvaluationDataRecord[] = [
+    {
+      id: 1,
+      consultantName: '王心理咨询师',
+      evaluationTime: dayjs().subtract(2, 'hour').unix(),
+      evaluationScore: 95,
+      comment: '非常专业，给了我很多启发和帮助',
+      evaluatorName: '李女士',
+      evaluatorId: 101,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 2,
+      consultantName: '张心理医生',
+      evaluationTime: dayjs().subtract(1, 'day').unix(),
+      evaluationScore: 88,
+      comment: '态度很好，建议很实用',
+      evaluatorName: '陈先生',
+      evaluatorId: 102,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 3,
+      consultantName: '李资深咨询师',
+      evaluationTime: dayjs().subtract(2, 'day').unix(),
+      evaluationScore: 92,
+      comment: '专业水准很高，解决了我的困惑',
+      evaluatorName: '王小姐',
+      evaluatorId: 103,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 4,
+      consultantName: '赵心理专家',
+      evaluationTime: dayjs().subtract(3, 'day').unix(),
+      evaluationScore: 90,
+      comment: '很有耐心，方法很有效',
+      evaluatorName: '刘先生',
+      evaluatorId: 104,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 5,
+      consultantName: '王心理咨询师',
+      evaluationTime: dayjs().subtract(4, 'day').unix(),
+      evaluationScore: 96,
+      comment: '非常满意，解决了长期困扰的问题',
+      evaluatorName: '周女士',
+      evaluatorId: 105,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 6,
+      consultantName: '孙资深心理师',
+      evaluationTime: dayjs().subtract(5, 'day').unix(),
+      evaluationScore: 85,
+      comment: '专业性强，建议中肯',
+      evaluatorName: '吴先生',
+      evaluatorId: 106,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 7,
+      consultantName: '李资深咨询师',
+      evaluationTime: dayjs().subtract(6, 'day').unix(),
+      evaluationScore: 93,
+      comment: '方法很实用，效果明显',
+      evaluatorName: '徐小姐',
+      evaluatorId: 107,
+      evaluationId: params.evaluationId,
+    },
+    {
+      id: 8,
+      consultantName: '陈心理医生',
+      evaluationTime: dayjs().subtract(7, 'day').unix(),
+      evaluationScore: 89,
+      comment: '态度温和，专业度高',
+      evaluatorName: '马先生',
+      evaluatorId: 108,
+      evaluationId: params.evaluationId,
+    },
+  ];
+
+  // 模拟搜索过滤
+  let filteredData = mockDataList;
+
+  if (params.consultantName) {
+    filteredData = filteredData.filter((item) =>
+      item.consultantName.includes(params.consultantName!),
+    );
+  }
+
+  if (params.evaluatorName) {
+    filteredData = filteredData.filter((item) =>
+      item.evaluatorName.includes(params.evaluatorName!),
+    );
+  }
+
+  if (params.evaluationStartTime && params.evaluationEndTime) {
+    filteredData = filteredData.filter(
+      (item) =>
+        item.evaluationTime >= params.evaluationStartTime! &&
+        item.evaluationTime <= params.evaluationEndTime!,
+    );
+  }
+
+  // 模拟分页
+  const { page = 1, size = 10 } = params;
+  const total = filteredData.length;
+  const start = (page - 1) * size;
+  const end = start + size;
+  const list = filteredData.slice(start, end);
+
+  return {
+    list,
+    total,
+  };
+};
+
 // 操作函数
 const handleViewData = (row: EvaluationData) => {
-  console.log('查看数据:', row);
-  message.info('查看评价数据功能正在开发中...');
+  currentEvaluationId.value = row.id;
+  currentEvaluationName.value = row.evaluationName;
+  dataModalVisible.value = true;
+  dataModalLoading.value = true;
+
+  // 延迟执行查询，确保弹窗打开后再加载数据
+  setTimeout(() => {
+    dataGridApi.query();
+    // 模拟加载完成
+    setTimeout(() => {
+      dataModalLoading.value = false;
+    }, 500);
+  }, 100);
+};
+
+// 获取评价维度数据
+const getEvaluationDimensions = (recordId: number) => {
+  const dimensionsData = {
+    1: [5, 5, 5, 5], // 优秀评价
+    2: [4, 4, 5, 4], // 良好评价
+    3: [5, 4, 5, 5], // 很好评价
+    4: [4, 5, 4, 5], // 良好评价
+    5: [5, 5, 5, 5], // 优秀评价
+    6: [4, 4, 4, 4], // 一般评价
+    7: [5, 4, 5, 4], // 良好评价
+    8: [4, 5, 4, 5], // 良好评价
+  };
+
+  const scores = dimensionsData[recordId as keyof typeof dimensionsData] || [4, 4, 4, 4];
+
+  return [
+    {
+      id: 1,
+      title: '信任与连接',
+      question: '我认为我的咨询师是值得信赖的，我能在一个安全、不受评判的氛围中坦诚地表达自己的想法和感受；',
+      score: scores[0] || 4,
+    },
+    {
+      id: 2,
+      title: '专业与目标',
+      question: '咨询师能清晰地理解我的核心问题，并和我一起制定了明确、可行的咨询目标和计划；',
+      score: scores[1] || 4,
+    },
+    {
+      id: 3,
+      title: '赋能与效果',
+      question: '通过咨询，我获得了新的视角、知识或技巧，这帮助我更好地应对当前面临的挑战；',
+      score: scores[2] || 4,
+    },
+    {
+      id: 4,
+      title: '倾听与沟通',
+      question: '我的咨询师能够积极、专注地倾听，并能用易于理解的方式与我沟通。',
+      score: scores[3] || 4,
+    },
+  ];
+};
+
+// 查看评价详情
+const handleViewDetail = (row: EvaluationDataRecord) => {
+  currentDetailData.value = row;
+  currentEvaluationDimensions.value = getEvaluationDimensions(row.id);
+  detailModalVisible.value = true;
+};
+
+// 关闭评价详情弹窗
+const closeDetailModal = () => {
+  detailModalVisible.value = false;
+  currentDetailData.value = null;
+  currentEvaluationDimensions.value = [];
+};
+
+// 关闭数据查看弹窗
+const closeDataModal = () => {
+  dataModalVisible.value = false;
+  currentEvaluationId.value = null;
+  currentEvaluationName.value = '';
 };
 
 const handlePublish = (row: EvaluationData) => {
@@ -554,6 +795,125 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions,
   gridOptions,
 });
+
+// 数据查看弹窗搜索表单配置
+const dataFormOptions: VbenFormProps = {
+  collapsed: false,
+  commonConfig: {
+    labelWidth: 100,
+  },
+  fieldMappingTime: [['evaluationRangePicker', ['evaluationStartTime', 'evaluationEndTime']]],
+  schema: [
+    {
+      component: 'Input',
+      fieldName: 'consultantName',
+      label: '咨询师',
+      componentProps: {
+        placeholder: '请输入咨询师姓名',
+      },
+    },
+    {
+      component: 'Input',
+      fieldName: 'evaluatorName',
+      label: '评价人',
+      componentProps: {
+        placeholder: '请输入评价人姓名',
+      },
+    },
+    {
+      component: 'RangePicker',
+      defaultValue: undefined,
+      fieldName: 'evaluationRangePicker',
+      label: '评价时间',
+      componentProps: {
+        placeholder: ['开始日期', '结束日期'],
+      },
+    },
+  ],
+  showCollapseButton: false,
+  submitOnChange: false,
+  submitOnEnter: true,
+};
+
+// 数据查看弹窗表格配置
+const dataGridOptions: VxeTableGridOptions = {
+  columns: [
+    { title: '序号', type: 'seq' },
+    {
+      field: 'consultantName',
+      title: '咨询师',
+      showOverflow: 'tooltip',
+    },
+    {
+      field: 'evaluatorName',
+      title: '评价人',
+      showOverflow: 'tooltip',
+    },
+    {
+      field: 'evaluationTime',
+      title: '评价时间',
+      slots: { default: 'dataEvaluationTime' },
+    },
+    {
+      field: 'evaluationScore',
+      title: '评价分数',
+      slots: { default: 'dataEvaluationScore' },
+    },
+    {
+      field: 'comment',
+      title: '评价内容',
+      showOverflow: 'tooltip',
+    },
+    {
+      field: 'actions',
+      title: '操作',
+      slots: { default: 'dataActions' },
+    },
+  ],
+  height: '60vh',
+  keepSource: true,
+  autoResize: true,
+  pagerConfig: {},
+  proxyConfig: {
+    response: {
+      result: 'list',
+      total: 'total',
+      list: 'list',
+    },
+    ajax: {
+      query: async ({ page }, formValues) => {
+        if (!currentEvaluationId.value) return { list: [], total: 0 };
+
+        const result = await getEvaluationDataList({
+          page: page.currentPage,
+          size: page.pageSize,
+          evaluationId: currentEvaluationId.value,
+          consultantName: formValues.consultantName,
+          evaluatorName: formValues.evaluatorName,
+          // 处理时间范围搜索
+          evaluationStartTime: formValues.evaluationStartTime
+            ? (Date.parse(formValues.evaluationStartTime) - 28800000) / 1000
+            : undefined,
+          evaluationEndTime: formValues.evaluationEndTime
+            ? (Date.parse(formValues.evaluationEndTime) - 28800000) / 1000 + 86399
+            : undefined,
+        });
+        return result;
+      },
+    },
+  },
+  toolbarConfig: {
+    custom: true,
+    refresh: true,
+    search: true,
+    zoom: true,
+  },
+};
+
+const [DataGrid, dataGridApi] = useVbenVxeGrid({
+  formOptions: dataFormOptions,
+  gridOptions: dataGridOptions,
+});
 </script>
 
 <template>
@@ -733,6 +1093,86 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </Form.Item>
     </Form>
   </Modal>
+
+  <!-- 数据查看弹窗 -->
+  <Modal
+    v-model:open="dataModalVisible"
+    :title="`${currentEvaluationName} - 评价数据`"
+    :footer="null"
+    width="80vw"
+    @cancel="closeDataModal"
+  >
+      <div style="padding: 20px 0; min-height: 65vh;">
+        <DataGrid>
+        <template #dataEvaluationTime="{ row }">
+          <span>
+            {{ dayjs(row.evaluationTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+          </span>
+        </template>
+
+        <template #dataEvaluationScore="{ row }">
+          <span
+            :class="[
+              'font-semibold',
+              row.evaluationScore >= 90 ? 'text-green-600' :
+              row.evaluationScore >= 80 ? 'text-blue-600' :
+              row.evaluationScore >= 70 ? 'text-orange-600' : 'text-red-600'
+            ]"
+          >
+            {{ row.evaluationScore }}分
+          </span>
+        </template>
+
+        <template #dataActions="{ row }">
+          <Button
+            type="link"
+            size="small"
+            @click="handleViewDetail(row)"
+          >
+            详情
+          </Button>
+        </template>
+        </DataGrid>
+      </div>
+  </Modal>
+
+  <!-- 评价详情弹窗 -->
+  <Modal
+    v-model:open="detailModalVisible"
+    title="评价详情"
+    :footer="null"
+    width="60vw"
+    @cancel="closeDetailModal"
+  >
+    <div class="h-[75vh] overflow-y-auto md:py-5 py-2.5 leading-relaxed bg-transparent dark:text-gray-300">
+      <div class="mb-5">
+        <div
+          v-for="(dimension, index) in currentEvaluationDimensions"
+          :key="dimension.id"
+          class="border-2 border-blue-500 rounded-lg md:p-5 p-4 mb-5 bg-white dark:bg-gray-800"
+        >
+          <div class="text-blue-600 dark:text-blue-400 font-bold text-base mb-4">
+            {{ index + 1 }}、{{ dimension.title }}
+          </div>
+
+          <div class="mb-5 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+            <span class="font-medium dark:text-gray-200">问题：</span>{{ dimension.question }}
+          </div>
+
+          <div class="flex justify-center my-5">
+            <span
+              v-for="star in 5"
+              :key="star"
+              class="md:text-2xl text-xl mx-0.5 transition-colors duration-200"
+              :class="star <= dimension.score ? 'text-yellow-400' : 'text-gray-300'"
+            >
+              ★
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Modal>
   </Spin>
 
 </template>
@@ -847,17 +1287,5 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
 .module-actions .ant-btn {
   min-width: 60px;
-}
-
-@media (max-width: 768px) {
-  .module-content {
-    grid-template-columns: 1fr;
-  }
-
-  .module-actions {
-    position: static;
-    margin-top: 16px;
-    justify-content: flex-end;
-  }
 }
 </style>
