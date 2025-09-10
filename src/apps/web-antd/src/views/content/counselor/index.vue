@@ -28,8 +28,6 @@ defineOptions({
 // 全屏loading状态
 const spinning = ref(false);
 
-// 移除了弹窗相关状态
-
 // 咨询时长数据查看弹窗相关状态
 const durationModalVisible = ref(false);
 const currentCounselorId = ref<number | null>(null);
@@ -41,13 +39,13 @@ const durationModalMode = ref<'add' | 'view'>('add');
 // 审核弹窗相关状态
 const currentAuditRecord = ref<CounselingDurationRecord | null>(null);
 
-// 移除未使用的状态变量
-
 // Excel导入相关状态
 const importModalVisible = ref(false);
 const uploadLoading = ref(false);
 
-// 移除了表单相关状态
+// 咨询师表单相关状态
+const counselorModalMode = ref<'add' | 'edit'>('add');
+const currentEditCounselor = ref<CounselorData | null>(null);
 
 // 类型定义
 interface CounselorData {
@@ -67,6 +65,13 @@ interface CounselorData {
   createTime: number;
   updateTime?: number;
   status: 'enabled' | 'disabled';
+  // 新增字段
+  consultingPrice?: number; // 咨询价格设置
+  consultingMethodType?: string; // 咨询方式类型
+  specializations?: string[]; // 擅长流派数组
+  expertiseAreas?: string[]; // 擅长领域数组
+  consultingStatus?: string; // 咨询状态
+  otherSpecialization?: string; // 其他擅长流派
 }
 
 interface SearchParams {
@@ -371,8 +376,13 @@ const closeDurationModal = () => {
   currentCounselorName.value = '';
 };
 
+// 咨询时长弹窗确认按钮处理
+const handleDurationModalConfirm = () => {
+  message.success('操作成功');
+  closeDurationModal();
+};
+
 const handleToggleStatus = (row: CounselorData) => {
-  console.log('切换状态:', row);
   const action = row.status === 'enabled' ? '停用' : '启用';
 
   // 开启全屏loading
@@ -391,11 +401,7 @@ const handleToggleStatus = (row: CounselorData) => {
   }, 1000);
 };
 
-// 已在下方重新定义handleEdit
-
-const handleDelete = (row: CounselorData) => {
-  console.log('删除咨询师:', row);
-
+const handleDelete = () => {
   // 开启全屏loading
   spinning.value = true;
 
@@ -412,10 +418,38 @@ const handleDelete = (row: CounselorData) => {
   }, 1000);
 };
 
-// 弹窗操作函数（已简化）
 const handleEdit = (row: CounselorData) => {
-  console.log('编辑咨询师', row.id);
-  message.info('编辑功能已禁用');
+  counselorModalMode.value = 'edit';
+  currentEditCounselor.value = row;
+
+  // 准备表单数据
+  const formData = {
+    school: row.school,
+    major: row.major,
+    personalIntro: row.personalIntro,
+    avatar: [], // 头像需要从现有数据中获取，这里简化处理
+    credentials: [], // 学信网认证信息需要从现有数据中获取，这里简化处理
+    consultingPrice: row.settlementPrice || '',
+    consultingMethod:
+      row.counselingMethod === '线上'
+        ? 'video'
+        : row.counselingMethod === '线下'
+          ? 'face_to_face'
+          : 'video',
+    specializations: [row.specialization || 'cbt'], // 从现有数据映射
+    expertiseAreas: [row.expertise ? 'emotion_stress' : 'emotion_stress'], // 从现有数据映射
+    consultingStatus: row.isOnline ? 'online' : 'offline',
+    otherSpecialization: '',
+  };
+
+  // 设置表单值并打开弹窗
+  counselorFormApi.setValues(formData);
+  counselorModalApi.open();
+
+  // 设置弹窗标题
+  counselorModalApi.setState({
+    title: '编辑咨询师',
+  });
 };
 
 // 咨询时长表单 Schema 配置（动态配置）
@@ -463,7 +497,7 @@ const getDurationFormSchema = (isReadonly = false) => [
     },
     renderComponentContent: () => {
       return {
-        default: () => isReadonly ? '查看图片' : '上传图片',
+        default: () => (isReadonly ? '查看图片' : '上传图片'),
       };
     },
   },
@@ -499,6 +533,200 @@ const auditFormSchema = [
   },
 ];
 
+// 咨询师表单 Schema 配置
+const counselorFormSchema = [
+  {
+    component: 'Upload',
+    fieldName: 'avatar',
+    label: '头像',
+    componentProps: {
+      customRequest: upload_file,
+      maxCount: 1,
+      multiple: false,
+      showUploadList: true,
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        const validExtensions = ['jpg', 'png', 'jpeg'];
+        const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+        const isValidType = validExtensions.includes(fileExtension || '');
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        if (!isValidType) {
+          message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传照片',
+      };
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'school',
+    label: '学校',
+    rules: z.string().min(1, '请输入学校'),
+    componentProps: {
+      placeholder: '请输入',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'major',
+    label: '专业',
+    rules: z.string().min(1, '请输入专业'),
+    componentProps: {
+      placeholder: '请输入',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'Upload',
+    fieldName: 'credentials',
+    label: '上传学信网认证',
+    componentProps: {
+      customRequest: upload_file,
+      maxCount: 5,
+      multiple: true,
+      showUploadList: true,
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传学信网',
+      };
+    },
+  },
+  {
+    component: 'Textarea',
+    fieldName: 'personalIntro',
+    label: '个人简介',
+    rules: z
+      .string()
+      .min(1, '请输入个人简介')
+      .max(200, '个人简介不能超过200个字'),
+    componentProps: {
+      placeholder: '请您填写您的个人简介（不超过200个字）',
+      rows: 4,
+      maxlength: 200,
+      showCount: true,
+      style: {
+        width: '100%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'InputNumber',
+    fieldName: 'consultingPrice',
+    label: '咨询价格设置',
+    rules: z.number().min(1, '请输入咨询价格'),
+    componentProps: {
+      placeholder: '请输入咨询价格',
+      min: 1,
+      addonAfter: '￥',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'RadioGroup',
+    fieldName: 'consultingMethod',
+    label: '咨询方式',
+    rules: z.string().min(1, '请选择咨询方式'),
+    componentProps: {
+      options: [
+        { label: '视频', value: 'video' },
+        { label: '语音', value: 'voice' },
+        { label: '面对面', value: 'face_to_face' },
+      ],
+    },
+  },
+  {
+    component: 'CheckboxGroup',
+    fieldName: 'specializations',
+    label: '擅长流派（最多四个）',
+    rules: z.array(z.string()).min(1, '请选择擅长流派').max(4, '最多选择四个'),
+    componentProps: {
+      options: [
+        { label: '认知行为疗法(CBT)', value: 'cbt' },
+        { label: '后现代疗法', value: 'postmodern' },
+        { label: '精神分析/动力学', value: 'psychoanalysis' },
+        { label: '人本存在疗法', value: 'humanistic' },
+        { label: '家庭治疗', value: 'family_therapy' },
+        { label: '其他', value: 'other' },
+      ],
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'otherSpecialization',
+    label: '',
+    dependencies: {
+      triggerFields: ['specializations'],
+      show: (values: any) => values.specializations?.includes('other'),
+    },
+    componentProps: {
+      placeholder: '请输入',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'CheckboxGroup',
+    fieldName: 'expertiseAreas',
+    label: '擅长领域（最多四个）',
+    rules: z.array(z.string()).min(1, '请选择擅长领域').max(4, '最多选择四个'),
+    componentProps: {
+      options: [
+        { label: '情绪与压力困扰', value: 'emotion_stress' },
+        { label: '人际与亲密关系', value: 'relationship' },
+        { label: '生涯规划', value: 'career_planning' },
+        { label: '自我成长与探索', value: 'self_growth' },
+        { label: '家庭关系（家庭咨询）', value: 'family_relations' },
+      ],
+    },
+  },
+  {
+    component: 'RadioGroup',
+    fieldName: 'consultingStatus',
+    label: '咨询状态',
+    rules: z.string().min(1, '请选择咨询状态'),
+    componentProps: {
+      options: [
+        { label: '下线', value: 'offline' },
+        { label: '上线', value: 'online' },
+      ],
+      defaultValue: 'offline',
+    },
+  },
+];
+
 // 创建咨询时长表单（动态模式）
 const [DurationForm, durationFormApi] = useVbenForm({
   schema: getDurationFormSchema(false), // 默认为编辑模式
@@ -527,16 +755,7 @@ const [DurationModal, durationModalApi] = useVbenModal({
       const formValues = await durationFormApi.getValues();
 
       // 模拟API请求
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 获取上传凭证URL
-      const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
-
-      console.log('新增咨询时长:', {
-        counselorId: currentCounselorId.value,
-        duration: formValues.duration,
-        certificateUrl,
-      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       message.success('新增咨询时长成功');
 
@@ -588,15 +807,10 @@ const [AuditModal, auditModalApi] = useVbenModal({
       const formValues = await auditFormApi.getValues();
 
       // 模拟API请求
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      console.log('审核咨询时长:', {
-        recordId: currentAuditRecord.value?.id,
-        auditStatus: formValues.auditStatus,
-        auditComment: formValues.auditComment,
-      });
-
-      const statusText = formValues.auditStatus === 'approved' ? '审核通过' : '审核不通过';
+      const statusText =
+        formValues.auditStatus === 'approved' ? '审核通过' : '审核不通过';
       message.success(`${statusText}成功`);
 
       // 关闭弹窗
@@ -621,10 +835,74 @@ const [AuditModal, auditModalApi] = useVbenModal({
   },
 });
 
+// 创建咨询师表单
+const [CounselorForm, counselorFormApi] = useVbenForm({
+  schema: counselorFormSchema,
+  showDefaultActions: false,
+  commonConfig: {
+    labelWidth: 180,
+  },
+});
+
+// 创建咨询师弹窗
+const [CounselorModal, counselorModalApi] = useVbenModal({
+  title: '新增咨询师',
+  onConfirm: async () => {
+    try {
+      // 开启loading
+      counselorModalApi.setState({ loading: true });
+
+      const validationResult = await counselorFormApi.validate();
+      if (!validationResult.valid) {
+        counselorModalApi.setState({ loading: false });
+        return;
+      }
+
+      const formValues = await counselorFormApi.getValues();
+
+      // 模拟API请求
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const actionText = counselorModalMode.value === 'add' ? '新增' : '编辑';
+
+      message.success(`${actionText}咨询师成功`);
+
+      // 关闭弹窗
+      counselorModalApi.close();
+
+      // 重置表单
+      counselorFormApi.resetForm();
+
+      // 刷新列表
+      gridApi.query();
+    } catch (error) {
+      console.error('提交失败:', error);
+      message.error({ content: '提交失败，请重试', key: 'counselor_submit' });
+    } finally {
+      // 关闭loading
+      counselorModalApi.setState({ loading: false });
+    }
+  },
+  onCancel: () => {
+    counselorFormApi.resetForm();
+    counselorModalApi.close();
+    currentEditCounselor.value = null;
+  },
+});
+
 // 新增咨询师按钮点击事件
 const handleCreate = () => {
-  console.log('新增咨询师');
-  message.info('新增功能已禁用');
+  counselorModalMode.value = 'add';
+  currentEditCounselor.value = null;
+
+  // 重置表单并打开弹窗
+  counselorFormApi.resetForm();
+  counselorModalApi.open();
+
+  // 设置弹窗标题
+  counselorModalApi.setState({
+    title: '新增咨询师',
+  });
 };
 
 // 新增咨询时长按钮点击事件
@@ -648,11 +926,9 @@ const handleAddDuration = () => {
   durationModalApi.setState({
     title: '新增咨询时长',
     showConfirmButton: true,
-    cancelText: '取消'
+    cancelText: '取消',
   });
 };
-
-// 移除重复定义
 
 // Excel导入相关函数
 const handleExcelImport = () => {
@@ -680,8 +956,8 @@ const customUpload = async (options: any) => {
   }
 
   // 验证文件大小
-  const isLt5M = file.size / 1024 / 1024 < 10;
-  if (!isLt5M) {
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
     message.error('文件大小不能超过 10MB!');
     onError(new Error('文件大小超限'));
     return;
@@ -750,8 +1026,6 @@ const handleAudit = (row: CounselingDurationRecord) => {
 
 // 查看咨询时长详情
 const handleView = (row: CounselingDurationRecord) => {
-  console.log('查看咨询时长详情', row.id);
-
   // 设置为查看模式
   durationModalMode.value = 'view';
 
@@ -761,12 +1035,16 @@ const handleView = (row: CounselingDurationRecord) => {
   // 准备表单数据
   const formData = {
     duration: row.duration,
-    certificate: row.certificate ? [{
-      url: row.certificate,
-      name: '凭证图片',
-      status: 'done',
-      response: { file_url: row.certificate }
-    }] : [],
+    certificate: row.certificate
+      ? [
+          {
+            url: row.certificate,
+            name: '凭证图片',
+            status: 'done',
+            response: { file_url: row.certificate },
+          },
+        ]
+      : [],
   };
 
   // 设置表单值并打开弹窗
@@ -777,7 +1055,7 @@ const handleView = (row: CounselingDurationRecord) => {
   durationModalApi.setState({
     title: '查看咨询时长',
     showConfirmButton: false,
-    cancelText: '关闭'
+    cancelText: '关闭',
   });
 };
 
@@ -879,7 +1157,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions,
 });
 
-// 咨询时长查看弹窗表单配置 - 已移除搜索条件
+// 咨询时长查看弹窗表单配置
 const durationFormOptions: VbenFormProps = {
   collapsed: true,
   commonConfig: {
@@ -1018,7 +1296,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
               title="确定要删除这个咨询师吗？"
               ok-text="确定"
               cancel-text="取消"
-              @confirm="handleDelete(row)"
+              @confirm="handleDelete"
             >
               <Button type="link" danger size="small"> 删除 </Button>
             </Popconfirm>
@@ -1031,16 +1309,14 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     <Modal
       v-model:open="durationModalVisible"
       :title="`${currentCounselorName} - 咨询时长`"
-      :footer="null"
       width="70vw"
       @cancel="closeDurationModal"
+      @ok="handleDurationModalConfirm"
     >
       <div style="padding: 20px 0; min-height: 65vh">
         <DurationGrid>
           <template #toolbar-actions>
-            <Button type="primary" @click="handleAddDuration">
-              新增
-            </Button>
+            <Button type="primary" @click="handleAddDuration"> 新增 </Button>
           </template>
 
           <template #createTime="{ row }">
@@ -1075,8 +1351,12 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
               <Button type="link" size="small" @click="handleView(row)">
                 查看
               </Button>
-              <Button v-if="row.auditStatus === 'pending'" type="link" size="small"
-                     @click="handleAudit(row)">
+              <Button
+                v-if="row.auditStatus === 'pending'"
+                type="link"
+                size="small"
+                @click="handleAudit(row)"
+              >
                 审核
               </Button>
             </Space>
@@ -1096,7 +1376,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
       <div style="padding: 20px 0">
         <Alert
           message="导入说明"
-          description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过5MB"
+          description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过10MB"
           type="info"
           show-icon
           class="mb-4"
@@ -1128,7 +1408,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
               <span v-if="uploadLoading">正在导入...</span>
               <span v-else>点击或拖拽Excel文件到此处导入</span>
             </p>
-            <p class="text-gray-500">支持 .xlsx、.xls 格式，最大5MB</p>
+            <p class="text-gray-500">支持 .xlsx、.xls 格式，最大10MB</p>
           </div>
         </Upload.Dragger>
       </div>
@@ -1142,5 +1422,12 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     <AuditModal class="w-[40vw]" :z-index="9999">
       <AuditForm />
     </AuditModal>
+
+    <!-- 咨询师弹窗 -->
+    <CounselorModal class="w-[60vw]" :z-index="9999">
+      <div class="counselor-form-container">
+        <CounselorForm />
+      </div>
+    </CounselorModal>
   </Spin>
 </template>
