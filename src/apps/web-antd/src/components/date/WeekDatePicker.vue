@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { Button } from 'ant-design-vue';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue';
+import { ChevronLeft, ChevronRight } from '@vben/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import 'dayjs/locale/zh-cn';
 
@@ -18,13 +18,14 @@ interface Props {
   startHour?: number;
   /** 时间轴结束时间 */
   endHour?: number;
-  /** 事件数据 */
-  events?: Array<{
+  /** 可预约时间段数据 */
+  appointmentSlots?: Array<{
     id: string;
     date: string;
-    time: string;
+    startTime: string;
+    endTime: string;
     title?: string;
-    color?: string;
+    type?: 'available' | 'booked' | 'unavailable';
   }>;
 }
 
@@ -32,14 +33,15 @@ interface Emits {
   (e: 'update:modelValue', value: string): void;
   (e: 'dateChange', date: string): void;
   (e: 'weekChange', startDate: string, endDate: string): void;
-  (e: 'eventClick', event: any): void;
+  (e: 'appointmentClick', appointment: any): void;
+  (e: 'todayClick'): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showTimeAxis: true,
-  startHour: 8,
-  endHour: 22,
-  events: () => [],
+  startHour: 1,
+  endHour: 23,
+  appointmentSlots: () => [],
 });
 
 const emit = defineEmits<Emits>();
@@ -50,9 +52,9 @@ dayjs.locale('zh-cn');
 // 当前选中日期
 const selectedDate = ref<Dayjs>(dayjs(props.modelValue || new Date()));
 
-// 当前周的开始日期（周一）
+// 当前周的开始日期（周日）
 const currentWeekStart = computed(() => {
-  return selectedDate.value.startOf('week').add(1, 'day'); // dayjs的周从周日开始，我们需要从周一开始
+  return selectedDate.value.startOf('week'); // dayjs的周从周日开始
 });
 
 // 当前周的日期数组
@@ -88,7 +90,7 @@ const timeSlots = computed(() => {
 });
 
 // 周几的标签
-const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const weekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 // 上一周
 const handlePrevWeek = () => {
@@ -99,6 +101,16 @@ const handlePrevWeek = () => {
 // 下一周
 const handleNextWeek = () => {
   selectedDate.value = selectedDate.value.add(1, 'week');
+  emitWeekChange();
+};
+
+// 回到今天
+const handleToday = () => {
+  selectedDate.value = dayjs();
+  const dateStr = selectedDate.value.format('YYYY-MM-DD');
+  emit('update:modelValue', dateStr);
+  emit('dateChange', dateStr);
+  emit('todayClick');
   emitWeekChange();
 };
 
@@ -117,15 +129,32 @@ const emitWeekChange = () => {
   emit('weekChange', start, end);
 };
 
-// 获取日期对应的事件
-const getDateEvents = (date: Dayjs) => {
+// 获取日期对应的预约时间段
+const getDateAppointments = (date: Dayjs) => {
   const dateStr = date.format('YYYY-MM-DD');
-  return props.events.filter(event => event.date === dateStr);
+  return props.appointmentSlots.filter(slot => slot.date === dateStr);
 };
 
-// 处理事件点击
-const handleEventClick = (event: any) => {
-  emit('eventClick', event);
+// 处理预约时间段点击
+const handleAppointmentClick = (appointment: any) => {
+  emit('appointmentClick', appointment);
+};
+
+// 计算时间段的位置和高度
+const getAppointmentStyle = (appointment: any) => {
+  const startHour = parseInt(appointment.startTime.split(':')[0]);
+  const startMinute = parseInt(appointment.startTime.split(':')[1]);
+  const endHour = parseInt(appointment.endTime.split(':')[0]);
+  const endMinute = parseInt(appointment.endTime.split(':')[1]);
+  
+  const startPosition = ((startHour - props.startHour) * 64) + (startMinute / 60) * 64;
+  const endPosition = ((endHour - props.startHour) * 64) + (endMinute / 60) * 64;
+  const height = endPosition - startPosition;
+  
+  return {
+    top: `${startPosition}px`,
+    height: `${height}px`,
+  };
 };
 
 // 检查是否为今天
@@ -154,13 +183,18 @@ emitWeekChange();
     <!-- 头部导航 -->
     <div class="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
       <div class="flex items-center space-x-4">
+        <!-- 今天按钮 -->
+        <Button @click="handleToday">
+          今天
+        </Button>
+        
         <!-- 左右导航 -->
         <div class="flex items-center space-x-2">
           <Button type="text" size="small" @click="handlePrevWeek">
-            <LeftOutlined />
+            <ChevronLeft />
           </Button>
           <Button type="text" size="small" @click="handleNextWeek">
-            <RightOutlined />
+            <ChevronRight />
           </Button>
         </div>
         
@@ -168,19 +202,6 @@ emitWeekChange();
         <div class="text-lg font-medium text-gray-900 dark:text-gray-100">
           {{ weekRangeText }}
         </div>
-      </div>
-      
-      <!-- 右侧周选择 -->
-      <div class="flex items-center space-x-2">
-        <Button type="text" size="small" class="text-gray-400 dark:text-gray-500">
-          日
-        </Button>
-        <Button type="primary" size="small">
-          周
-        </Button>
-        <Button type="text" size="small" class="text-gray-400 dark:text-gray-500">
-          月
-        </Button>
       </div>
     </div>
     
@@ -235,24 +256,32 @@ emitWeekChange();
         <div 
           v-for="date in weekDates" 
           :key="date.format('YYYY-MM-DD')"
-          class="border-r border-gray-200 dark:border-gray-700 last:border-r-0"
+          class="border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative"
         >
+          <!-- 时间网格 -->
           <div 
             v-for="time in timeSlots" 
             :key="`${date.format('YYYY-MM-DD')}-${time}`"
-            class="h-16 border-b border-gray-200 dark:border-gray-700 last:border-b-0 relative hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="h-16 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <!-- 事件显示 -->
-            <div 
-              v-for="event in getDateEvents(date).filter(e => e.time === time)" 
-              :key="event.id"
-              class="absolute inset-1 rounded text-xs cursor-pointer"
-              :class="event.color ? `bg-${event.color}-100 text-${event.color}-800 dark:bg-${event.color}-900/20 dark:text-${event.color}-300` : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'"
-              @click="handleEventClick(event)"
-            >
-              <div class="p-1 truncate">
-                {{ event.title || '事件' }}
-              </div>
+          </div>
+          
+          <!-- 预约时间段 -->
+          <div 
+            v-for="appointment in getDateAppointments(date)" 
+            :key="appointment.id"
+            class="absolute left-1 right-1 rounded cursor-pointer transition-all hover:shadow-md"
+            :class="{
+              'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200': appointment.type === 'available',
+              'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 border border-green-200': appointment.type === 'booked',
+              'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-200': appointment.type === 'unavailable'
+            }"
+            :style="getAppointmentStyle(appointment)"
+            @click="handleAppointmentClick(appointment)"
+          >
+            <div class="p-2 text-xs">
+              <div class="font-medium">{{ appointment.title || '可预约时间' }}</div>
+              <div class="text-xs opacity-75">{{ appointment.startTime }} - {{ appointment.endTime }}</div>
             </div>
           </div>
         </div>
