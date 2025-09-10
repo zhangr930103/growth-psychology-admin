@@ -71,6 +71,9 @@ interface CounselorData {
   specializations?: string[]; // 擅长流派数组
   expertiseAreas?: string[]; // 擅长领域数组
   consultingStatus?: string; // 咨询状态
+  durationProof?: string[]; // 时长证明
+  settlementWeight?: number; // 结算权重
+  totalDuration?: number; // 总咨询时长
   otherSpecialization?: string; // 其他擅长流派
 }
 
@@ -439,6 +442,27 @@ const handleEdit = (row: CounselorData) => {
     specializations: [row.specialization || 'cbt'], // 从现有数据映射
     expertiseAreas: [row.expertise ? 'emotion_stress' : 'emotion_stress'], // 从现有数据映射
     consultingStatus: row.isOnline ? 'online' : 'offline',
+    durationProof: [], // 时长证明，这里简化处理
+    location: 
+      row.location === '北京' ? 'beijing' :
+      row.location === '上海' ? 'shanghai' :
+      row.location === '广州' ? 'guangzhou' :
+      row.location === '深圳' ? 'shenzhen' :
+      row.location === '杭州' ? 'hangzhou' :
+      row.location === '成都' ? 'chengdu' :
+      row.location === '武汉' ? 'wuhan' :
+      row.location === '西安' ? 'xian' :
+      row.location === '南京' ? 'nanjing' :
+      row.location === '重庆' ? 'chongqing' :
+      row.location === '天津' ? 'tianjin' :
+      row.location === '苏州' ? 'suzhou' :
+      row.location === '长沙' ? 'changsha' :
+      row.location === '青岛' ? 'qingdao' :
+      row.location === '大连' ? 'dalian' :
+      row.location === '厦门' ? 'xiamen' :
+      'other', // 默认为其他
+    settlementWeight: row.settlementWeight || 0, // 结算权重
+    totalDuration: row.totalDuration || row.counselingDuration || 0, // 总咨询时长
     otherSpecialization: '',
   };
 
@@ -713,6 +737,71 @@ const counselorFormSchema = [
     },
   },
   {
+    component: 'Select',
+    fieldName: 'location',
+    label: '所在位置',
+    rules: z.string().min(1, '请选择所在位置'),
+    componentProps: {
+      placeholder: '请选择省市',
+      options: [
+        { label: '北京', value: 'beijing' },
+        { label: '上海', value: 'shanghai' },
+        { label: '广州', value: 'guangzhou' },
+        { label: '深圳', value: 'shenzhen' },
+        { label: '杭州', value: 'hangzhou' },
+        { label: '成都', value: 'chengdu' },
+        { label: '武汉', value: 'wuhan' },
+        { label: '西安', value: 'xian' },
+        { label: '南京', value: 'nanjing' },
+        { label: '重庆', value: 'chongqing' },
+        { label: '天津', value: 'tianjin' },
+        { label: '苏州', value: 'suzhou' },
+        { label: '长沙', value: 'changsha' },
+        { label: '青岛', value: 'qingdao' },
+        { label: '大连', value: 'dalian' },
+        { label: '厦门', value: 'xiamen' },
+        { label: '其他', value: 'other' },
+      ],
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'InputNumber',
+    fieldName: 'settlementWeight',
+    label: '结算权重',
+    rules: z.number().min(0, '请输入结算权重').max(100, '权重不能超过100%'),
+    componentProps: {
+      placeholder: '请输入人结算权重',
+      min: 0,
+      max: 100,
+      step: 0.1,
+      addonAfter: '%',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'InputNumber',
+    fieldName: 'totalDuration',
+    label: '咨询时长',
+    rules: z.number().min(0, '请输入咨询时长'),
+    componentProps: {
+      placeholder: '请输入咨询时长',
+      min: 0,
+      step: 0.5,
+      addonAfter: '小时',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
     component: 'RadioGroup',
     fieldName: 'consultingStatus',
     label: '咨询状态',
@@ -723,6 +812,38 @@ const counselorFormSchema = [
         { label: '上线', value: 'online' },
       ],
       defaultValue: 'offline',
+    },
+  },
+  {
+    component: 'Upload',
+    fieldName: 'durationProof',
+    label: '上传时长证明',
+    componentProps: {
+      customRequest: upload_file,
+      maxCount: 5,
+      multiple: true,
+      showUploadList: true,
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        const validExtensions = ['jpg', 'png', 'jpeg'];
+        const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+        const isValidType = validExtensions.includes(fileExtension || '');
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        if (!isValidType) {
+          message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传证明',
+      };
     },
   },
 ];
