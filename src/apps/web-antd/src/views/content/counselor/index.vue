@@ -2,32 +2,12 @@
 import type { VbenFormProps } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
-import { ref, computed } from 'vue';
+import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, message, Popconfirm, Space, Spin, Upload, Modal, Image } from 'ant-design-vue';
+import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, Tag, Textarea, Select, Upload, Alert } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-
-// 咨询师数据类型定义
-interface CounselorData {
-  id: number;
-  name: string;
-  avatar: string;
-  school: string;
-  major: string;
-  personal_info: string;
-  consultation_hours: number;
-  expertise_area: string;
-  expertise_domain: string;
-  consultation_method: string;
-  location: string;
-  result_authority: string;
-  is_online: boolean;
-  status: 'active' | 'inactive';
-  creator: string;
-  created_at: string;
-  updated_at: string;
-}
 
 defineOptions({
   name: 'CounselorManagement',
@@ -36,190 +16,115 @@ defineOptions({
 // 全屏loading状态
 const spinning = ref(false);
 
-// Excel导入相关
+// 弹窗相关状态
+const modalVisible = ref(false);
+const modalLoading = ref(false);
+const editingId = ref<number | null>(null);
+
+// 咨询时长数据查看弹窗相关状态
+const durationModalVisible = ref(false);
+const currentCounselorId = ref<number | null>(null);
+const currentCounselorName = ref('');
+
+// Excel导入相关状态
 const importModalVisible = ref(false);
-const fileList = ref([]);
+const uploadLoading = ref(false);
 
-// 搜索条件
-const searchForm = ref({
-  name: '',
-  creator: '',
-  status: '',
+// 表单 ref
+const formRef = ref();
+
+// 弹窗表单数据
+const formData = reactive({
+  counselorName: '',
+  school: '',
+  major: '',
+  personalIntro: '',
+  specialization: '',
+  expertise: '',
+  counselingMethod: 'online',
+  location: '',
+  settlementPrice: '',
+  isOnline: true,
 });
 
-// 模拟咨询师数据
-const allCounselors = ref<CounselorData[]>([
-  {
-    id: 1,
-    name: '张心理',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhang',
-    school: '北京师范大学',
-    major: '心理学',
-    personal_info: '多年从事心理咨询工作，擅长焦虑症和抑郁症的治疗，具有丰富的临床经验',
-    consultation_hours: 1200,
-    expertise_area: '焦虑症治疗',
-    expertise_domain: '认知行为疗法',
-    consultation_method: '面对面咨询',
-    location: '北京市海淀区',
-    result_authority: '高级咨询师',
-    is_online: true,
-    status: 'active',
-    creator: '管理员',
-    created_at: '2023-01-15T08:30:00Z',
-    updated_at: '2024-09-10T10:15:00Z',
-  },
-  {
-    id: 2,
-    name: '李咨询',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Li',
-    school: '华东师范大学',
-    major: '应用心理学',
-    personal_info: '专业从事青少年心理咨询，具有丰富的临床经验，擅长家庭治疗和认知行为疗法',
-    consultation_hours: 850,
-    expertise_area: '青少年心理',
-    expertise_domain: '家庭治疗',
-    consultation_method: '在线咨询',
-    location: '上海市徐汇区',
-    result_authority: '中级咨询师',
-    is_online: false,
-    status: 'active',
-    creator: '系统',
-    created_at: '2023-03-20T09:45:00Z',
-    updated_at: '2024-09-09T14:20:00Z',
-  },
-  {
-    id: 3,
-    name: '王治疗',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wang',
-    school: '中南大学',
-    major: '临床心理学',
-    personal_info: '专注于抑郁症和焦虑症的治疗，有10年以上的临床经验',
-    consultation_hours: 1580,
-    expertise_area: '抑郁症治疗',
-    expertise_domain: '精神分析',
-    consultation_method: '面对面咨询',
-    location: '长沙市岳麓区',
-    result_authority: '资深咨询师',
-    is_online: true,
-    status: 'inactive',
-    creator: '管理员',
-    created_at: '2022-11-10T11:00:00Z',
-    updated_at: '2024-09-08T16:30:00Z',
-  },
-  {
-    id: 4,
-    name: '刘专家',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liu',
-    school: '西南大学',
-    major: '发展与教育心理学',
-    personal_info: '儿童心理发展专家，专业从事学习障碍和注意力缺陷的咨询与治疗',
-    consultation_hours: 920,
-    expertise_area: '儿童心理',
-    expertise_domain: '行为矫正',
-    consultation_method: '面对面咨询',
-    location: '重庆市北碚区',
-    result_authority: '高级咨询师',
-    is_online: true,
-    status: 'active',
-    creator: '系统',
-    created_at: '2023-05-18T13:15:00Z',
-    updated_at: '2024-09-10T09:45:00Z',
-  },
-  {
-    id: 5,
-    name: '陈导师',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chen',
-    school: '华南师范大学',
-    major: '咨询心理学',
-    personal_info: '婚姻家庭咨询师，专业处理夫妻关系、亲子关系等家庭问题',
-    consultation_hours: 670,
-    expertise_area: '婚姻家庭',
-    expertise_domain: '系统家庭治疗',
-    consultation_method: '在线咨询',
-    location: '广州市天河区',
-    result_authority: '中级咨询师',
-    is_online: false,
-    status: 'active',
-    creator: '管理员',
-    created_at: '2023-07-25T15:30:00Z',
-    updated_at: '2024-09-07T12:10:00Z',
-  },
-  {
-    id: 6,
-    name: '赵顾问',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhao',
-    school: '南京师范大学',
-    major: '社会心理学',
-    personal_info: '职场心理专家，擅长处理工作压力、职业规划、人际关系等问题',
-    consultation_hours: 1100,
-    expertise_area: '职场心理',
-    expertise_domain: '职业咨询',
-    consultation_method: '面对面咨询',
-    location: '南京市鼓楼区',
-    result_authority: '高级咨询师',
-    is_online: true,
-    status: 'inactive',
-    creator: '系统',
-    created_at: '2022-12-08T10:20:00Z',
-    updated_at: '2024-09-05T17:45:00Z',
-  },
-]);
+// 类型定义
+interface CounselorData {
+  id: number;
+  counselorName: string;
+  school: string;
+  major: string;
+  personalIntro: string;
+  counselingDuration: number; // 咨询时长(小时)
+  specialization: string; // 擅长流派
+  expertise: string; // 擅长领域
+  counselingMethod: string; // 咨询方式
+  location: string; // 所在位置
+  settlementPrice: number; // 结算价格
+  isOnline: boolean; // 是否在线
+  creatorName: string;
+  createTime: number;
+  updateTime?: number;
+  status: 'enabled' | 'disabled';
+}
 
-// 过滤后的数据
-const filteredCounselors = computed(() => {
-  let result = [...allCounselors.value];
+interface SearchParams {
+  page?: number;
+  size?: number;
+  counselorName?: string;
+  creator?: string;
+  status?: string;
+}
 
-  // 按姓名搜索
-  if (searchForm.value.name) {
-    result = result.filter(item =>
-      item.name.includes(searchForm.value.name)
-    );
-  }
+interface ApiResponse {
+  list: CounselorData[];
+  total: number;
+}
 
-  // 按创建人筛选
-  if (searchForm.value.creator) {
-    result = result.filter(item =>
-      item.creator === searchForm.value.creator
-    );
-  }
+// 咨询时长记录相关类型定义
+interface CounselingRecord {
+  id: number;
+  clientName: string;
+  sessionDate: number;
+  duration: number; // 咨询时长(分钟)
+  topic: string;
+  counselorId: number;
+}
 
-  // 按状态筛选
-  if (searchForm.value.status) {
-    result = result.filter(item =>
-      item.status === searchForm.value.status
-    );
-  }
+interface CounselingRecordSearchParams {
+  page?: number;
+  size?: number;
+  clientName?: string;
+  sessionStartTime?: number;
+  sessionEndTime?: number;
+  counselorId: number;
+}
 
-  return result;
-});
-
-// 总数
-const total = computed(() => filteredCounselors.value.length);
+interface CounselingRecordApiResponse {
+  list: CounselingRecord[];
+  total: number;
+}
 
 // 搜索表单配置
 const formOptions: VbenFormProps = {
-  // 默认展开
   collapsed: false,
+  commonConfig: {
+    labelWidth: 130,
+  },
   schema: [
     {
       component: 'Input',
-      fieldName: 'name',
+      fieldName: 'counselorName',
       label: '咨询师名称',
       componentProps: {
-        placeholder: '请输入咨询师姓名',
+        placeholder: '请输入',
       },
     },
     {
-      component: 'Select',
+      component: 'Input',
       fieldName: 'creator',
       label: '创建人',
       componentProps: {
-        placeholder: '全部',
-        options: [
-          { label: '全部', value: '' },
-          { label: '管理员', value: '管理员' },
-          { label: '系统', value: '系统' },
-        ],
+        placeholder: '请输入',
       },
     },
     {
@@ -230,222 +135,449 @@ const formOptions: VbenFormProps = {
         placeholder: '全部',
         options: [
           { label: '全部', value: '' },
-          { label: '启用', value: 'active' },
-          { label: '禁用', value: 'inactive' },
+          { label: '启用', value: 'enabled' },
+          { label: '停用', value: 'disabled' },
         ],
       },
     },
   ],
-  // 控制表单是否显示折叠按钮
   showCollapseButton: true,
-  // 是否在字段值改变时提交表单
-  submitOnChange: true,
-  // 按下回车时是否提交表单
+  submitOnChange: false,
   submitOnEnter: true,
-  // 表单提交处理函数
-  handleSubmit: (values: Record<string, any>) => {
-    searchForm.value = {
-      name: values.name || '',
-      creator: values.creator || '',
-      status: values.status || '',
-    };
-    gridApi.query(); // 刷新表格数据
-  },
-  // 表单重置处理函数
-  handleReset: () => {
-    searchForm.value = {
-      name: '',
-      creator: '',
-      status: '',
-    };
-    gridApi.query(); // 刷新表格数据
-  },
 };
 
-// 咨询师操作函数
-const handleEnable = (row: CounselorData) => {
-  console.log('启用咨询师:', row);
+// 模拟咨询师管理数据API
+const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  // 直接更新本地数据
-  const counselor = allCounselors.value.find(c => c.id === row.id);
-  if (counselor) {
-    counselor.status = 'active';
-    counselor.updated_at = new Date().toISOString();
-    message.success('咨询师启用成功');
+  const mockData: CounselorData[] = [
+    {
+      id: 1,
+      counselorName: '姓名',
+      school: '北京师范大学',
+      major: '心理学',
+      personalIntro: '拥有多年心理咨询经验，擅长认知行为疗法，专注于青少年心理健康问题的治疗和干预。',
+      counselingDuration: 120,
+      specialization: '认知行为疗法',
+      expertise: '青少年心理、认知行为疗法',
+      counselingMethod: '线上',
+      location: '北京',
+      settlementPrice: 200,
+      isOnline: true,
+      creatorName: '张三',
+      createTime: dayjs().subtract(30, 'day').unix(),
+      updateTime: dayjs().subtract(25, 'day').unix(),
+      status: 'enabled',
+    },
+    {
+      id: 2,
+      counselorName: '李心理师',
+      school: '华东师范大学',
+      major: '应用心理学',
+      personalIntro: '国家二级心理咨询师，专注于婚姻家庭治疗和情绪管理，帮助客户建立健康的人际关系。',
+      counselingDuration: 85,
+      specialization: '家庭系统治疗',
+      expertise: '婚姻家庭、情绪管理',
+      counselingMethod: '线上+线下',
+      location: '上海',
+      settlementPrice: 180,
+      isOnline: true,
+      creatorName: '李四',
+      createTime: dayjs().subtract(25, 'day').unix(),
+      updateTime: dayjs().subtract(20, 'day').unix(),
+      status: 'enabled',
+    },
+    {
+      id: 3,
+      counselorName: '王咨询师',
+      school: '中南大学',
+      major: '临床心理学',
+      personalIntro: '临床心理学硕士，擅长焦虑症、抑郁症的心理治疗，采用整合性治疗方法。',
+      counselingDuration: 95,
+      specialization: '整合式治疗',
+      expertise: '焦虑症、抑郁症治疗',
+      counselingMethod: '线下',
+      location: '长沙',
+      settlementPrice: 220,
+      isOnline: false,
+      creatorName: '王五',
+      createTime: dayjs().subtract(20, 'day').unix(),
+      status: 'disabled',
+    },
+    {
+      id: 4,
+      counselorName: '赵心理',
+      school: '西南大学',
+      major: '发展与教育心理学',
+      personalIntro: '儿童青少年心理专家，在学习障碍、注意力缺陷等方面有丰富经验。',
+      counselingDuration: 75,
+      specialization: '游戏治疗',
+      expertise: '儿童心理、学习障碍',
+      counselingMethod: '线上',
+      location: '重庆',
+      settlementPrice: 160,
+      isOnline: true,
+      creatorName: '赵六',
+      createTime: dayjs().subtract(15, 'day').unix(),
+      updateTime: dayjs().subtract(10, 'day').unix(),
+      status: 'enabled',
+    },
+    {
+      id: 5,
+      counselorName: '孙老师',
+      school: '华中师范大学',
+      major: '心理健康教育',
+      personalIntro: '学校心理健康教育专家，专注于学生心理危机干预和心理健康促进工作。',
+      counselingDuration: 110,
+      specialization: '危机干预',
+      expertise: '危机干预、心理健康教育',
+      counselingMethod: '线上+线下',
+      location: '武汉',
+      settlementPrice: 150,
+      isOnline: true,
+      creatorName: '孙七',
+      createTime: dayjs().subtract(12, 'day').unix(),
+      status: 'enabled',
+    },
+  ];
+
+  // 模拟搜索过滤
+  let filteredData = mockData;
+
+  if (params.counselorName) {
+    filteredData = filteredData.filter((item) =>
+      item.counselorName.includes(params.counselorName!),
+    );
   }
+
+  if (params.creator) {
+    filteredData = filteredData.filter((item) =>
+      item.creatorName.includes(params.creator!),
+    );
+  }
+
+  if (params.status) {
+    filteredData = filteredData.filter((item) =>
+      item.status === params.status,
+    );
+  }
+
+
+  // 模拟分页
+  const { page = 1, size = 10 } = params;
+  const total = filteredData.length;
+  const start = (page - 1) * size;
+  const end = start + size;
+  const list = filteredData.slice(start, end);
+
+  return {
+    list,
+    total,
+  };
 };
 
-const handleDisable = (row: CounselorData) => {
-  console.log('禁用咨询师:', row);
+// 模拟咨询记录数据API
+const getCounselingRecordList = async (params: CounselingRecordSearchParams): Promise<CounselingRecordApiResponse> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  // 直接更新本地数据
-  const counselor = allCounselors.value.find(c => c.id === row.id);
-  if (counselor) {
-    counselor.status = 'inactive';
-    counselor.updated_at = new Date().toISOString();
-    message.success('咨询师禁用成功');
+  const mockDataList: CounselingRecord[] = [
+    {
+      id: 1,
+      clientName: '小张',
+      sessionDate: dayjs().subtract(1, 'day').unix(),
+      duration: 50,
+      topic: '学习压力和焦虑情绪',
+      counselorId: params.counselorId,
+    },
+    {
+      id: 2,
+      clientName: '小李',
+      sessionDate: dayjs().subtract(3, 'day').unix(),
+      duration: 45,
+      topic: '人际关系困扰',
+      counselorId: params.counselorId,
+    },
+    {
+      id: 3,
+      clientName: '小王',
+      sessionDate: dayjs().subtract(5, 'day').unix(),
+      duration: 60,
+      topic: '情绪管理问题',
+      counselorId: params.counselorId,
+    },
+    {
+      id: 4,
+      clientName: '小赵',
+      sessionDate: dayjs().subtract(7, 'day').unix(),
+      duration: 40,
+      topic: '职场适应问题',
+      counselorId: params.counselorId,
+    },
+    {
+      id: 5,
+      clientName: '小孙',
+      sessionDate: dayjs().subtract(10, 'day').unix(),
+      duration: 55,
+      topic: '家庭关系调适',
+      counselorId: params.counselorId,
+    },
+  ];
+
+  // 模拟搜索过滤
+  let filteredData = mockDataList;
+
+  if (params.clientName) {
+    filteredData = filteredData.filter((item) =>
+      item.clientName.includes(params.clientName!),
+    );
   }
+
+  if (params.sessionStartTime && params.sessionEndTime) {
+    filteredData = filteredData.filter(
+      (item) =>
+        item.sessionDate >= params.sessionStartTime! &&
+        item.sessionDate <= params.sessionEndTime!,
+    );
+  }
+
+  // 模拟分页
+  const { page = 1, size = 10 } = params;
+  const total = filteredData.length;
+  const start = (page - 1) * size;
+  const end = start + size;
+  const list = filteredData.slice(start, end);
+
+  return {
+    list,
+    total,
+  };
+};
+
+// 操作函数
+const handleViewDuration = (row: CounselorData) => {
+  currentCounselorId.value = row.id;
+  currentCounselorName.value = row.counselorName;
+  durationModalVisible.value = true;
+
+  // 延迟执行查询，确保弹窗打开后再加载数据
+  setTimeout(() => {
+    durationGridApi.query();
+  }, 100);
+};
+
+// 关闭咨询时长查看弹窗
+const closeDurationModal = () => {
+  durationModalVisible.value = false;
+  currentCounselorId.value = null;
+  currentCounselorName.value = '';
+};
+
+const handleToggleStatus = (row: CounselorData) => {
+  console.log('切换状态:', row);
+  const action = row.status === 'enabled' ? '停用' : '启用';
+
+  // 开启全屏loading
+  spinning.value = true;
+
+  // 模拟API延迟
+  setTimeout(() => {
+    // 关闭全屏loading
+    spinning.value = false;
+
+    message.success({
+      content: `咨询师${action}成功`,
+    });
+    // 刷新列表
+    gridApi.query();
+  }, 1000);
 };
 
 const handleEdit = (row: CounselorData) => {
-  console.log('编辑咨询师:', row);
-  // TODO: 打开编辑模态框
-  message.info('编辑功能开发中...');
+  openEditModal(row);
 };
 
 const handleDelete = (row: CounselorData) => {
   console.log('删除咨询师:', row);
 
-  // 直接从本地数据中删除
-  const index = allCounselors.value.findIndex(c => c.id === row.id);
-  if (index > -1) {
-    allCounselors.value.splice(index, 1);
-    message.success('咨询师删除成功');
+  // 开启全屏loading
+  spinning.value = true;
+
+  // 模拟API延迟
+  setTimeout(() => {
+    // 关闭全屏loading
+    spinning.value = false;
+
+    message.success({
+      content: '咨询师删除成功',
+    });
+    // 刷新列表
+    gridApi.query();
+  }, 1000);
+};
+
+// 弹窗相关函数
+const resetFormData = () => {
+  formData.counselorName = '';
+  formData.school = '';
+  formData.major = '';
+  formData.personalIntro = '';
+  formData.specialization = '';
+  formData.expertise = '';
+  formData.counselingMethod = 'online';
+  formData.location = '';
+  formData.settlementPrice = '';
+  formData.isOnline = true;
+  editingId.value = null;
+};
+
+const openCreateModal = async () => {
+  resetFormData();
+  modalVisible.value = true;
+
+  // 等待 DOM 更新后重置表单校验状态
+  await nextTick();
+  formRef.value?.clearValidate();
+};
+
+const openEditModal = async (row: CounselorData) => {
+  resetFormData();
+  editingId.value = row.id;
+  formData.counselorName = row.counselorName;
+  formData.school = row.school;
+  formData.major = row.major;
+  formData.personalIntro = row.personalIntro;
+  formData.specialization = row.specialization;
+  formData.expertise = row.expertise;
+  formData.counselingMethod = row.counselingMethod;
+  formData.location = row.location;
+  formData.settlementPrice = row.settlementPrice.toString();
+  formData.isOnline = row.isOnline;
+
+  modalVisible.value = true;
+
+  // 等待 DOM 更新后重置表单校验状态
+  await nextTick();
+  formRef.value?.clearValidate();
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+  formRef.value?.resetFields();
+  resetFormData();
+};
+
+const handleSubmit = async () => {
+  try {
+    // 使用 Form 组件的内置校验
+    await formRef.value?.validate();
+
+    modalLoading.value = true;
+
+    // 模拟API请求
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const action = editingId.value ? '编辑' : '新增';
+    message.success(`${action}咨询师成功`);
+
+    // 刷新列表
+    gridApi.query();
+
+    // 关闭弹窗
+    closeModal();
+  } catch (error) {
+    // 校验失败时不做处理，表单会自动显示红色校验信息
+    console.log('表单校验失败:', error);
+  } finally {
+    modalLoading.value = false;
   }
 };
 
-const handleConsultationTime = (row: CounselorData) => {
-  console.log('咨询时长:', row);
-  message.info(`${row.name}的咨询时长：${row.consultation_hours}小时`);
-};
-
-// 工具栏操作函数
 const handleCreate = () => {
-  console.log('新建咨询师');
-
-  // 创建新的咨询师数据
-  const newCounselor: CounselorData = {
-    id: Math.max(...allCounselors.value.map(c => c.id)) + 1,
-    name: `新咨询师${allCounselors.value.length + 1}`,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=New${allCounselors.value.length + 1}`,
-    school: '示例大学',
-    major: '心理学',
-    personal_info: '新创建的咨询师，请编辑详细信息',
-    consultation_hours: 0,
-    expertise_area: '通用咨询',
-    expertise_domain: '认知治疗',
-    consultation_method: '面对面咨询',
-    location: '北京市',
-    result_authority: '初级咨询师',
-    is_online: true,
-    status: 'active',
-    creator: '管理员',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  // 添加到数据列表
-  allCounselors.value.push(newCounselor);
-  message.success('新建咨询师成功');
+  openCreateModal();
 };
 
-const handleImportExcel = () => {
+// Excel导入相关函数
+const handleExcelImport = () => {
   importModalVisible.value = true;
 };
 
-// Excel上传处理
-const handleUpload = async (options: any) => {
+const closeImportModal = () => {
+  importModalVisible.value = false;
+};
+
+// 自定义上传处理
+const customUpload = async (options: any) => {
   const { file, onSuccess, onError } = options;
 
-  try {
-    spinning.value = true;
-
-    // 模拟处理Excel文件
-    console.log('处理Excel文件:', file.name);
-
-    // 模拟延迟
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 模拟Excel导入，添加一些虚拟数据
-    const newCounselors: CounselorData[] = [
-      {
-        id: Math.max(...allCounselors.value.map(c => c.id)) + 1,
-        name: '导入咨询师1',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Import1',
-        school: '导入大学',
-        major: '心理学',
-        personal_info: '通过Excel导入的咨询师',
-        consultation_hours: 500,
-        expertise_area: '通用咨询',
-        expertise_domain: '认知治疗',
-        consultation_method: '在线咨询',
-        location: '北京市',
-        result_authority: '中级咨询师',
-        is_online: true,
-        status: 'active',
-        creator: '系统',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: Math.max(...allCounselors.value.map(c => c.id)) + 2,
-        name: '导入咨询师2',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Import2',
-        school: '导入师范大学',
-        major: '应用心理学',
-        personal_info: '通过Excel导入的咨询师2',
-        consultation_hours: 300,
-        expertise_area: '儿童心理',
-        expertise_domain: '游戏治疗',
-        consultation_method: '面对面咨询',
-        location: '上海市',
-        result_authority: '初级咨询师',
-        is_online: false,
-        status: 'active',
-        creator: '系统',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
-
-    // 添加到模拟数据
-    allCounselors.value.push(...newCounselors);
-
-    message.success(`Excel导入成功，共导入 ${newCounselors.length} 条咨询师数据`);
-    importModalVisible.value = false;
-    fileList.value = [];
-
-    // 通知上传组件成功
-    onSuccess && onSuccess({ message: 'Excel导入成功' });
-  } catch (error) {
-    console.error('Excel导入失败:', error);
-    message.error('Excel导入失败');
-
-    // 通知上传组件失败
-    onError && onError(error);
-  } finally {
-    spinning.value = false;
-  }
-};
-
-// Excel上传前的验证
-const beforeUpload = (file: File) => {
+  // 验证文件类型
   const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                  file.type === 'application/vnd.ms-excel' ||
-                  file.name.endsWith('.xlsx') ||
-                  file.name.endsWith('.xls');
+                  file.type === 'application/vnd.ms-excel';
 
   if (!isExcel) {
-    message.error('只能上传Excel文件！');
-    return false;
+    message.error('只能上传Excel文件(.xlsx, .xls)!');
+    onError(new Error('文件类型错误'));
+    return;
   }
 
-  const isLt10M = file.size / 1024 / 1024 < 10;
-  if (!isLt10M) {
-    message.error('文件大小不能超过10MB！');
-    return false;
+  // 验证文件大小
+  const isLt5M = file.size / 1024 / 1024 < 5;
+  if (!isLt5M) {
+    message.error('文件大小不能超过 5MB!');
+    onError(new Error('文件大小超限'));
+    return;
   }
 
-  return true;
+  uploadLoading.value = true;
+
+  try {
+    // 创建 FormData
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 在实际项目中，这里应该调用真实的导入接口
+    // const response = await fetch('/api/counselor/import', {
+    //   method: 'POST',
+    //   body: formData,
+    // });
+    // const result = await response.json();
+
+    message.success('Excel文件导入成功！');
+
+    // 刷新列表
+    gridApi.query();
+
+    // 关闭弹窗
+    closeImportModal();
+
+    onSuccess();
+  } catch (error) {
+    console.error('导入失败:', error);
+    message.error('导入失败，请重试');
+    onError(error);
+  } finally {
+    uploadLoading.value = false;
+  }
 };
 
+
+// 获取在线状态
+const getOnlineStatus = (isOnline: boolean) => {
+  return isOnline
+    ? { color: 'green', text: '在线' }
+    : { color: 'gray', text: '离线' };
+};
+
+// 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
     { title: '序号', type: 'seq' },
     {
-      field: 'name',
+      field: 'counselorName',
       title: '咨询师名称',
-      slots: { default: 'counselorInfo' },
+      showOverflow: 'tooltip',
     },
     {
       field: 'school',
@@ -458,49 +590,48 @@ const gridOptions: VxeTableGridOptions = {
       showOverflow: 'tooltip',
     },
     {
-      field: 'personal_info',
+      field: 'personalIntro',
       title: '个人简介',
       showOverflow: 'tooltip',
     },
     {
-      field: 'consultation_hours',
+      field: 'counselingDuration',
       title: '咨询时长',
-      slots: { default: 'consultationHours' },
+      slots: { default: 'counselingDuration' },
     },
     {
-      field: 'expertise_area',
+      field: 'specialization',
       title: '擅长流派',
       showOverflow: 'tooltip',
     },
     {
-      field: 'expertise_domain',
+      field: 'expertise',
       title: '擅长领域',
       showOverflow: 'tooltip',
     },
     {
-      field: 'consultation_method',
+      field: 'counselingMethod',
       title: '咨询方式',
       showOverflow: 'tooltip',
     },
     {
       field: 'location',
       title: '所在位置',
-      showOverflow: 'tooltip',
     },
     {
-      field: 'result_authority',
-      title: '结算权限',
-      showOverflow: 'tooltip',
+      field: 'settlementPrice',
+      title: '结算价重',
+      slots: { default: 'settlementPrice' },
     },
     {
-      field: 'is_online',
+      field: 'isOnline',
       title: '是否在线',
-      slots: { default: 'onlineStatus' },
+      slots: { default: 'isOnline' },
     },
     {
       field: 'actions',
-      width: 250,
       title: '操作',
+      minWidth: 200,
       slots: { default: 'actions' },
     },
   ],
@@ -515,16 +646,13 @@ const gridOptions: VxeTableGridOptions = {
       list: 'list',
     },
     ajax: {
-      query: async ({ page }) => {
-        // 计算分页
-        const start = (page.currentPage - 1) * page.pageSize;
-        const end = start + page.pageSize;
-        const list = filteredCounselors.value.slice(start, end);
-
-        return {
-          list,
-          total: total.value,
-        };
+      query: async ({ page }, formValues) => {
+        const result = await getCounselorList({
+          page: page.currentPage,
+          size: page.pageSize,
+          ...formValues,
+        });
+        return result;
       },
     },
   },
@@ -534,135 +662,379 @@ const gridOptions: VxeTableGridOptions = {
     search: true,
     zoom: true,
   },
-  showOverflow: false,
 };
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions,
   gridOptions,
 });
+
+// 咨询时长查看弹窗搜索表单配置
+const durationFormOptions: VbenFormProps = {
+  collapsed: false,
+  commonConfig: {
+    labelWidth: 100,
+  },
+  fieldMappingTime: [['sessionRangePicker', ['sessionStartTime', 'sessionEndTime']]],
+  schema: [
+    {
+      component: 'Input',
+      fieldName: 'clientName',
+      label: '客户姓名',
+      componentProps: {
+        placeholder: '请输入',
+      },
+    },
+    {
+      component: 'RangePicker',
+      defaultValue: undefined,
+      fieldName: 'sessionRangePicker',
+      label: '咨询时间',
+      componentProps: {
+        placeholder: ['开始日期', '结束日期'],
+      },
+    },
+  ],
+  showCollapseButton: false,
+  submitOnChange: false,
+  submitOnEnter: true,
+};
+
+// 咨询时长查看弹窗表格配置
+const durationGridOptions: VxeTableGridOptions = {
+  columns: [
+    {
+      field: 'clientName',
+      title: '客户姓名',
+      showOverflow: 'tooltip',
+    },
+    {
+      field: 'sessionDate',
+      title: '咨询时间',
+      slots: { default: 'sessionDate' },
+    },
+    {
+      field: 'duration',
+      title: '时长(分钟)',
+      slots: { default: 'duration' },
+    },
+    {
+      field: 'topic',
+      title: '咨询主题',
+      showOverflow: 'tooltip',
+    },
+  ],
+  height: '60vh',
+  keepSource: true,
+  autoResize: true,
+  pagerConfig: {},
+  proxyConfig: {
+    response: {
+      result: 'list',
+      total: 'total',
+      list: 'list',
+    },
+    ajax: {
+      query: async ({ page }, formValues) => {
+        if (!currentCounselorId.value) return { list: [], total: 0 };
+
+        const result = await getCounselingRecordList({
+          page: page.currentPage,
+          size: page.pageSize,
+          counselorId: currentCounselorId.value,
+          clientName: formValues.clientName,
+          // 处理时间范围搜索
+          sessionStartTime: formValues.sessionStartTime
+            ? (Date.parse(formValues.sessionStartTime) - 28800000) / 1000
+            : undefined,
+          sessionEndTime: formValues.sessionEndTime
+            ? (Date.parse(formValues.sessionEndTime) - 28800000) / 1000 + 86399
+            : undefined,
+        });
+        return result;
+      },
+    },
+  },
+  toolbarConfig: {
+    custom: true,
+    refresh: true,
+    search: true,
+    zoom: true,
+  },
+};
+
+const [DurationGrid, durationGridApi] = useVbenVxeGrid({
+  formOptions: durationFormOptions,
+  gridOptions: durationGridOptions,
+});
 </script>
 
 <template>
   <Spin :spinning="spinning" tip="正在处理，请稍候...">
     <Page auto-content-height title="咨询师管理">
-      <Grid>
-        <template #toolbar-actions>
-          <Button type="primary" class="mr-4" @click="handleCreate">
-            新建
+    <Grid>
+      <template #toolbar-actions>
+        <Button type="primary" class="mr-4" @click="handleCreate">
+          新建
+        </Button>
+        <Button class="mr-4" @click="handleExcelImport">
+          excel导入
+        </Button>
+      </template>
+
+      <template #counselingDuration="{ row }">
+        <span>{{ row.counselingDuration }}小时</span>
+      </template>
+
+      <template #settlementPrice="{ row }">
+        <span class="font-medium text-green-600">
+          ¥{{ row.settlementPrice }}
+        </span>
+      </template>
+
+      <template #isOnline="{ row }">
+        <Tag :color="getOnlineStatus(row.isOnline).color">
+          {{ getOnlineStatus(row.isOnline).text }}
+        </Tag>
+      </template>
+
+      <template #actions="{ row }">
+        <Space>
+          <Button
+            type="link"
+            size="small"
+            @click="handleViewDuration(row)"
+          >
+            咨询时长
           </Button>
-          <Button @click="handleImportExcel">
-            excel导入
+          <Button
+            v-if="row.status === 'enabled'"
+            type="link"
+            size="small"
+            @click="handleToggleStatus(row)"
+          >
+            停用
           </Button>
-        </template>
+          <Button
+            v-else
+            type="link"
+            size="small"
+            @click="handleToggleStatus(row)"
+          >
+            启用
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            @click="handleEdit(row)"
+          >
+            编辑
+          </Button>
+          <Popconfirm
+            title="确定要删除这个咨询师吗？"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="handleDelete(row)"
+          >
+            <Button type="link" danger size="small"> 删除 </Button>
+          </Popconfirm>
+        </Space>
+      </template>
+    </Grid>
+  </Page>
 
-        <template #counselorInfo="{ row }">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-              <Image
-                v-if="row.avatar"
-                :src="row.avatar"
-                :width="40"
-                :height="40"
-                :preview="true"
-                class="rounded-full object-cover"
-                :fallback="'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='"
-              />
-              <span v-else class="text-gray-500 text-sm font-medium">
-                {{ row.name?.charAt(0) }}
-              </span>
-            </div>
-            <span class="font-medium">{{ row.name }}</span>
-          </div>
-        </template>
+  <!-- 新增/编辑弹窗 -->
+  <Modal
+    v-model:open="modalVisible"
+    :title="editingId ? '编辑咨询师' : '新增咨询师'"
+    :confirm-loading="modalLoading"
+    width="800px"
+    @ok="handleSubmit"
+    @cancel="closeModal"
+  >
+    <Form
+      ref="formRef"
+      :model="formData"
+      layout="vertical"
+      style="padding: 20px 0"
+    >
+      <Form.Item
+        label="咨询师名称"
+        name="counselorName"
+        :rules="[{ required: true, message: '请输入咨询师名称' }]"
+      >
+        <Input
+          v-model:value="formData.counselorName"
+          placeholder="请输入咨询师名称"
+        />
+      </Form.Item>
 
-        <template #consultationHours="{ row }">
-          <span>{{ row.consultation_hours }}小时</span>
-        </template>
+      <Form.Item
+        label="学校"
+        name="school"
+        :rules="[{ required: true, message: '请输入学校名称' }]"
+      >
+        <Input
+          v-model:value="formData.school"
+          placeholder="请输入学校名称"
+        />
+      </Form.Item>
 
-        <template #onlineStatus="{ row }">
-          <span :class="row.is_online ? 'text-green-500' : 'text-gray-500'">
-            {{ row.is_online ? '在线' : '离线' }}
+      <Form.Item
+        label="专业"
+        name="major"
+        :rules="[{ required: true, message: '请输入专业' }]"
+      >
+        <Input
+          v-model:value="formData.major"
+          placeholder="请输入专业"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="个人简介"
+        name="personalIntro"
+        :rules="[{ required: true, message: '请输入个人简介' }]"
+      >
+        <Textarea
+          v-model:value="formData.personalIntro"
+          placeholder="请输入个人简介（不超过500个字）"
+          :rows="4"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="擅长流派"
+        name="specialization"
+        :rules="[{ required: true, message: '请输入擅长流派' }]"
+      >
+        <Input
+          v-model:value="formData.specialization"
+          placeholder="请输入擅长流派"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="擅长领域"
+        name="expertise"
+        :rules="[{ required: true, message: '请输入擅长领域' }]"
+      >
+        <Input
+          v-model:value="formData.expertise"
+          placeholder="请输入擅长领域，多个用逗号分隔"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="咨询方式"
+        name="counselingMethod"
+        :rules="[{ required: true, message: '请选择咨询方式' }]"
+      >
+        <Select
+          v-model:value="formData.counselingMethod"
+          placeholder="请选择咨询方式"
+        >
+          <Select.Option value="online">线上</Select.Option>
+          <Select.Option value="offline">线下</Select.Option>
+          <Select.Option value="both">线上+线下</Select.Option>
+        </Select>
+      </Form.Item>
+
+      <Form.Item
+        label="所在位置"
+        name="location"
+        :rules="[{ required: true, message: '请输入所在位置' }]"
+      >
+        <Input
+          v-model:value="formData.location"
+          placeholder="请输入所在位置"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="结算价格"
+        name="settlementPrice"
+        :rules="[
+          { required: true, message: '请输入结算价格' },
+          { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格' }
+        ]"
+      >
+        <Input
+          v-model:value="formData.settlementPrice"
+          placeholder="请输入结算价格"
+          addonBefore="¥"
+        />
+      </Form.Item>
+
+      <Form.Item label="是否在线">
+        <Switch v-model:checked="formData.isOnline" />
+      </Form.Item>
+    </Form>
+  </Modal>
+
+  <!-- 咨询时长查看弹窗 -->
+  <Modal
+    v-model:open="durationModalVisible"
+    :title="`${currentCounselorName} - 咨询时长`"
+    :footer="null"
+    width="80vw"
+    @cancel="closeDurationModal"
+  >
+      <div style="padding: 20px 0; min-height: 65vh;">
+        <DurationGrid>
+        <template #sessionDate="{ row }">
+          <span>
+            {{ dayjs(row.sessionDate * 1000).format('YYYY-MM-DD HH:mm:ss') }}
           </span>
         </template>
 
-        <template #actions="{ row }">
-          <Space wrap>
-            <Button
-              v-if="row.status === 'inactive'"
-              type="link"
-              size="small"
-              class="text-blue-500 p-0"
-              @click="handleEnable(row)"
-            >
-              启用
-            </Button>
-            <Button
-              v-else
-              type="link"
-              size="small"
-              class="text-gray-500 p-0"
-              @click="handleDisable(row)"
-            >
-              禁用
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              class="text-blue-500 p-0"
-              @click="handleEdit(row)"
-            >
-              编辑
-            </Button>
-            <Popconfirm
-              title="确定要删除这个咨询师吗？"
-              ok-text="确定"
-              cancel-text="取消"
-              @confirm="handleDelete(row)"
-            >
-              <Button
-                type="link"
-                size="small"
-                class="text-red-500 p-0"
-              >
-                删除
-              </Button>
-            </Popconfirm>
-            <Button
-              type="link"
-              size="small"
-              class="text-green-500 p-0"
-              @click="handleConsultationTime(row)"
-            >
-              咨询时长
-            </Button>
-          </Space>
+        <template #duration="{ row }">
+          <span class="font-medium text-blue-600">
+            {{ row.duration }}分钟
+          </span>
         </template>
-      </Grid>
-    </Page>
-
-    <!-- Excel导入模态框 -->
-    <Modal
-      v-model:open="importModalVisible"
-      title="Excel导入"
-      @ok="importModalVisible = false"
-      @cancel="importModalVisible = false"
-    >
-      <div class="p-4">
-        <Upload
-          v-model:file-list="fileList"
-          :custom-request="handleUpload"
-          :before-upload="beforeUpload"
-          accept=".xlsx,.xls"
-          :show-upload-list="true"
-        >
-          <Button>选择Excel文件</Button>
-        </Upload>
-        <div class="mt-4 text-gray-500 text-sm">
-          <p>支持格式：.xlsx, .xls</p>
-          <p>请确保Excel文件包含所需的咨询师信息字段</p>
-        </div>
+        </DurationGrid>
       </div>
-    </Modal>
+  </Modal>
+
+  <!-- Excel导入弹窗 -->
+  <Modal
+    v-model:open="importModalVisible"
+    title="Excel批量导入咨询师"
+    :footer="null"
+    width="600px"
+    @cancel="closeImportModal"
+  >
+    <div style="padding: 20px 0;">
+      <Alert
+        message="导入说明"
+        description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过5MB"
+        type="info"
+        show-icon
+        class="mb-4"
+      />
+
+      <Upload.Dragger
+        :custom-request="customUpload"
+        :multiple="false"
+        accept=".xlsx,.xls"
+        :show-upload-list="false"
+      >
+        <div class="p-8">
+          <div class="mb-4">
+            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="text-lg">
+            <span v-if="uploadLoading">正在导入...</span>
+            <span v-else>点击或拖拽Excel文件到此处导入</span>
+          </p>
+          <p class="text-gray-500">支持 .xlsx、.xls 格式，最大5MB</p>
+        </div>
+      </Upload.Dragger>
+    </div>
+  </Modal>
   </Spin>
+
 </template>
