@@ -84,7 +84,7 @@ const convertTimeSlotsToEvents = (timeSlots: TimeSlot[]): EventInput[] => {
     
     return {
       id: `slot-${index}`,
-      title: `${weekLabels[slot.day]} ${String(slot.startHour).padStart(2, '0')}:00-${String(Math.max(0, slot.endHour - 1)).padStart(2, '0')}:00`,
+      title: `${weekLabels[slot.day]} ${String(slot.startHour).padStart(2, '0')}:${String(slot.startMinute || 0).padStart(2, '0')}-${String(slot.endHour).padStart(2, '0')}:${String(slot.endMinute || 0).padStart(2, '0')}`,
       start: startTime.toISOString(),
       end: endTime.toISOString(),
       backgroundColor: '#3B82F6',
@@ -108,8 +108,11 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   height: 600,
   slotMinTime: '00:00:00',
   slotMaxTime: '24:00:00',
-  slotDuration: '01:00:00',
+  slotDuration: '00:15:00', // 15分钟间隔
+  slotLabelInterval: '01:00:00', // 时间轴标签仍然显示小时
   allDaySlot: false,
+  scrollTime: null, // 禁用初始滚动
+  nowIndicator: false, // 禁用当前时间指示器
   selectable: true,
   selectMirror: true,
   editable: true,
@@ -495,16 +498,17 @@ onMounted(() => {
 }
 
 .feishu-style-calendar .fc-timegrid-slot {
-  height: 48px;
+  height: 20px; /* 15分钟间隔，减少高度 */
   border-bottom: 1px solid #f3f4f6;
+}
+
+.feishu-style-calendar .fc-timegrid-slot-minor {
+  height: 20px; /* 15分钟间隔子格子 */
+  border-bottom: 1px solid #f9fafb;
 }
 
 .feishu-style-calendar .fc-timegrid-slot:hover {
   background-color: #f8fafc;
-}
-
-.feishu-style-calendar .fc-timegrid-slot-minor {
-  border-bottom: 1px solid #f9fafb;
 }
 
 .feishu-style-calendar .fc-timegrid-slot-label {

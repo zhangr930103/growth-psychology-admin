@@ -1,1 +1,1 @@
-export { default as WeekDatePicker } from './WeekDatePicker.vue';
+export { default as WeekDatePicker } from './FullCalendarWeekPicker.vue';
