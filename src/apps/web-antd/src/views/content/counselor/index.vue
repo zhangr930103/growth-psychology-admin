@@ -3,7 +3,9 @@ import type { VbenFormProps } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { ref } from 'vue';
-import { Page } from '@vben/common-ui';
+import { Page, useVbenModal } from '@vben/common-ui';
+import { useVbenForm, z } from '#/adapter/form';
+import { upload_file } from '#/api/examples/upload';
 import {
   Button,
   message,
@@ -32,6 +34,8 @@ const spinning = ref(false);
 const durationModalVisible = ref(false);
 const currentCounselorId = ref<number | null>(null);
 const currentCounselorName = ref('');
+
+// 移除未使用的状态变量
 
 // Excel导入相关状态
 const importModalVisible = ref(false);
@@ -73,26 +77,30 @@ interface ApiResponse {
 }
 
 // 咨询时长记录相关类型定义
-interface CounselingRecord {
+interface CounselingDurationRecord {
   id: number;
-  clientName: string;
-  sessionDate: number;
-  duration: number; // 咨询时长(分钟)
-  topic: string;
   counselorId: number;
+  createTime: number;
+  duration: number; // 咨询时长(小时)
+  certificate?: string; // 凭证图片URL
+  auditStatus: 'pending' | 'approved' | 'rejected'; // 审核状态：待审核、审核通过、审核不通过
+  operatorName: string; // 操作人名称
+  creatorName: string; // 创建人
+  auditTime?: number; // 审核时间
+  auditComment?: string; // 审核备注
 }
 
-interface CounselingRecordSearchParams {
+interface CounselingDurationSearchParams {
   page?: number;
   size?: number;
-  clientName?: string;
-  sessionStartTime?: number;
-  sessionEndTime?: number;
+  auditStatus?: string;
+  startTime?: number;
+  endTime?: number;
   counselorId: number;
 }
 
-interface CounselingRecordApiResponse {
-  list: CounselingRecord[];
+interface CounselingDurationApiResponse {
+  list: CounselingDurationRecord[];
   total: number;
 }
 
@@ -270,71 +278,60 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
   };
 };
 
-// 模拟咨询记录数据API
-const getCounselingRecordList = async (
-  params: CounselingRecordSearchParams,
-): Promise<CounselingRecordApiResponse> => {
+// 模拟咨询时长记录数据API
+const getCounselingDurationList = async (
+  params: CounselingDurationSearchParams,
+): Promise<CounselingDurationApiResponse> => {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const mockDataList: CounselingRecord[] = [
+  const mockDataList: CounselingDurationRecord[] = [
     {
       id: 1,
-      clientName: '小张',
-      sessionDate: dayjs().subtract(1, 'day').unix(),
-      duration: 50,
-      topic: '学习压力和焦虑情绪',
       counselorId: params.counselorId,
+      createTime: dayjs().subtract(1, 'day').unix(),
+      duration: 2,
+      certificate: 'https://picsum.photos/300/200?random=1',
+      auditStatus: 'pending',
+      operatorName: '管理员A',
+      creatorName: '张三',
     },
     {
       id: 2,
-      clientName: '小李',
-      sessionDate: dayjs().subtract(3, 'day').unix(),
-      duration: 45,
-      topic: '人际关系困扰',
       counselorId: params.counselorId,
+      createTime: dayjs().subtract(3, 'day').unix(),
+      duration: 1.5,
+      certificate: 'https://picsum.photos/300/200?random=2',
+      auditStatus: 'approved',
+      operatorName: '管理员B',
+      creatorName: '李四',
+      auditTime: dayjs().subtract(2, 'day').unix(),
     },
     {
       id: 3,
-      clientName: '小王',
-      sessionDate: dayjs().subtract(5, 'day').unix(),
-      duration: 60,
-      topic: '情绪管理问题',
       counselorId: params.counselorId,
+      createTime: dayjs().subtract(5, 'day').unix(),
+      duration: 3,
+      auditStatus: 'rejected',
+      operatorName: '管理员C',
+      creatorName: '王五',
+      auditTime: dayjs().subtract(4, 'day').unix(),
+      auditComment: '凭证不清晰，请重新上传',
     },
     {
       id: 4,
-      clientName: '小赵',
-      sessionDate: dayjs().subtract(7, 'day').unix(),
-      duration: 40,
-      topic: '职场适应问题',
       counselorId: params.counselorId,
-    },
-    {
-      id: 5,
-      clientName: '小孙',
-      sessionDate: dayjs().subtract(10, 'day').unix(),
-      duration: 55,
-      topic: '家庭关系调适',
-      counselorId: params.counselorId,
+      createTime: dayjs().subtract(7, 'day').unix(),
+      duration: 2.5,
+      certificate: 'https://picsum.photos/300/200?random=3',
+      auditStatus: 'approved',
+      operatorName: '管理员D',
+      creatorName: '赵六',
+      auditTime: dayjs().subtract(6, 'day').unix(),
     },
   ];
 
-  // 模拟搜索过滤
+  // 直接返回所有数据，不做过滤
   let filteredData = mockDataList;
-
-  if (params.clientName) {
-    filteredData = filteredData.filter((item) =>
-      item.clientName.includes(params.clientName!),
-    );
-  }
-
-  if (params.sessionStartTime && params.sessionEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.sessionDate >= params.sessionStartTime! &&
-        item.sessionDate <= params.sessionEndTime!,
-    );
-  }
 
   // 模拟分页
   const { page = 1, size = 10 } = params;
@@ -415,12 +412,125 @@ const handleEdit = (row: CounselorData) => {
   message.info('编辑功能已禁用');
 };
 
+// 新增咨询时长表单 Schema 配置
+const addDurationFormSchema = [
+  {
+    component: 'InputNumber',
+    fieldName: 'duration',
+    label: '时长',
+    rules: z.number().min(0.1, '请输入有效的时长'),
+    componentProps: {
+      placeholder: '请输入咨询时长',
+      min: 0,
+      step: 0.5,
+      style: { width: '100%' },
+    },
+  },
+  {
+    component: 'Upload',
+    fieldName: 'certificate',
+    label: '上传凭证',
+    componentProps: {
+      customRequest: upload_file,
+      disabled: false,
+      maxCount: 1,
+      multiple: false,
+      showUploadList: true,
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        const validExtensions = ['jpg', 'png', 'jpeg'];
+        const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+        const isValidType = validExtensions.includes(fileExtension || '');
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        if (!isValidType) {
+          message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传图片',
+      };
+    },
+  },
+];
+
+// 创建新增咨询时长表单
+const [AddDurationForm, addDurationFormApi] = useVbenForm({
+  schema: addDurationFormSchema,
+  showDefaultActions: false,
+  commonConfig: {
+    labelWidth: 120,
+  },
+});
+
+// 创建新增咨询时长弹窗
+const [AddDurationModal, addDurationModalApi] = useVbenModal({
+  title: '新增咨询时长',
+  onConfirm: async () => {
+    try {
+      const validationResult = await addDurationFormApi.validate();
+      if (!validationResult.valid) return;
+
+      const formValues = await addDurationFormApi.getValues();
+
+      // 模拟API请求
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 获取上传凭证URL
+      const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
+
+      console.log('新增咨询时长:', {
+        counselorId: currentCounselorId.value,
+        duration: formValues.duration,
+        certificateUrl,
+      });
+
+      message.success('新增咨询时长成功');
+
+      // 关闭弹窗
+      addDurationModalApi.close();
+
+      // 重置表单
+      addDurationFormApi.resetForm();
+
+      // 刷新列表
+      durationGridApi.query();
+    } catch (error) {
+      console.error('提交失败:', error);
+      message.error({ content: '提交失败，请重试', key: 'add_duration' });
+    }
+  },
+  onCancel: () => {
+    addDurationFormApi.resetForm();
+    addDurationModalApi.close();
+  },
+});
+
+// 新增咨询师按钮点击事件
 const handleCreate = () => {
   console.log('新增咨询师');
   message.info('新增功能已禁用');
 };
 
-// 已在上方定义handleCreate
+// 新增咨询时长按钮点击事件
+const handleAddDuration = () => {
+  if (!currentCounselorId.value) {
+    message.warning('请先选择咨询师');
+    return;
+  }
+
+  addDurationFormApi.resetForm();
+  addDurationModalApi.open();
+};
+
+// 移除重复定义
 
 // Excel导入相关函数
 const handleExcelImport = () => {
@@ -495,6 +605,29 @@ const getOnlineStatus = (isOnline: boolean) => {
   return isOnline
     ? { color: 'green', text: '在线' }
     : { color: 'gray', text: '离线' };
+};
+
+// 获取审核状态
+const getAuditStatus = (status: string) => {
+  const statusMap: Record<string, { color: string; text: string }> = {
+    pending: { color: 'orange', text: '待审核' },
+    approved: { color: 'green', text: '审核通过' },
+    rejected: { color: 'red', text: '审核不通过' },
+  };
+  return statusMap[status] || { color: 'gray', text: '未知' };
+};
+
+// 审核时长按钮
+const handleAudit = (row: CounselingDurationRecord, status: 'approved' | 'rejected') => {
+  console.log('审核咨询时长', row.id, status);
+  message.success('审核已通过');
+  durationGridApi.query();
+};
+
+// 查看审核不通过原因
+const handleView = (row: CounselingDurationRecord) => {
+  console.log('查看审核不通过原因', row.id);
+  message.info(row.auditComment || '无审核备注');
 };
 
 // 表格配置
@@ -586,7 +719,6 @@ const gridOptions: VxeTableGridOptions = {
   toolbarConfig: {
     custom: true,
     refresh: true,
-    search: true,
     zoom: true,
   },
 };
@@ -596,61 +728,50 @@ const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions,
 });
 
-// 咨询时长查看弹窗搜索表单配置
+// 咨询时长查看弹窗表单配置 - 已移除搜索条件
 const durationFormOptions: VbenFormProps = {
-  collapsed: false,
+  collapsed: true,
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [
-    ['sessionRangePicker', ['sessionStartTime', 'sessionEndTime']],
-  ],
-  schema: [
-    {
-      component: 'Input',
-      fieldName: 'clientName',
-      label: '客户姓名',
-      componentProps: {
-        placeholder: '请输入',
-      },
-    },
-    {
-      component: 'RangePicker',
-      defaultValue: undefined,
-      fieldName: 'sessionRangePicker',
-      label: '咨询时间',
-      componentProps: {
-        placeholder: ['开始日期', '结束日期'],
-      },
-    },
-  ],
+  schema: [], // 空数组表示不显示任何搜索条件
   showCollapseButton: false,
   submitOnChange: false,
-  submitOnEnter: true,
+  submitOnEnter: false,
 };
 
 // 咨询时长查看弹窗表格配置
 const durationGridOptions: VxeTableGridOptions = {
   columns: [
     {
-      field: 'clientName',
-      title: '客户姓名',
-      showOverflow: 'tooltip',
-    },
-    {
-      field: 'sessionDate',
-      title: '咨询时间',
-      slots: { default: 'sessionDate' },
+      field: 'createTime',
+      title: '创建时间',
+      slots: { default: 'createTime' },
     },
     {
       field: 'duration',
-      title: '时长(分钟)',
+      title: '小时',
       slots: { default: 'duration' },
     },
     {
-      field: 'topic',
-      title: '咨询主题',
+      field: 'certificate',
+      title: '凭证',
+      slots: { default: 'certificate' },
+    },
+    {
+      field: 'auditStatus',
+      title: '审核状态',
+      slots: { default: 'auditStatus' },
+    },
+    {
+      field: 'operatorName',
+      title: '操作人',
       showOverflow: 'tooltip',
+    },
+    {
+      field: 'actions',
+      title: '操作',
+      slots: { default: 'durationActions' },
     },
   ],
   height: '60vh',
@@ -664,21 +785,13 @@ const durationGridOptions: VxeTableGridOptions = {
       list: 'list',
     },
     ajax: {
-      query: async ({ page }, formValues) => {
+      query: async ({ page }) => {
         if (!currentCounselorId.value) return { list: [], total: 0 };
 
-        const result = await getCounselingRecordList({
+        const result = await getCounselingDurationList({
           page: page.currentPage,
           size: page.pageSize,
           counselorId: currentCounselorId.value,
-          clientName: formValues.clientName,
-          // 处理时间范围搜索
-          sessionStartTime: formValues.sessionStartTime
-            ? (Date.parse(formValues.sessionStartTime) - 28800000) / 1000
-            : undefined,
-          sessionEndTime: formValues.sessionEndTime
-            ? (Date.parse(formValues.sessionEndTime) - 28800000) / 1000 + 86399
-            : undefined,
         });
         return result;
       },
@@ -687,7 +800,6 @@ const durationGridOptions: VxeTableGridOptions = {
   toolbarConfig: {
     custom: true,
     refresh: true,
-    search: true,
     zoom: true,
   },
 };
@@ -776,16 +888,50 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
     >
       <div style="padding: 20px 0; min-height: 65vh">
         <DurationGrid>
-          <template #sessionDate="{ row }">
+          <template #toolbar-actions>
+            <Button type="primary" @click="handleAddDuration">
+              新增
+            </Button>
+          </template>
+
+          <template #createTime="{ row }">
             <span>
-              {{ dayjs(row.sessionDate * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+              {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
             </span>
           </template>
 
           <template #duration="{ row }">
             <span class="font-medium text-blue-600">
-              {{ row.duration }}分钟
+              {{ row.duration }}小时
             </span>
+          </template>
+
+          <template #certificate="{ row }">
+            <div v-if="row.certificate">
+              <a :href="row.certificate" target="_blank">
+                <Button type="link" size="small">查看</Button>
+              </a>
+            </div>
+            <div v-else class="text-gray-400">暂无凭证</div>
+          </template>
+
+          <template #auditStatus="{ row }">
+            <Tag :color="getAuditStatus(row.auditStatus).color">
+              {{ getAuditStatus(row.auditStatus).text }}
+            </Tag>
+          </template>
+
+          <template #durationActions="{ row }">
+            <Space>
+              <Button v-if="row.auditStatus === 'pending'" type="link" size="small"
+                     @click="handleAudit(row, 'approved')">
+                审核
+              </Button>
+              <Button v-if="row.auditStatus === 'rejected'" type="link" size="small"
+                     @click="handleView(row)">
+                查看
+              </Button>
+            </Space>
           </template>
         </DurationGrid>
       </div>
@@ -839,5 +985,9 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
         </Upload.Dragger>
       </div>
     </Modal>
+    <!-- 新增咨询时长弹窗 -->
+    <AddDurationModal class="w-[500px]" :z-index="9999">
+      <AddDurationForm />
+    </AddDurationModal>
   </Spin>
 </template>
