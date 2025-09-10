@@ -2,21 +2,16 @@
 import type { VbenFormProps } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
-import { nextTick, reactive, ref } from 'vue';
+import { ref } from 'vue';
 import { Page } from '@vben/common-ui';
 import {
   Button,
-  Form,
-  Input,
   message,
   Modal,
   Popconfirm,
   Space,
   Spin,
-  Switch,
   Tag,
-  Textarea,
-  Select,
   Upload,
   Alert,
 } from 'ant-design-vue';
@@ -31,10 +26,7 @@ defineOptions({
 // 全屏loading状态
 const spinning = ref(false);
 
-// 弹窗相关状态
-const modalVisible = ref(false);
-const modalLoading = ref(false);
-const editingId = ref<number | null>(null);
+// 移除了弹窗相关状态
 
 // 咨询时长数据查看弹窗相关状态
 const durationModalVisible = ref(false);
@@ -45,22 +37,7 @@ const currentCounselorName = ref('');
 const importModalVisible = ref(false);
 const uploadLoading = ref(false);
 
-// 表单 ref
-const formRef = ref();
-
-// 弹窗表单数据
-const formData = reactive({
-  counselorName: '',
-  school: '',
-  major: '',
-  personalIntro: '',
-  specialization: '',
-  expertise: '',
-  counselingMethod: 'online',
-  location: '',
-  settlementPrice: '',
-  isOnline: true,
-});
+// 移除了表单相关状态
 
 // 类型定义
 interface CounselorData {
@@ -411,9 +388,7 @@ const handleToggleStatus = (row: CounselorData) => {
   }, 1000);
 };
 
-const handleEdit = (row: CounselorData) => {
-  openEditModal(row);
-};
+// 已在下方重新定义handleEdit
 
 const handleDelete = (row: CounselorData) => {
   console.log('删除咨询师:', row);
@@ -434,86 +409,18 @@ const handleDelete = (row: CounselorData) => {
   }, 1000);
 };
 
-// 弹窗相关函数
-const resetFormData = () => {
-  formData.counselorName = '';
-  formData.school = '';
-  formData.major = '';
-  formData.personalIntro = '';
-  formData.specialization = '';
-  formData.expertise = '';
-  formData.counselingMethod = 'online';
-  formData.location = '';
-  formData.settlementPrice = '';
-  formData.isOnline = true;
-  editingId.value = null;
-};
-
-const openCreateModal = async () => {
-  resetFormData();
-  modalVisible.value = true;
-
-  // 等待 DOM 更新后重置表单校验状态
-  await nextTick();
-  formRef.value?.clearValidate();
-};
-
-const openEditModal = async (row: CounselorData) => {
-  resetFormData();
-  editingId.value = row.id;
-  formData.counselorName = row.counselorName;
-  formData.school = row.school;
-  formData.major = row.major;
-  formData.personalIntro = row.personalIntro;
-  formData.specialization = row.specialization;
-  formData.expertise = row.expertise;
-  formData.counselingMethod = row.counselingMethod;
-  formData.location = row.location;
-  formData.settlementPrice = row.settlementPrice.toString();
-  formData.isOnline = row.isOnline;
-
-  modalVisible.value = true;
-
-  // 等待 DOM 更新后重置表单校验状态
-  await nextTick();
-  formRef.value?.clearValidate();
-};
-
-const closeModal = () => {
-  modalVisible.value = false;
-  formRef.value?.resetFields();
-  resetFormData();
-};
-
-const handleSubmit = async () => {
-  try {
-    // 使用 Form 组件的内置校验
-    await formRef.value?.validate();
-
-    modalLoading.value = true;
-
-    // 模拟API请求
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const action = editingId.value ? '编辑' : '新增';
-    message.success(`${action}咨询师成功`);
-
-    // 刷新列表
-    gridApi.query();
-
-    // 关闭弹窗
-    closeModal();
-  } catch (error) {
-    // 校验失败时不做处理，表单会自动显示红色校验信息
-    console.log('表单校验失败:', error);
-  } finally {
-    modalLoading.value = false;
-  }
+// 弹窗操作函数（已简化）
+const handleEdit = (row: CounselorData) => {
+  console.log('编辑咨询师', row.id);
+  message.info('编辑功能已禁用');
 };
 
 const handleCreate = () => {
-  openCreateModal();
+  console.log('新增咨询师');
+  message.info('新增功能已禁用');
 };
+
+// 已在上方定义handleCreate
 
 // Excel导入相关函数
 const handleExcelImport = () => {
@@ -823,22 +730,24 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
             <Button type="link" size="small" @click="handleViewDuration(row)">
               咨询时长
             </Button>
-            <Button
+            <Popconfirm
               v-if="row.status === 'enabled'"
-              type="link"
-              size="small"
-              @click="handleToggleStatus(row)"
+              title="确定要停用这个咨询师吗？"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="handleToggleStatus(row)"
             >
-              停用
-            </Button>
-            <Button
+              <Button type="link" size="small">停用</Button>
+            </Popconfirm>
+            <Popconfirm
               v-else
-              type="link"
-              size="small"
-              @click="handleToggleStatus(row)"
+              title="确定要启用这个咨询师吗？"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="handleToggleStatus(row)"
             >
-              启用
-            </Button>
+              <Button type="link" size="small">启用</Button>
+            </Popconfirm>
             <Button type="link" size="small" @click="handleEdit(row)">
               编辑
             </Button>
@@ -855,128 +764,7 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
       </Grid>
     </Page>
 
-    <!-- 新增/编辑弹窗 -->
-    <Modal
-      v-model:open="modalVisible"
-      :title="editingId ? '编辑咨询师' : '新增咨询师'"
-      :confirm-loading="modalLoading"
-      width="800px"
-      @ok="handleSubmit"
-      @cancel="closeModal"
-    >
-      <Form
-        ref="formRef"
-        :model="formData"
-        layout="vertical"
-        style="padding: 20px 0"
-      >
-        <Form.Item
-          label="咨询师名称"
-          name="counselorName"
-          :rules="[{ required: true, message: '请输入咨询师名称' }]"
-        >
-          <Input
-            v-model:value="formData.counselorName"
-            placeholder="请输入咨询师名称"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="学校"
-          name="school"
-          :rules="[{ required: true, message: '请输入学校名称' }]"
-        >
-          <Input v-model:value="formData.school" placeholder="请输入学校名称" />
-        </Form.Item>
-
-        <Form.Item
-          label="专业"
-          name="major"
-          :rules="[{ required: true, message: '请输入专业' }]"
-        >
-          <Input v-model:value="formData.major" placeholder="请输入专业" />
-        </Form.Item>
-
-        <Form.Item
-          label="个人简介"
-          name="personalIntro"
-          :rules="[{ required: true, message: '请输入个人简介' }]"
-        >
-          <Textarea
-            v-model:value="formData.personalIntro"
-            placeholder="请输入个人简介（不超过500个字）"
-            :rows="4"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="擅长流派"
-          name="specialization"
-          :rules="[{ required: true, message: '请输入擅长流派' }]"
-        >
-          <Input
-            v-model:value="formData.specialization"
-            placeholder="请输入擅长流派"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="擅长领域"
-          name="expertise"
-          :rules="[{ required: true, message: '请输入擅长领域' }]"
-        >
-          <Input
-            v-model:value="formData.expertise"
-            placeholder="请输入擅长领域，多个用逗号分隔"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="咨询方式"
-          name="counselingMethod"
-          :rules="[{ required: true, message: '请选择咨询方式' }]"
-        >
-          <Select
-            v-model:value="formData.counselingMethod"
-            placeholder="请选择咨询方式"
-          >
-            <Select.Option value="online">线上</Select.Option>
-            <Select.Option value="offline">线下</Select.Option>
-            <Select.Option value="both">线上+线下</Select.Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="所在位置"
-          name="location"
-          :rules="[{ required: true, message: '请输入所在位置' }]"
-        >
-          <Input
-            v-model:value="formData.location"
-            placeholder="请输入所在位置"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="结算价格"
-          name="settlementPrice"
-          :rules="[
-            { required: true, message: '请输入结算价格' },
-            { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格' },
-          ]"
-        >
-          <Input
-            v-model:value="formData.settlementPrice"
-            placeholder="请输入结算价格"
-            addonBefore="¥"
-          />
-        </Form.Item>
-
-        <Form.Item label="是否在线">
-          <Switch v-model:checked="formData.isOnline" />
-        </Form.Item>
-      </Form>
-    </Modal>
+    <!-- 新增/编辑弹窗已移除 -->
 
     <!-- 咨询时长查看弹窗 -->
     <Modal
