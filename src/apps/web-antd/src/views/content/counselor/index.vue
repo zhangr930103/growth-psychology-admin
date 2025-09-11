@@ -89,12 +89,14 @@ interface CounselorData {
   updateTime?: number;
   status: 'enabled' | 'disabled';
   // 新增字段
+  avatar?: string | any[]; // 头像
+  credentials?: any[]; // 学信网认证
   consultingPrice?: number; // 咨询价格设置
   consultingMethodType?: string; // 咨询方式类型
   specializations?: string[]; // 擅长流派数组
   expertiseAreas?: string[]; // 擅长领域数组
   consultingStatus?: string; // 咨询状态
-  durationProof?: string[]; // 时长证明
+  durationProof?: any[]; // 时长证明
   settlementWeight?: number; // 结算权重
   totalDuration?: number; // 总咨询时长
   otherSpecialization?: string; // 其他擅长流派
@@ -128,6 +130,8 @@ const adaptApiDataToLocal = (apiData: ApiCounselorData): CounselorData => {
       apiData.update_time ||
       Math.floor(new Date(apiData.updated_at).getTime() / 1000),
     status: apiData.status as 'enabled' | 'disabled',
+    avatar: apiData.avatar,
+    credentials: apiData.credentials,
     consultingPrice: Number(apiData.consulting_price) || 0,
     consultingMethodType: apiData.consulting_method,
     specializations: apiData.specializations,
@@ -497,18 +501,18 @@ const handleEdit = (row: CounselorData) => {
     school: row.school,
     major: row.major,
     personalIntro: row.personalIntro,
-    avatar: [], // 头像需要从现有数据中获取，这里简化处理
-    credentials: [], // 学信网认证信息需要从现有数据中获取，这里简化处理
+    avatar: prepareFileListForUpload(row.avatar),
+    credentials: prepareFileListForUpload(row.credentials),
     consultingPrice: row.consultingPrice || row.settlementPrice || '',
     consultingMethod: mapConsultingMethodToValue(row.consultingMethodType || row.counselingMethod),
-    specializations: row.specializations || [row.specialization].filter(Boolean) || [],
+    specializations: prepareSpecializationsForEdit(getSpecializationsList(row)).specializations,
     expertiseAreas: row.expertiseAreas || [row.expertise].filter(Boolean) || [],
     consultingStatus: row.consultingStatus || (row.isOnline ? 'online' : 'offline'),
-    durationProof: row.durationProof || [], // 时长证明
+    durationProof: prepareFileListForUpload(row.durationProof), // 时长证明
     location: mapLocationToValue(row.location), // 使用映射函数
     settlementWeight: row.settlementWeight || 0, // 结算权重
     totalDuration: row.totalDuration || row.counselingDuration || 0, // 总咨询时长
-    otherSpecialization: row.otherSpecialization || '',
+    otherSpecialization: prepareSpecializationsForEdit(getSpecializationsList(row)).otherSpecialization || row.otherSpecialization || '',
   };
 
   // 位置映射函数
@@ -547,6 +551,122 @@ const handleEdit = (row: CounselorData) => {
     return methodMap[method] || method || 'video';
   }
 
+  // 获取擅长流派列表函数：统一处理数组和字符串格式
+  function getSpecializationsList(row: CounselorData): string[] {
+    // 如果有 specializations 数组，优先使用
+    if (row.specializations && Array.isArray(row.specializations)) {
+      return row.specializations;
+    }
+
+    // 如果没有数组但有 specialization 字符串，转换为数组
+    if (row.specialization) {
+      // 如果是逗号分隔的字符串，分割并清理
+      if (row.specialization.includes(',')) {
+        return row.specialization.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      // 单个字符串
+      return [row.specialization];
+    }
+
+    return [];
+  }
+
+  // 擅长流派编辑准备函数：处理"其他"流派的回显
+  function prepareSpecializationsForEdit(specializations: string[]): {
+    specializations: string[];
+    otherSpecialization: string;
+  } {
+    // 预定义的擅长流派选项
+    const predefinedSpecializations = [
+      'cbt',
+      'postmodern',
+      'psychoanalysis',
+      'humanistic',
+      'family_therapy',
+      'other'
+    ];
+
+    const resultSpecializations: string[] = [];
+    let otherSpecialization = '';
+
+    specializations.forEach(spec => {
+      if (predefinedSpecializations.includes(spec)) {
+        // 如果是预定义选项，直接添加
+        resultSpecializations.push(spec);
+      } else {
+        // 如果不是预定义选项，认为是自定义的"其他"流派
+        if (!resultSpecializations.includes('other')) {
+          resultSpecializations.push('other');
+        }
+        // 将自定义流派名称保存到 otherSpecialization（如果有多个自定义的，用逗号分隔）
+        if (otherSpecialization) {
+          otherSpecialization += ', ' + spec;
+        } else {
+          otherSpecialization = spec;
+        }
+      }
+    });
+
+    return {
+      specializations: resultSpecializations,
+      otherSpecialization
+    };
+  }
+
+  // 文件数据转换函数：将API返回的文件数据转换为上传组件格式
+  function prepareFileListForUpload(fileData: any): any[] {
+    if (!fileData) return [];
+
+    // 如果是字符串（单个文件URL）
+    if (typeof fileData === 'string' && fileData) {
+      return [{
+        uid: Date.now().toString(),
+        name: '文件',
+        status: 'done',
+        url: fileData,
+        response: { file_url: fileData }
+      }];
+    }
+
+    // 如果是数组
+    if (Array.isArray(fileData)) {
+      return fileData.map((file, index) => {
+        // 如果数组元素是字符串
+        if (typeof file === 'string') {
+          return {
+            uid: `${Date.now()}-${index}`,
+            name: '文件',
+            status: 'done',
+            url: file,
+            response: { file_url: file }
+          };
+        }
+
+        // 如果数组元素是对象，且有url属性
+        if (file && typeof file === 'object' && file.url) {
+          return {
+            uid: file.uid || `${Date.now()}-${index}`,
+            name: file.name || '文件',
+            status: 'done',
+            url: file.url,
+            response: { file_url: file.url }
+          };
+        }
+
+        // 其他情况，尝试直接使用
+        return {
+          uid: `${Date.now()}-${index}`,
+          name: '文件',
+          status: 'done',
+          url: file,
+          response: { file_url: file }
+        };
+      }).filter(item => item.url);
+    }
+
+    return [];
+  }
+
   // 设置可咨询时间数据（如果有的话）
   counselorAvailableTimeSlots.value = row.availableTimeSlots || [];
 
@@ -563,6 +683,16 @@ const handleEdit = (row: CounselorData) => {
     console.log('编辑数据回显 - 原始数据:', row);
     console.log('编辑数据回显 - 映射后的表单数据:', formData);
     console.log('编辑数据回显 - 可咨询时间:', counselorAvailableTimeSlots.value);
+    console.log('编辑数据回显 - 头像数据:', formData.avatar);
+    console.log('编辑数据回显 - 证书数据:', formData.credentials);
+    console.log('编辑数据回显 - 时长证明数据:', formData.durationProof);
+    console.log('编辑数据回显 - 擅长流派处理结果:', {
+      原始数组: row.specializations,
+      原始字符串: row.specialization,
+      获取列表: getSpecializationsList(row),
+      处理后: formData.specializations,
+      其他流派: formData.otherSpecialization
+    });
 
     counselorFormApi.setValues({
       ...formData,
