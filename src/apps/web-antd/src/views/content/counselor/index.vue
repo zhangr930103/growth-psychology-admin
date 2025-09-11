@@ -12,9 +12,12 @@ import {
   editCounselorApi,
   deleteCounselorApi,
   toggleCounselorStatusApi,
+  getCounselingDurationListApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
+  type CounselingDurationListParams,
+  type CounselingDurationRecord as ApiCounselingDurationRecord,
   type CounselorData as ApiCounselorData,
 } from '#/api/core/counselor';
 import {
@@ -142,6 +145,22 @@ const adaptApiDataToLocal = (apiData: ApiCounselorData): CounselorData => {
     settlementWeight: Number(apiData.settlement_weight) || 0,
     totalDuration: Number(apiData.total_duration) || 0,
     availableTimeSlots: apiData.available_time_slots,
+  };
+};
+
+// 咨询时长数据适配器函数：将API数据转换为本地格式
+const adaptDurationApiDataToLocal = (apiData: ApiCounselingDurationRecord): CounselingDurationRecord => {
+  return {
+    id: apiData.id,
+    counselorId: apiData.counselor_id,
+    createTime: apiData.create_time || Math.floor(new Date(apiData.created_at).getTime() / 1000),
+    duration: Number(apiData.duration) || 0,
+    certificate: apiData.certificate,
+    auditStatus: apiData.audit_status as 'pending' | 'approved' | 'rejected',
+    operatorName: apiData.operator_name,
+    creatorName: apiData.creator_name,
+    auditTime: apiData.audit_time_stamp || Math.floor(new Date(apiData.audit_time).getTime() / 1000),
+    auditComment: apiData.audit_comment,
   };
 };
 
@@ -346,7 +365,6 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
       total: response.total,
     };
   } catch (error) {
-    console.error('获取咨询师列表失败:', error);
     // 如果API调用失败，返回空数据
     return {
       list: [],
@@ -355,72 +373,38 @@ const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
   }
 };
 
-// 模拟咨询时长记录数据API
+// 咨询时长记录数据API
 const getCounselingDurationList = async (
   params: CounselingDurationSearchParams,
 ): Promise<CounselingDurationApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    // 转换参数格式以匹配API接口
+    const apiParams: CounselingDurationListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      counselor_id: params.counselorId,
+      audit_status: params.auditStatus,
+      start_time: params.startTime,
+      end_time: params.endTime,
+    };
 
-  const mockDataList: CounselingDurationRecord[] = [
-    {
-      id: 1,
-      counselorId: params.counselorId,
-      createTime: dayjs().subtract(1, 'day').unix(),
-      duration: 2,
-      certificate: 'https://picsum.photos/300/200?random=1',
-      auditStatus: 'pending',
-      operatorName: '管理员A',
-      creatorName: '张三',
-    },
-    {
-      id: 2,
-      counselorId: params.counselorId,
-      createTime: dayjs().subtract(3, 'day').unix(),
-      duration: 1.5,
-      certificate: 'https://picsum.photos/300/200?random=2',
-      auditStatus: 'approved',
-      operatorName: '管理员B',
-      creatorName: '李四',
-      auditTime: dayjs().subtract(2, 'day').unix(),
-    },
-    {
-      id: 3,
-      counselorId: params.counselorId,
-      createTime: dayjs().subtract(5, 'day').unix(),
-      duration: 3,
-      auditStatus: 'rejected',
-      operatorName: '管理员C',
-      creatorName: '王五',
-      auditTime: dayjs().subtract(4, 'day').unix(),
-      auditComment: '凭证不清晰，请重新上传',
-    },
-    {
-      id: 4,
-      counselorId: params.counselorId,
-      createTime: dayjs().subtract(7, 'day').unix(),
-      duration: 2.5,
-      certificate: 'https://picsum.photos/300/200?random=3',
-      auditStatus: 'approved',
-      operatorName: '管理员D',
-      creatorName: '赵六',
-      auditTime: dayjs().subtract(6, 'day').unix(),
-    },
-  ];
+    // 调用真实API
+    const response = await getCounselingDurationListApi(apiParams);
 
-  // 直接返回所有数据，不做过滤
-  let filteredData = mockDataList;
+    // 转换API返回的数据格式
+    const adaptedList = response.list.map(adaptDurationApiDataToLocal);
 
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
+    return {
+      list: adaptedList,
+      total: response.total,
+    };
+  } catch (error) {
+    // 如果API调用失败，返回空数据
+    return {
+      list: [],
+      total: 0,
+    };
+  }
 };
 
 // 操作函数
@@ -469,7 +453,6 @@ const handleToggleStatus = async (row: CounselorData) => {
     // 刷新列表
     gridApi.query();
   } catch (error) {
-    console.error('状态切换失败:', error);
     message.error({
       content: `${action}失败，请重试`,
     });
@@ -494,7 +477,6 @@ const handleDelete = async (row: CounselorData) => {
     // 刷新列表
     gridApi.query();
   } catch (error) {
-    console.error('删除咨询师失败:', error);
     message.error({
       content: '删除失败，请重试',
     });
@@ -1133,7 +1115,6 @@ const [DurationModal, durationModalApi] = useVbenModal({
       // 刷新列表
       durationGridApi.query();
     } catch (error) {
-      console.error('提交失败:', error);
       message.error({ content: '提交失败，请重试', key: 'add_duration' });
     } finally {
       // 关闭loading
@@ -1187,7 +1168,6 @@ const [AuditModal, auditModalApi] = useVbenModal({
       // 刷新列表
       durationGridApi.query();
     } catch (error) {
-      console.error('审核失败:', error);
       message.error({ content: '审核失败，请重试', key: 'audit' });
     } finally {
       // 关闭loading
@@ -1264,7 +1244,6 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
       // 刷新列表
       gridApi.query();
     } catch (error) {
-      console.error('提交失败:', error);
       const actionText = counselorModalMode.value === 'add' ? '新增' : '编辑';
       message.error({ content: `${actionText}失败，请重试`, key: 'counselor_submit' });
     } finally {
@@ -1387,7 +1366,6 @@ const customUpload = async (options: any) => {
 
     onSuccess();
   } catch (error) {
-    console.error('导入失败:', error);
     message.error('导入失败，请重试');
     onError(error);
   } finally {

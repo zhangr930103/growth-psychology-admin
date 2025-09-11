@@ -161,6 +161,45 @@ export interface ToggleStatusResponse {
 }
 
 /**
+ * 咨询时长列表查询参数类型
+ */
+export interface CounselingDurationListParams {
+  page: number;
+  size: number;
+  counselor_id: number;
+  audit_status?: string;
+  start_time?: number;
+  end_time?: number;
+}
+
+/**
+ * 咨询时长记录数据类型
+ */
+export interface CounselingDurationRecord {
+  id: number;
+  counselor_id: number;
+  duration: string;
+  certificate: string;
+  audit_status: string;
+  operator_name: string;
+  creator_name: string;
+  audit_time: string;
+  audit_comment: string;
+  created_at: string;
+  updated_at: string;
+  create_time: number;
+  audit_time_stamp: number;
+}
+
+/**
+ * 咨询时长列表响应类型
+ */
+export interface CounselingDurationListResponse {
+  list: CounselingDurationRecord[];
+  total: number;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -203,4 +242,11 @@ export async function deleteCounselorApi(params: DeleteCounselorParams): Promise
  */
 export async function toggleCounselorStatusApi(params: ToggleStatusParams): Promise<ToggleStatusResponse> {
   return requestClient.post<ToggleStatusResponse>('/counselors/toggle-status', params);
+}
+
+/**
+ * 获取咨询时长列表
+ */
+export async function getCounselingDurationListApi(params: CounselingDurationListParams): Promise<CounselingDurationListResponse> {
+  return requestClient.post<CounselingDurationListResponse>('/counselors/duration/list', params);
 }
