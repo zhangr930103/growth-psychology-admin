@@ -499,70 +499,76 @@ const handleEdit = (row: CounselorData) => {
     personalIntro: row.personalIntro,
     avatar: [], // 头像需要从现有数据中获取，这里简化处理
     credentials: [], // 学信网认证信息需要从现有数据中获取，这里简化处理
-    consultingPrice: row.settlementPrice || '',
-    consultingMethod:
-      row.counselingMethod === '线上'
-        ? 'video'
-        : row.counselingMethod === '线下'
-          ? 'face_to_face'
-          : 'video',
-    specializations: [row.specialization || 'cbt'], // 从现有数据映射
-    expertiseAreas: [row.expertise ? 'emotion_stress' : 'emotion_stress'], // 从现有数据映射
-    consultingStatus: row.isOnline ? 'online' : 'offline',
-    durationProof: [], // 时长证明，这里简化处理
-    location:
-      row.location === '北京'
-        ? 'beijing'
-        : row.location === '上海'
-          ? 'shanghai'
-          : row.location === '广州'
-            ? 'guangzhou'
-            : row.location === '深圳'
-              ? 'shenzhen'
-              : row.location === '杭州'
-                ? 'hangzhou'
-                : row.location === '成都'
-                  ? 'chengdu'
-                  : row.location === '武汉'
-                    ? 'wuhan'
-                    : row.location === '西安'
-                      ? 'xian'
-                      : row.location === '南京'
-                        ? 'nanjing'
-                        : row.location === '重庆'
-                          ? 'chongqing'
-                          : row.location === '天津'
-                            ? 'tianjin'
-                            : row.location === '苏州'
-                              ? 'suzhou'
-                              : row.location === '长沙'
-                                ? 'changsha'
-                                : row.location === '青岛'
-                                  ? 'qingdao'
-                                  : row.location === '大连'
-                                    ? 'dalian'
-                                    : row.location === '厦门'
-                                      ? 'xiamen'
-                                      : 'other', // 默认为其他
+    consultingPrice: row.consultingPrice || row.settlementPrice || '',
+    consultingMethod: mapConsultingMethodToValue(row.consultingMethodType || row.counselingMethod),
+    specializations: row.specializations || [row.specialization].filter(Boolean) || [],
+    expertiseAreas: row.expertiseAreas || [row.expertise].filter(Boolean) || [],
+    consultingStatus: row.consultingStatus || (row.isOnline ? 'online' : 'offline'),
+    durationProof: row.durationProof || [], // 时长证明
+    location: mapLocationToValue(row.location), // 使用映射函数
     settlementWeight: row.settlementWeight || 0, // 结算权重
     totalDuration: row.totalDuration || row.counselingDuration || 0, // 总咨询时长
-    otherSpecialization: '',
+    otherSpecialization: row.otherSpecialization || '',
   };
+
+  // 位置映射函数
+  function mapLocationToValue(location: string): string {
+    const locationMap: Record<string, string> = {
+      '北京': 'beijing',
+      '上海': 'shanghai',
+      '广州': 'guangzhou',
+      '深圳': 'shenzhen',
+      '杭州': 'hangzhou',
+      '成都': 'chengdu',
+      '武汉': 'wuhan',
+      '西安': 'xian',
+      '南京': 'nanjing',
+      '重庆': 'chongqing',
+      '天津': 'tianjin',
+      '苏州': 'suzhou',
+      '长沙': 'changsha',
+      '青岛': 'qingdao',
+      '大连': 'dalian',
+      '厦门': 'xiamen',
+    };
+    return locationMap[location] || location || 'other';
+  }
+
+  // 咨询方式映射函数
+  function mapConsultingMethodToValue(method: string): string {
+    const methodMap: Record<string, string> = {
+      '线上': 'video',
+      '视频': 'video',
+      '语音': 'voice',
+      '线下': 'face_to_face',
+      '面对面': 'face_to_face',
+      '线上+线下': 'video', // 默认选择视频
+    };
+    return methodMap[method] || method || 'video';
+  }
 
   // 设置可咨询时间数据（如果有的话）
   counselorAvailableTimeSlots.value = row.availableTimeSlots || [];
 
-  // 设置表单值并打开弹窗
-  counselorFormApi.setValues({
-    ...formData,
-    availableTimeSlots: counselorAvailableTimeSlots.value,
-  });
+  // 先打开弹窗，再设置表单值（确保表单组件已渲染）
   counselorModalApi.open();
 
   // 设置弹窗标题
   counselorModalApi.setState({
     title: '编辑咨询师',
   });
+
+  // 延迟设置表单值，确保表单组件已经渲染完成
+  setTimeout(() => {
+    console.log('编辑数据回显 - 原始数据:', row);
+    console.log('编辑数据回显 - 映射后的表单数据:', formData);
+    console.log('编辑数据回显 - 可咨询时间:', counselorAvailableTimeSlots.value);
+
+    counselorFormApi.setValues({
+      ...formData,
+      availableTimeSlots: counselorAvailableTimeSlots.value,
+    });
+  }, 100);
 };
 
 // 咨询时长表单 Schema 配置（动态配置）
