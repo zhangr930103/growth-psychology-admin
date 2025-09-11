@@ -95,6 +95,39 @@ export interface CreateCounselorResponse {
 }
 
 /**
+ * 编辑咨询师参数类型
+ */
+export interface EditCounselorParams {
+  id: number;
+  counselor_name: string;
+  school: string;
+  major: string;
+  personal_intro: string;
+  avatar: string;
+  credentials: any[];
+  consulting_price: number;
+  consulting_method: string;
+  specializations: string[];
+  expertise_areas: string[];
+  consulting_status: string;
+  location: string;
+  total_duration: number;
+  settlement_price: number;
+  settlement_weight: number;
+  duration_proof: any[];
+  available_time_slots: TimeSlot[];
+}
+
+/**
+ * 编辑咨询师响应类型
+ */
+export interface EditCounselorResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -116,4 +149,11 @@ export async function getCounselorListApi(params: CounselorListParams): Promise<
  */
 export async function createCounselorApi(params: CreateCounselorParams): Promise<CreateCounselorResponse> {
   return requestClient.post<CreateCounselorResponse>('/counselors/create', params);
+}
+
+/**
+ * 编辑咨询师
+ */
+export async function editCounselorApi(params: EditCounselorParams): Promise<EditCounselorResponse> {
+  return requestClient.post<EditCounselorResponse>('/counselors/edit', params);
 }

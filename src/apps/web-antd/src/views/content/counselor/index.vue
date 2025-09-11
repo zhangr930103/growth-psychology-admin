@@ -9,8 +9,10 @@ import { upload_file } from '#/api/examples/upload';
 import {
   getCounselorListApi,
   createCounselorApi,
+  editCounselorApi,
   type CounselorListParams,
   type CreateCounselorParams,
+  type EditCounselorParams,
   type CounselorData as ApiCounselorData,
 } from '#/api/core/counselor';
 import {
@@ -164,6 +166,54 @@ const adaptFormDataToApi = (formData: any): CreateCounselorParams => {
   }
 
   return {
+    counselor_name: formData.counselorName || '',
+    school: formData.school || '',
+    major: formData.major || '',
+    personal_intro: formData.personalIntro || '',
+    avatar: extractSingleFileUrl(formData.avatar || []),
+    credentials: extractFileUrls(formData.credentials || []).map(url => ({ url })),
+    consulting_price: Number(formData.consultingPrice) || 0,
+    consulting_method: formData.consultingMethod || '',
+    specializations: finalSpecializations,
+    expertise_areas: formData.expertiseAreas || [],
+    consulting_status: formData.consultingStatus || '',
+    location: formData.location || '',
+    total_duration: Number(formData.totalDuration) || 0,
+    settlement_price: Number(formData.consultingPrice) || 0, // 使用咨询价格作为结算价格
+    settlement_weight: Number(formData.settlementWeight) || 0,
+    duration_proof: extractFileUrls(formData.durationProof || []).map(url => ({ url })),
+    available_time_slots: formData.availableTimeSlots || [],
+  };
+};
+
+// 编辑表单数据适配器函数：将表单数据转换为编辑API格式
+const adaptFormDataToEditApi = (formData: any, counselorId: number): EditCounselorParams => {
+  // 处理上传文件的URL提取
+  const extractFileUrls = (fileList: any[]): string[] => {
+    if (!Array.isArray(fileList)) return [];
+    return fileList.map(file => {
+      if (typeof file === 'string') return file;
+      return file?.response?.file_url || file?.url || '';
+    }).filter(Boolean);
+  };
+
+  // 处理单个文件的URL提取
+  const extractSingleFileUrl = (fileList: any[]): string => {
+    const urls = extractFileUrls(fileList);
+    return urls[0] || '';
+  };
+
+  // 处理其他擅长流派
+  let finalSpecializations = formData.specializations || [];
+  if (finalSpecializations.includes('other') && formData.otherSpecialization) {
+    // 如果选择了其他，则用用户输入的内容替换'other'
+    finalSpecializations = finalSpecializations.map((spec: string) =>
+      spec === 'other' ? formData.otherSpecialization : spec
+    );
+  }
+
+  return {
+    id: counselorId,
     counselor_name: formData.counselorName || '',
     school: formData.school || '',
     major: formData.major || '',
@@ -1052,8 +1102,15 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
         await createCounselorApi(apiData);
         message.success('新增咨询师成功');
       } else {
-        // 编辑咨询师：这里可以后续添加编辑API
-        // TODO: 添加编辑咨询师的API调用
+        // 编辑咨询师：调用编辑API
+        if (!currentEditCounselor.value?.id) {
+          throw new Error('缺少咨询师ID，无法进行编辑');
+        }
+
+        const editApiData = adaptFormDataToEditApi(submitData, currentEditCounselor.value.id);
+        console.log('转换后的编辑API数据:', editApiData);
+
+        await editCounselorApi(editApiData);
         message.success('编辑咨询师成功');
       }
 
