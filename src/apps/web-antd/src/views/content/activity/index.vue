@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getActivityListApi, createActivityApi, updateActivityApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams } from '#/api';
+import { getActivityListApi, createActivityApi, updateActivityApi, deleteActivityApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams } from '#/api';
 
 defineOptions({
   name: 'ActivityManagement',
@@ -250,23 +250,31 @@ const handleDisable = (row: ActivityData) => {
   }, 1000);
 };
 
-const handleDelete = (row: ActivityData) => {
+const handleDelete = async (row: ActivityData) => {
   console.log('删除活动:', row);
 
-  // 开启全屏loading
-  spinning.value = true;
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用真实删除API
+    await deleteActivityApi(row.id);
 
     message.success({
       content: '活动删除成功',
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error: any) {
+    // 错误处理
+    const errorMsg = error?.response?.data?.message || error?.message || '删除失败，请稍后重试';
+    message.error(errorMsg);
+    console.error('删除活动失败:', error);
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 // 弹窗相关函数

@@ -117,7 +117,5 @@ export async function disableActivityApi(id: number): Promise<ActivityOperationR
  * 删除活动
  */
 export async function deleteActivityApi(id: number): Promise<ActivityOperationResponse> {
-  return requestClient.post<ActivityOperationResponse>('/activities/delete', {}, {
-    params: { id }
-  });
+  return requestClient.post<ActivityOperationResponse>('/activities/delete', { id });
 }
