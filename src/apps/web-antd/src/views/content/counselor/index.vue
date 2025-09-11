@@ -1624,7 +1624,7 @@ const durationGridOptions: VxeTableGridOptions = {
       slots: { default: 'durationActions' },
     },
   ],
-  height: '60vh',
+  height: 600,
   keepSource: true,
   autoResize: true,
   pagerConfig: {},
