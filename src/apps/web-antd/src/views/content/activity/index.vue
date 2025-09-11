@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getActivityListApi, createActivityApi, updateActivityApi, deleteActivityApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams } from '#/api';
+import { getActivityListApi, createActivityApi, updateActivityApi, deleteActivityApi, toggleActivityStatusApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams, type ToggleActivityStatusParams } from '#/api';
 
 defineOptions({
   name: 'ActivityManagement',
@@ -212,42 +212,66 @@ const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
 };
 
 // 操作函数
-const handleEnable = (row: ActivityData) => {
+const handleEnable = async (row: ActivityData) => {
   console.log('启用活动:', row);
 
-  // 开启全屏loading
-  spinning.value = true;
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用统一的状态切换API，设置为启用
+    const params: ToggleActivityStatusParams = {
+      id: row.id,
+      is_enabled: true,
+    };
+    await toggleActivityStatusApi(params);
 
     message.success({
       content: '活动启用成功',
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
-};
-
-const handleDisable = (row: ActivityData) => {
-  console.log('禁用活动:', row);
-
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
+  } catch (error: any) {
+    // 错误处理
+    const errorMsg = error?.response?.data?.message || error?.message || '启用失败，请稍后重试';
+    message.error(errorMsg);
+    console.error('启用活动失败:', error);
+  } finally {
     // 关闭全屏loading
     spinning.value = false;
+  }
+};
+
+const handleDisable = async (row: ActivityData) => {
+  console.log('禁用活动:', row);
+
+  try {
+    // 开启全屏loading
+    spinning.value = true;
+
+    // 调用统一的状态切换API，设置为禁用
+    const params: ToggleActivityStatusParams = {
+      id: row.id,
+      is_enabled: false,
+    };
+    await toggleActivityStatusApi(params);
 
     message.success({
       content: '活动禁用成功',
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error: any) {
+    // 错误处理
+    const errorMsg = error?.response?.data?.message || error?.message || '禁用失败，请稍后重试';
+    message.error(errorMsg);
+    console.error('禁用活动失败:', error);
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleDelete = async (row: ActivityData) => {

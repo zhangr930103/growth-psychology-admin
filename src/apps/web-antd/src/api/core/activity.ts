@@ -96,21 +96,18 @@ export async function updateActivityApi(params: UpdateActivityParams): Promise<A
 }
 
 /**
- * 启用活动
+ * 切换活动状态参数类型
  */
-export async function enableActivityApi(id: number): Promise<ActivityOperationResponse> {
-  return requestClient.post<ActivityOperationResponse>('/activities/enable', {}, {
-    params: { id }
-  });
+export interface ToggleActivityStatusParams {
+  id: number;
+  is_enabled: boolean;
 }
 
 /**
- * 禁用活动
+ * 切换活动状态（启用/禁用）
  */
-export async function disableActivityApi(id: number): Promise<ActivityOperationResponse> {
-  return requestClient.post<ActivityOperationResponse>('/activities/disable', {}, {
-    params: { id }
-  });
+export async function toggleActivityStatusApi(params: ToggleActivityStatusParams): Promise<ActivityOperationResponse> {
+  return requestClient.post<ActivityOperationResponse>('/activities/toggle-status', params);
 }
 
 /**
