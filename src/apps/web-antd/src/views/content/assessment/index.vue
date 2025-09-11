@@ -8,6 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, T
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { getQuestionnaireListApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
 
 defineOptions({
   name: 'AssessmentManagement',
@@ -38,32 +39,27 @@ const formData = reactive({
   isPublished: false,
 });
 
-// 类型定义
+// 类型定义（用于向后兼容，映射到新的API数据结构）
 interface AssessmentData {
   id: number;
-  questionnaireName: string;
-  questionnaireIntro: string;
-  questionnaireNotice: string;
-  questionnaireUrl: string;
-  creatorName: string;
-  createTime: number;
-  publishTime?: number;
-  publishStatus: 'published' | 'unpublished' | 'draft';
+  questionnaireName: string; // 映射到 title
+  questionnaireIntro: string; // 映射到 description
+  questionnaireNotice: string; // 自定义字段，暂时保留
+  questionnaireUrl: string; // 自定义字段，暂时保留
+  creatorName: string; // 映射到 creator_name
+  createTime: number; // 转换自 created_at
+  publishTime?: number; // 转换自 start_time 或其他字段
+  publishStatus: 'published' | 'unpublished' | 'draft'; // 映射到 status
 }
 
 interface SearchParams {
   page?: number;
   size?: number;
-  questionnaireName?: string;
+  title?: string; // 原 questionnaireName
   creator?: string;
-  publishStatus?: string;
+  status?: string; // 原 publishStatus
   createStartTime?: number;
   createEndTime?: number;
-}
-
-interface ApiResponse {
-  list: AssessmentData[];
-  total: number;
 }
 
 // 问卷数据相关类型定义
@@ -99,30 +95,23 @@ const formOptions: VbenFormProps = {
   schema: [
     {
       component: 'Input',
-      fieldName: 'questionnaireName',
+      fieldName: 'title',
       label: '问卷名称',
       componentProps: {
         placeholder: '请输入',
       },
     },
     {
-      component: 'Select',
+      component: 'Input',
       fieldName: 'creator',
       label: '创建人',
       componentProps: {
-        placeholder: '全部',
-        options: [
-          { label: '全部', value: '' },
-          { label: '张三', value: '张三' },
-          { label: '李四', value: '李四' },
-          { label: '王五', value: '王五' },
-          { label: '赵六', value: '赵六' },
-        ],
+        placeholder: '请输入创建人',
       },
     },
     {
       component: 'Select',
-      fieldName: 'publishStatus',
+      fieldName: 'status',
       label: '状态',
       componentProps: {
         placeholder: '全部',
@@ -149,115 +138,34 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟问卷管理数据API
-const getAssessmentList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+// 问卷管理数据API调用
+const getAssessmentList = async (params: SearchParams): Promise<{ list: AssessmentData[]; total: number }> => {
+  const apiParams: QuestionnaireListParams = {
+    page: params.page || 1,
+    size: params.size || 10,
+    title: params.title,
+    creator: params.creator,
+    status: params.status as 'draft' | 'published' | 'unpublished',
+  };
 
-  const mockData: AssessmentData[] = [
-    {
-      id: 1,
-      questionnaireName: '心理健康量表',
-      questionnaireIntro: '评估个人心理健康状况的专业量表',
-      questionnaireNotice: '请根据您最近两周的实际情况如实填写，每题必须作答',
-      questionnaireUrl: 'https://www.wjx.cn/jq/123456789.aspx',
-      creatorName: '张三',
-      createTime: dayjs().subtract(30, 'day').unix(),
-      publishTime: dayjs().subtract(25, 'day').unix(),
-      publishStatus: 'published',
-    },
-    {
-      id: 2,
-      questionnaireName: '职业倦怠评估',
-      questionnaireIntro: '测量职场人员工作倦怠程度的量表',
-      questionnaireNotice: '请诚实回答关于工作感受的问题，答案无对错之分',
-      questionnaireUrl: 'https://www.wjx.cn/jq/987654321.aspx',
-      creatorName: '李四',
-      createTime: dayjs().subtract(20, 'day').unix(),
-      publishTime: dayjs().subtract(15, 'day').unix(),
-      publishStatus: 'published',
-    },
-    {
-      id: 3,
-      questionnaireName: '人格特质测试',
-      questionnaireIntro: '基于大五人格理论的人格特质评估工具',
-      questionnaireNotice: '测试约需15-20分钟，请在安静环境下完成',
-      questionnaireUrl: 'https://www.wjx.cn/jq/456789123.aspx',
-      creatorName: '王五',
-      createTime: dayjs().subtract(15, 'day').unix(),
-      publishStatus: 'unpublished',
-    },
-    {
-      id: 4,
-      questionnaireName: '抑郁自评量表',
-      questionnaireIntro: 'SDS抑郁自评量表，用于筛查抑郁症状',
-      questionnaireNotice: '本量表仅供参考，不能替代专业医学诊断',
-      questionnaireUrl: 'https://www.wjx.cn/jq/789123456.aspx',
-      creatorName: '赵六',
-      createTime: dayjs().subtract(10, 'day').unix(),
-      publishStatus: 'draft',
-    },
-    {
-      id: 5,
-      questionnaireName: '焦虑自评量表',
-      questionnaireIntro: 'SAS焦虑自评量表，评估焦虑水平',
-      questionnaireNotice: '请根据您最近一周的感受进行作答',
-      questionnaireUrl: 'https://www.wjx.cn/jq/321654987.aspx',
-      creatorName: '孙七',
-      createTime: dayjs().subtract(8, 'day').unix(),
-      publishTime: dayjs().subtract(5, 'day').unix(),
-      publishStatus: 'published',
-    },
-    {
-      id: 6,
-      questionnaireName: '学习动机量表',
-      questionnaireIntro: '评估学生学习动机和学习态度',
-      questionnaireNotice: '适用于高中及以上学历人群',
-      questionnaireUrl: 'https://www.wjx.cn/jq/654987321.aspx',
-      creatorName: '周八',
-      createTime: dayjs().subtract(5, 'day').unix(),
-      publishStatus: 'unpublished',
-    },
-  ];
+  const response = await getQuestionnaireListApi(apiParams);
 
-  // 模拟搜索过滤
-  let filteredData = mockData;
-
-  if (params.questionnaireName) {
-    filteredData = filteredData.filter((item) =>
-      item.questionnaireName.includes(params.questionnaireName!),
-    );
-  }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creatorName.includes(params.creator!),
-    );
-  }
-
-  if (params.publishStatus) {
-    filteredData = filteredData.filter((item) =>
-      item.publishStatus === params.publishStatus,
-    );
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.createTime >= params.createStartTime! &&
-        item.createTime <= params.createEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
+  // 将API返回的数据转换为组件需要的格式
+  const mappedList: AssessmentData[] = response.list.map((item: QuestionnaireData) => ({
+    id: item.id,
+    questionnaireName: item.title,
+    questionnaireIntro: item.description,
+    questionnaireNotice: '', // API暂无此字段，使用默认值
+    questionnaireUrl: '', // API暂无此字段，使用默认值
+    creatorName: item.creator_name,
+    createTime: new Date(item.created_at).getTime() / 1000, // 转换为时间戳
+    publishTime: item.start_time ? new Date(item.start_time).getTime() / 1000 : undefined,
+    publishStatus: item.status,
+  }));
 
   return {
-    list,
-    total,
+    list: mappedList,
+    total: response.total,
   };
 };
 
@@ -569,7 +477,9 @@ const gridOptions: VxeTableGridOptions = {
         const result = await getAssessmentList({
           page: page.currentPage,
           size: page.pageSize,
-          ...formValues,
+          title: formValues.title,
+          creator: formValues.creator,
+          status: formValues.status,
           // 处理时间范围搜索
           createStartTime: formValues.createStartTime
             ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
