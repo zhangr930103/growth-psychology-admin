@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { getActivityListApi, type ActivityData as ApiActivityData, type ActivityListParams } from '#/api';
 
 defineOptions({
   name: 'ActivityManagement',
@@ -38,7 +39,7 @@ const formData = reactive({
   isEnabled: true,
 });
 
-// 活动数据类型定义
+// 活动数据类型定义（前端使用的驼峰格式）
 interface ActivityData {
   id: number;
   activityName: string;
@@ -55,14 +56,33 @@ interface ActivityData {
   isEnabled: boolean; // 是否启用
 }
 
+// 数据转换函数：将 API 返回的下划线格式转换为前端的驼峰格式
+const transformApiData = (apiData: ApiActivityData): ActivityData => {
+  return {
+    id: apiData.id,
+    activityName: apiData.activity_name,
+    activityContent: apiData.activity_content,
+    instructor: apiData.instructor,
+    activityTime: new Date(apiData.activity_time).getTime() / 1000, // 转换为 unix 时间戳（秒）
+    registrationDeadline: new Date(apiData.registration_deadline).getTime() / 1000, // 转换为 unix 时间戳（秒）
+    duration: apiData.duration,
+    minParticipants: apiData.min_participants,
+    maxRegistrations: apiData.max_registrations,
+    creatorName: apiData.creator_name,
+    creatorId: apiData.creator_id,
+    createTime: apiData.create_time,
+    isEnabled: apiData.is_enabled,
+  };
+};
+
 interface SearchParams {
   page?: number;
   size?: number;
-  activityName?: string;
+  activity_name?: string;
   creator?: string;
-  isEnabled?: boolean | string;
-  createStartTime?: number;
-  createEndTime?: number;
+  is_enabled?: boolean | string;
+  create_start_time?: number;
+  create_end_time?: number;
 }
 
 interface ApiResponse {
@@ -122,129 +142,39 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟活动数据API
+// 获取活动列表API
 const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    // 构建API参数
+    const apiParams: ActivityListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      activity_name: params.activity_name,
+      creator: params.creator,
+      is_enabled: params.is_enabled === '' ? undefined : 
+        (typeof params.is_enabled === 'string' ? params.is_enabled === 'true' : params.is_enabled),
+      create_start_time: params.create_start_time,
+      create_end_time: params.create_end_time,
+    };
 
-  const mockData: ActivityData[] = [
-    {
-      id: 1,
-      activityName: '团体心理辅导活动',
-      activityContent: '通过团体活动形式，帮助参与者建立良好的人际关系，提升心理健康水平。',
-      instructor: '张心理，李专家',
-      activityTime: dayjs().add(7, 'day').unix(),
-      registrationDeadline: dayjs().add(3, 'day').unix(),
-      duration: 120,
-      minParticipants: 8,
-      maxRegistrations: 20,
-      creatorName: '张心理',
-      creatorId: 1,
-      createTime: dayjs().subtract(5, 'day').unix(),
-      isEnabled: true,
-    },
-    {
-      id: 2,
-      activityName: '压力管理工作坊',
-      activityContent: '学习有效的压力管理技巧，掌握放松训练方法，提升应对压力的能力。',
-      instructor: '李老师',
-      activityTime: dayjs().add(14, 'day').unix(),
-      registrationDeadline: dayjs().add(10, 'day').unix(),
-      duration: 90,
-      minParticipants: 6,
-      maxRegistrations: 15,
-      creatorName: '李老师',
-      creatorId: 2,
-      createTime: dayjs().subtract(3, 'day').unix(),
-      isEnabled: true,
-    },
-    {
-      id: 3,
-      activityName: '职场沟通技能培训',
-      activityContent: '提升职场沟通能力，学习有效的沟通技巧和冲突解决方法。',
-      instructor: '王顾问，陈导师',
-      activityTime: dayjs().add(21, 'day').unix(),
-      registrationDeadline: dayjs().add(15, 'day').unix(),
-      duration: 180,
-      minParticipants: 10,
-      maxRegistrations: 25,
-      creatorName: '王顾问',
-      creatorId: 3,
-      createTime: dayjs().subtract(1, 'day').unix(),
-      isEnabled: false,
-    },
-    {
-      id: 4,
-      activityName: '情绪调节训练营',
-      activityContent: '学习情绪识别和调节技巧，提升情绪管理能力。',
-      instructor: '刘专家',
-      activityTime: dayjs().add(28, 'day').unix(),
-      registrationDeadline: dayjs().add(20, 'day').unix(),
-      duration: 150,
-      minParticipants: 8,
-      maxRegistrations: 18,
-      creatorName: '刘专家',
-      creatorId: 4,
-      createTime: dayjs().subtract(2, 'day').unix(),
-      isEnabled: true,
-    },
-    {
-      id: 5,
-      activityName: '团队建设拓展活动',
-      activityContent: '通过户外拓展活动增强团队凝聚力，提升团队协作能力。',
-      instructor: '陈教练，赵领队',
-      activityTime: dayjs().add(35, 'day').unix(),
-      registrationDeadline: dayjs().add(25, 'day').unix(),
-      duration: 240,
-      minParticipants: 15,
-      maxRegistrations: 30,
-      creatorName: '陈教练',
-      creatorId: 5,
-      createTime: dayjs().subtract(4, 'day').unix(),
-      isEnabled: false,
-    },
-  ];
-
-  // 模拟搜索过滤
-  let filteredData = mockData;
-
-  if (params.activityName) {
-    filteredData = filteredData.filter((item) =>
-      item.activityName.includes(params.activityName!),
-    );
+    // 调用真实API
+    const response = await getActivityListApi(apiParams);
+    
+    // 转换数据格式
+    const transformedList = response.list.map(transformApiData);
+    
+    return {
+      list: transformedList,
+      total: response.total,
+    };
+  } catch (error) {
+    console.error('获取活动列表失败:', error);
+    message.error('获取活动列表失败，请稍后重试');
+    return {
+      list: [],
+      total: 0,
+    };
   }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creatorName.includes(params.creator!),
-    );
-  }
-
-  if (params.isEnabled !== undefined && params.isEnabled !== '') {
-    const enabledValue = params.isEnabled === 'true' || params.isEnabled === true;
-    filteredData = filteredData.filter((item) =>
-      item.isEnabled === enabledValue,
-    );
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.createTime >= params.createStartTime! &&
-        item.createTime <= params.createEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
 };
 
 // 操作函数
@@ -458,12 +388,15 @@ const gridOptions: VxeTableGridOptions = {
         const result = await getActivityList({
           page: page.currentPage,
           size: page.pageSize,
-          ...formValues,
+          // 转换字段名：前端表单的驼峰格式转换为API的下划线格式
+          activity_name: formValues.activityName,
+          creator: formValues.creator,
+          is_enabled: formValues.isEnabled,
           // 处理时间范围搜索
-          createStartTime: formValues.createStartTime
+          create_start_time: formValues.createStartTime
             ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
             : undefined,
-          createEndTime: formValues.createEndTime
+          create_end_time: formValues.createEndTime
             ? (Date.parse(formValues.createEndTime) - 28800000) / 1000 + 86399
             : undefined,
         });
