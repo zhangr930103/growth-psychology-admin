@@ -20,6 +20,13 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { 
+  getFaqListApi, 
+  toggleFaqStatusApi, 
+  deleteFaqApi,
+  type FaqData,
+  type FaqListParams 
+} from '#/api/core/faq';
 
 defineOptions({
   name: 'FaqManagement',
@@ -40,42 +47,25 @@ const formRef = ref();
 const formData = reactive({
   question: '',
   answer: '',
-  isTop: false,
-  isCustomerServiceDisplay: false,
-  sortOrder: 0,
+  category: '',
+  is_featured: false,
+  order_index: 0,
+  tags: '',
+  keywords: '',
 });
 
-// FAQ数据类型定义
-interface FaqData {
-  id: number;
-  question: string;
-  answer: string;
-  category: string;
-  creatorName: string;
-  creatorId: number;
-  createTime: number;
-  publishTime?: number;
-  isTop: boolean; // 是否置顶
-  isCustomerServiceDisplay: boolean; // 是否客服显示
-  isEnabled: boolean; // 是否启用
-  viewCount: number;
-  sortOrder: number;
-}
-
+// 搜索参数接口
 interface SearchParams {
   page?: number;
   size?: number;
   question?: string;
   category?: string;
   creator?: string;
-  isEnabled?: boolean | string;
+  status?: string;
+  is_featured?: boolean;
+  keyword?: string;
   createStartTime?: number;
   createEndTime?: number;
-}
-
-interface ApiResponse {
-  list: FaqData[];
-  total: number;
 }
 
 // 搜索表单配置
@@ -104,15 +94,23 @@ const formOptions: VbenFormProps = {
     },
     {
       component: 'Select',
-      fieldName: 'isEnabled',
-      label: '是否启用',
+      fieldName: 'status',
+      label: '状态',
       componentProps: {
         placeholder: '全部',
         options: [
           { label: '全部', value: '' },
-          { label: '已启用', value: true },
-          { label: '已停用', value: false },
+          { label: '激活', value: 'active' },
+          { label: '非激活', value: 'inactive' },
         ],
+      },
+    },
+    {
+      component: 'Input',
+      fieldName: 'keyword',
+      label: '关键词',
+      componentProps: {
+        placeholder: '请输入关键词',
       },
     },
     {
@@ -130,215 +128,69 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟FAQ数据API
-const getFaqList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockData: FaqData[] = [
-    {
-      id: 1,
-      question: '如何注册账号？',
-      answer:
-        '您可以通过手机号码或邮箱地址进行注册，按照页面提示填写相关信息即可完成注册。',
-      category: 'account',
-      creatorName: '张三',
-      creatorId: 1,
-      createTime: dayjs().subtract(30, 'day').unix(),
-      publishTime: dayjs().subtract(25, 'day').unix(),
-      isTop: true,
-      isCustomerServiceDisplay: true,
-      isEnabled: true,
-      viewCount: 1256,
-      sortOrder: 1,
-    },
-    {
-      id: 2,
-      question: '如何找回密码？',
-      answer:
-        '您可以在登录页面点击"忘记密码"，然后通过注册时使用的手机号码或邮箱进行密码重置。',
-      category: 'account',
-      creatorName: '李四',
-      creatorId: 2,
-      createTime: dayjs().subtract(25, 'day').unix(),
-      publishTime: dayjs().subtract(20, 'day').unix(),
-      isTop: false,
-      isCustomerServiceDisplay: true,
-      isEnabled: true,
-      viewCount: 892,
-      sortOrder: 2,
-    },
-    {
-      id: 3,
-      question: '订单支付失败怎么办？',
-      answer:
-        '如果支付失败，请检查银行卡余额是否充足，或者尝试更换其他支付方式。如仍有问题请联系客服。',
-      category: 'payment',
-      creatorName: '王五',
-      creatorId: 3,
-      createTime: dayjs().subtract(20, 'day').unix(),
-      isTop: false,
-      isCustomerServiceDisplay: false,
-      isEnabled: false,
-      viewCount: 0,
-      sortOrder: 3,
-    },
-    {
-      id: 4,
-      question: '如何申请退款？',
-      answer:
-        '在订单详情页面点击"申请退款"按钮，填写退款原因并提交申请，客服会在24小时内处理您的申请。',
-      category: 'order',
-      creatorName: '赵六',
-      creatorId: 4,
-      createTime: dayjs().subtract(15, 'day').unix(),
-      isTop: false,
-      isCustomerServiceDisplay: true,
-      isEnabled: false,
-      viewCount: 0,
-      sortOrder: 4,
-    },
-    {
-      id: 5,
-      question: '咨询服务如何收费？',
-      answer:
-        '咨询服务按照时长收费，具体费用标准请查看服务详情页面，我们提供多种套餐供您选择。',
-      category: 'service',
-      creatorName: '孙七',
-      creatorId: 5,
-      createTime: dayjs().subtract(10, 'day').unix(),
-      publishTime: dayjs().subtract(8, 'day').unix(),
-      isTop: true,
-      isCustomerServiceDisplay: false,
-      isEnabled: true,
-      viewCount: 567,
-      sortOrder: 5,
-    },
-    {
-      id: 6,
-      question: '系统维护期间无法访问怎么办？',
-      answer:
-        '系统维护期间服务会暂时中断，维护完成后会自动恢复。维护时间会提前在官网和App内通知。',
-      category: 'technical',
-      creatorName: '周八',
-      creatorId: 6,
-      createTime: dayjs().subtract(8, 'day').unix(),
-      isTop: false,
-      isCustomerServiceDisplay: true,
-      isEnabled: false,
-      viewCount: 0,
-      sortOrder: 6,
-    },
-  ];
-
-  // 模拟搜索过滤
-  let filteredData = mockData;
-
-  if (params.question) {
-    filteredData = filteredData.filter((item) =>
-      item.question.includes(params.question!),
-    );
-  }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creatorName.includes(params.creator!),
-    );
-  }
-
-  if (params.isEnabled !== undefined && params.isEnabled !== '') {
-    const enabledValue =
-      params.isEnabled === 'true' || params.isEnabled === true;
-    filteredData = filteredData.filter(
-      (item) => item.isEnabled === enabledValue,
-    );
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.createTime >= params.createStartTime! &&
-        item.createTime <= params.createEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
+// 获取FAQ列表
+const getFaqList = async (params: SearchParams) => {
+  const apiParams: FaqListParams = {
+    page: params.page || 1,
+    size: params.size || 10,
+    question: params.question,
+    category: params.category,
+    status: params.status,
+    keyword: params.keyword,
   };
+  
+  return await getFaqListApi(apiParams);
 };
 
 // 操作函数
-const handleEnable = (row: FaqData) => {
-  console.log('启用FAQ:', row);
-
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
-
-    message.success({
-      content: 'FAQ启用成功',
-    });
-    // 刷新列表
+const handleEnable = async (row: FaqData) => {
+  try {
+    spinning.value = true;
+    await toggleFaqStatusApi({ id: row.id, status: 'active' });
+    message.success('FAQ启用成功');
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    message.error('FAQ启用失败');
+  } finally {
+    spinning.value = false;
+  }
 };
 
-const handleDisable = (row: FaqData) => {
-  console.log('禁用FAQ:', row);
-
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
-
-    message.success({
-      content: 'FAQ禁用成功',
-    });
-    // 刷新列表
+const handleDisable = async (row: FaqData) => {
+  try {
+    spinning.value = true;
+    await toggleFaqStatusApi({ id: row.id, status: 'inactive' });
+    message.success('FAQ禁用成功');
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    message.error('FAQ禁用失败');
+  } finally {
+    spinning.value = false;
+  }
 };
 
-const handleDelete = (row: FaqData) => {
-  console.log('删除FAQ:', row);
-
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
-
-    message.success({
-      content: 'FAQ删除成功',
-    });
-    // 刷新列表
+const handleDelete = async (row: FaqData) => {
+  try {
+    spinning.value = true;
+    await deleteFaqApi(row.id);
+    message.success('FAQ删除成功');
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    message.error('FAQ删除失败');
+  } finally {
+    spinning.value = false;
+  }
 };
 
 // 弹窗相关函数
 const resetFormData = () => {
   formData.question = '';
   formData.answer = '';
-  formData.isTop = false;
-  formData.isCustomerServiceDisplay = false;
-  formData.sortOrder = 0;
+  formData.category = '';
+  formData.is_featured = false;
+  formData.order_index = 0;
+  formData.tags = '';
+  formData.keywords = '';
   editingId.value = null;
 };
 
@@ -356,9 +208,11 @@ const openEditModal = async (row: FaqData) => {
   editingId.value = row.id;
   formData.question = row.question;
   formData.answer = row.answer;
-  formData.isTop = row.isTop;
-  formData.isCustomerServiceDisplay = row.isCustomerServiceDisplay;
-  formData.sortOrder = row.sortOrder;
+  formData.category = row.category;
+  formData.is_featured = row.is_featured;
+  formData.order_index = row.order_index;
+  formData.tags = row.tags;
+  formData.keywords = row.keywords;
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -412,49 +266,47 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'question',
       title: '问题名称',
-      minWidth: 200,
       showOverflow: 'tooltip',
     },
     {
       field: 'answer',
       title: '问题答案',
-      minWidth: 250,
       slots: { default: 'answer' },
     },
     {
-      field: 'isTop',
+      field: 'category',
+      title: '分类',
+    },
+    {
+      field: 'is_featured',
       title: '是否置顶',
-      width: 120,
-      slots: { default: 'isTop' },
+      slots: { default: 'is_featured' },
     },
     {
-      field: 'isCustomerServiceDisplay',
-      title: '是否客服显示',
-      slots: { default: 'isCustomerServiceDisplay' },
+      field: 'order_index',
+      title: '排序',
     },
     {
-      field: 'createTime',
+      field: 'created_at',
       title: '创建时间',
-      slots: { default: 'createTime' },
+      slots: { default: 'created_at' },
     },
     {
-      field: 'creatorName',
+      field: 'creator_name',
       title: '创建人',
     },
     {
-      field: 'publishTime',
-      title: '发布时间',
-      slots: { default: 'publishTime' },
+      field: 'view_count',
+      title: '查看次数',
     },
     {
-      field: 'isEnabled',
-      title: '是否启用',
-      slots: { default: 'isEnabled' },
+      field: 'status',
+      title: '状态',
+      slots: { default: 'status' },
     },
     {
       field: 'actions',
       title: '操作',
-      width: 220,
       slots: { default: 'actions' },
     },
   ],
@@ -474,13 +326,6 @@ const gridOptions: VxeTableGridOptions = {
           page: page.currentPage,
           size: page.pageSize,
           ...formValues,
-          // 处理时间范围搜索
-          createStartTime: formValues.createStartTime
-            ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
-            : undefined,
-          createEndTime: formValues.createEndTime
-            ? (Date.parse(formValues.createEndTime) - 28800000) / 1000 + 86399
-            : undefined,
         });
         return result;
       },
@@ -509,34 +354,21 @@ const [Grid, gridApi] = useVbenVxeGrid({
             新增
           </Button>
         </template>
-        <template #isTop="{ row }">
-          <Tag :color="row.isTop ? 'red' : 'gray'">
-            {{ row.isTop ? '是' : '否' }}
+        <template #is_featured="{ row }">
+          <Tag :color="row.is_featured ? 'red' : 'gray'">
+            {{ row.is_featured ? '是' : '否' }}
           </Tag>
         </template>
 
-        <template #isCustomerServiceDisplay="{ row }">
-          <Tag :color="row.isCustomerServiceDisplay ? 'blue' : 'gray'">
-            {{ row.isCustomerServiceDisplay ? '是' : '否' }}
-          </Tag>
-        </template>
-
-        <template #createTime="{ row }">
+        <template #created_at="{ row }">
           <span>
-            {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+            {{ dayjs(row.created_at).format('YYYY-MM-DD HH:mm:ss') }}
           </span>
         </template>
 
-        <template #publishTime="{ row }">
-          <span v-if="row.publishTime">
-            {{ dayjs(row.publishTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
-          </span>
-          <span v-else class="text-gray-400 dark:text-gray-300">-</span>
-        </template>
-
-        <template #isEnabled="{ row }">
-          <Tag :color="row.isEnabled ? 'green' : 'red'">
-            {{ row.isEnabled ? '已启用' : '已停用' }}
+        <template #status="{ row }">
+          <Tag :color="row.status === 'active' ? 'green' : 'red'">
+            {{ row.status === 'active' ? '激活' : '非激活' }}
           </Tag>
         </template>
 
@@ -544,7 +376,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <div
             class="answer-content"
             v-html="row.answer"
-            style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;"
           />
         </template>
 
@@ -554,7 +385,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               编辑
             </Button>
             <Popconfirm
-              v-if="!row.isEnabled"
+              v-if="row.status !== 'active'"
               title="确定要启用吗？"
               ok-text="确定"
               cancel-text="取消"
@@ -563,7 +394,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               <Button type="link" size="small"> 启用 </Button>
             </Popconfirm>
             <Popconfirm
-              v-if="row.isEnabled"
+              v-if="row.status === 'active'"
               title="确定要禁用吗？"
               ok-text="确定"
               cancel-text="取消"
@@ -629,15 +460,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
           />
         </Form.Item>
 
-        <Form.Item label="是否置顶在首页">
-          <Radio.Group v-model:value="formData.isTop">
-            <Radio :value="true">是</Radio>
-            <Radio :value="false">否</Radio>
-          </Radio.Group>
+        <Form.Item label="分类">
+          <Input
+            v-model:value="formData.category"
+            placeholder="请输入分类"
+          />
         </Form.Item>
 
-        <Form.Item label="是否在客服聊天页面显示">
-          <Radio.Group v-model:value="formData.isCustomerServiceDisplay">
+        <Form.Item label="是否置顶">
+          <Radio.Group v-model:value="formData.is_featured">
             <Radio :value="true">是</Radio>
             <Radio :value="false">否</Radio>
           </Radio.Group>
@@ -645,14 +476,27 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
         <Form.Item label="排序">
           <Input
-            v-model:value="formData.sortOrder"
+            v-model:value="formData.order_index"
             type="number"
             placeholder="请输入排序值"
-            style="width: 200px"
           />
           <div style="color: #999; font-size: 12px; margin-top: 5px">
             值越大越显示在前面
           </div>
+        </Form.Item>
+
+        <Form.Item label="标签">
+          <Input
+            v-model:value="formData.tags"
+            placeholder="请输入标签（多个标签用逗号分隔）"
+          />
+        </Form.Item>
+
+        <Form.Item label="关键词">
+          <Input
+            v-model:value="formData.keywords"
+            placeholder="请输入关键词（多个关键词用逗号分隔）"
+          />
         </Form.Item>
       </Form>
     </Modal>
@@ -661,7 +505,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
 <style scoped>
 .answer-content {
-  max-width: 300px;
   line-height: 1.5;
 }
 
