@@ -7,6 +7,13 @@ import { Page, useVbenModal } from '@vben/common-ui';
 import { useVbenForm, z } from '#/adapter/form';
 import { upload_file } from '#/api/examples/upload';
 import {
+  getCounselorListApi,
+  createCounselorApi,
+  type CounselorListParams,
+  type CreateCounselorParams,
+  type CounselorData as ApiCounselorData,
+} from '#/api/core/counselor';
+import {
   Button,
   message,
   Modal,
@@ -60,7 +67,7 @@ interface TimeSlot {
   endMinute?: number; // 0-59
 }
 
-// 类型定义
+// 本地组件使用的类型定义（保持向后兼容）
 interface CounselorData {
   id: number;
   counselorName: string;
@@ -90,6 +97,92 @@ interface CounselorData {
   otherSpecialization?: string; // 其他擅长流派
   availableTimeSlots?: TimeSlot[]; // 可咨询时间段
 }
+
+// API数据适配器函数
+const adaptApiDataToLocal = (apiData: ApiCounselorData): CounselorData => {
+  return {
+    id: apiData.id,
+    counselorName: apiData.counselor_name,
+    school: apiData.school,
+    major: apiData.major,
+    personalIntro: apiData.personal_intro,
+    counselingDuration: Number(apiData.total_duration) || 0,
+    specialization: Array.isArray(apiData.specializations)
+      ? apiData.specializations.join(', ')
+      : '',
+    expertise: Array.isArray(apiData.expertise_areas)
+      ? apiData.expertise_areas.join(', ')
+      : '',
+    counselingMethod: apiData.consulting_method,
+    location: apiData.location,
+    settlementPrice: Number(apiData.settlement_price) || 0,
+    isOnline: apiData.is_online,
+    creatorName: apiData.creator_name,
+    createTime:
+      apiData.create_time ||
+      Math.floor(new Date(apiData.created_at).getTime() / 1000),
+    updateTime:
+      apiData.update_time ||
+      Math.floor(new Date(apiData.updated_at).getTime() / 1000),
+    status: apiData.status as 'enabled' | 'disabled',
+    consultingPrice: Number(apiData.consulting_price) || 0,
+    consultingMethodType: apiData.consulting_method,
+    specializations: apiData.specializations,
+    expertiseAreas: apiData.expertise_areas,
+    consultingStatus: apiData.consulting_status,
+    durationProof: apiData.duration_proof,
+    settlementWeight: Number(apiData.settlement_weight) || 0,
+    totalDuration: Number(apiData.total_duration) || 0,
+    availableTimeSlots: apiData.available_time_slots,
+  };
+};
+
+// 表单数据适配器函数：将表单数据转换为API格式
+const adaptFormDataToApi = (formData: any): CreateCounselorParams => {
+  // 处理上传文件的URL提取
+  const extractFileUrls = (fileList: any[]): string[] => {
+    if (!Array.isArray(fileList)) return [];
+    return fileList.map(file => {
+      if (typeof file === 'string') return file;
+      return file?.response?.file_url || file?.url || '';
+    }).filter(Boolean);
+  };
+
+  // 处理单个文件的URL提取
+  const extractSingleFileUrl = (fileList: any[]): string => {
+    const urls = extractFileUrls(fileList);
+    return urls[0] || '';
+  };
+
+  // 处理其他擅长流派
+  let finalSpecializations = formData.specializations || [];
+  if (finalSpecializations.includes('other') && formData.otherSpecialization) {
+    // 如果选择了其他，则用用户输入的内容替换'other'
+    finalSpecializations = finalSpecializations.map((spec: string) =>
+      spec === 'other' ? formData.otherSpecialization : spec
+    );
+  }
+
+  return {
+    counselor_name: formData.counselorName || '',
+    school: formData.school || '',
+    major: formData.major || '',
+    personal_intro: formData.personalIntro || '',
+    avatar: extractSingleFileUrl(formData.avatar || []),
+    credentials: extractFileUrls(formData.credentials || []).map(url => ({ url })),
+    consulting_price: Number(formData.consultingPrice) || 0,
+    consulting_method: formData.consultingMethod || '',
+    specializations: finalSpecializations,
+    expertise_areas: formData.expertiseAreas || [],
+    consulting_status: formData.consultingStatus || '',
+    location: formData.location || '',
+    total_duration: Number(formData.totalDuration) || 0,
+    settlement_price: Number(formData.consultingPrice) || 0, // 使用咨询价格作为结算价格
+    settlement_weight: Number(formData.settlementWeight) || 0,
+    duration_proof: extractFileUrls(formData.durationProof || []).map(url => ({ url })),
+    available_time_slots: formData.availableTimeSlots || [],
+  };
+};
 
 interface SearchParams {
   page?: number;
@@ -174,136 +267,36 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟咨询师管理数据API
+// 咨询师管理数据API
 const getCounselorList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    // 转换参数格式以匹配API接口
+    const apiParams: CounselorListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      counselor_name: params.counselorName,
+      creator: params.creator,
+      status: params.status,
+    };
 
-  const mockData: CounselorData[] = [
-    {
-      id: 1,
-      counselorName: '姓名',
-      school: '北京师范大学',
-      major: '心理学',
-      personalIntro:
-        '拥有多年心理咨询经验，擅长认知行为疗法，专注于青少年心理健康问题的治疗和干预。',
-      counselingDuration: 120,
-      specialization: '认知行为疗法',
-      expertise: '青少年心理、认知行为疗法',
-      counselingMethod: '线上',
-      location: '北京',
-      settlementPrice: 200,
-      isOnline: true,
-      creatorName: '张三',
-      createTime: dayjs().subtract(30, 'day').unix(),
-      updateTime: dayjs().subtract(25, 'day').unix(),
-      status: 'enabled',
-    },
-    {
-      id: 2,
-      counselorName: '李心理师',
-      school: '华东师范大学',
-      major: '应用心理学',
-      personalIntro:
-        '国家二级心理咨询师，专注于婚姻家庭治疗和情绪管理，帮助客户建立健康的人际关系。',
-      counselingDuration: 85,
-      specialization: '家庭系统治疗',
-      expertise: '婚姻家庭、情绪管理',
-      counselingMethod: '线上+线下',
-      location: '上海',
-      settlementPrice: 180,
-      isOnline: true,
-      creatorName: '李四',
-      createTime: dayjs().subtract(25, 'day').unix(),
-      updateTime: dayjs().subtract(20, 'day').unix(),
-      status: 'enabled',
-    },
-    {
-      id: 3,
-      counselorName: '王咨询师',
-      school: '中南大学',
-      major: '临床心理学',
-      personalIntro:
-        '临床心理学硕士，擅长焦虑症、抑郁症的心理治疗，采用整合性治疗方法。',
-      counselingDuration: 95,
-      specialization: '整合式治疗',
-      expertise: '焦虑症、抑郁症治疗',
-      counselingMethod: '线下',
-      location: '长沙',
-      settlementPrice: 220,
-      isOnline: false,
-      creatorName: '王五',
-      createTime: dayjs().subtract(20, 'day').unix(),
-      status: 'disabled',
-    },
-    {
-      id: 4,
-      counselorName: '赵心理',
-      school: '西南大学',
-      major: '发展与教育心理学',
-      personalIntro:
-        '儿童青少年心理专家，在学习障碍、注意力缺陷等方面有丰富经验。',
-      counselingDuration: 75,
-      specialization: '游戏治疗',
-      expertise: '儿童心理、学习障碍',
-      counselingMethod: '线上',
-      location: '重庆',
-      settlementPrice: 160,
-      isOnline: true,
-      creatorName: '赵六',
-      createTime: dayjs().subtract(15, 'day').unix(),
-      updateTime: dayjs().subtract(10, 'day').unix(),
-      status: 'enabled',
-    },
-    {
-      id: 5,
-      counselorName: '孙老师',
-      school: '华中师范大学',
-      major: '心理健康教育',
-      personalIntro:
-        '学校心理健康教育专家，专注于学生心理危机干预和心理健康促进工作。',
-      counselingDuration: 110,
-      specialization: '危机干预',
-      expertise: '危机干预、心理健康教育',
-      counselingMethod: '线上+线下',
-      location: '武汉',
-      settlementPrice: 150,
-      isOnline: true,
-      creatorName: '孙七',
-      createTime: dayjs().subtract(12, 'day').unix(),
-      status: 'enabled',
-    },
-  ];
+    // 调用真实API
+    const response = await getCounselorListApi(apiParams);
 
-  // 模拟搜索过滤
-  let filteredData = mockData;
+    // 转换API返回的数据格式
+    const adaptedList = response.list.map(adaptApiDataToLocal);
 
-  if (params.counselorName) {
-    filteredData = filteredData.filter((item) =>
-      item.counselorName.includes(params.counselorName!),
-    );
+    return {
+      list: adaptedList,
+      total: response.total,
+    };
+  } catch (error) {
+    console.error('获取咨询师列表失败:', error);
+    // 如果API调用失败，返回空数据
+    return {
+      list: [],
+      total: 0,
+    };
   }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creatorName.includes(params.creator!),
-    );
-  }
-
-  if (params.status) {
-    filteredData = filteredData.filter((item) => item.status === params.status);
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
 };
 
 // 模拟咨询时长记录数据API
@@ -441,6 +434,7 @@ const handleEdit = (row: CounselorData) => {
 
   // 准备表单数据
   const formData = {
+    counselorName: row.counselorName,
     school: row.school,
     major: row.major,
     personalIntro: row.personalIntro,
@@ -595,6 +589,19 @@ const auditFormSchema = [
 
 // 咨询师表单 Schema 配置
 const counselorFormSchema = [
+  {
+    component: 'Input',
+    fieldName: 'counselorName',
+    label: '咨询师姓名',
+    rules: z.string().min(1, '请输入咨询师姓名'),
+    componentProps: {
+      placeholder: '请输入咨询师姓名',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
   {
     component: 'Upload',
     fieldName: 'avatar',
@@ -1037,12 +1044,18 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
 
       console.log('提交的咨询师数据:', submitData);
 
-      // 模拟API请求
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (counselorModalMode.value === 'add') {
+        // 新增咨询师：调用创建API
+        const apiData = adaptFormDataToApi(submitData);
+        console.log('转换后的API数据:', apiData);
 
-      const actionText = counselorModalMode.value === 'add' ? '新增' : '编辑';
-
-      message.success(`${actionText}咨询师成功`);
+        await createCounselorApi(apiData);
+        message.success('新增咨询师成功');
+      } else {
+        // 编辑咨询师：这里可以后续添加编辑API
+        // TODO: 添加编辑咨询师的API调用
+        message.success('编辑咨询师成功');
+      }
 
       // 关闭弹窗
       counselorModalApi.close();
@@ -1055,7 +1068,8 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
       gridApi.query();
     } catch (error) {
       console.error('提交失败:', error);
-      message.error({ content: '提交失败，请重试', key: 'counselor_submit' });
+      const actionText = counselorModalMode.value === 'add' ? '新增' : '编辑';
+      message.error({ content: `${actionText}失败，请重试`, key: 'counselor_submit' });
     } finally {
       // 关闭loading
       counselorModalApi.setState({ loading: false });
@@ -1077,12 +1091,12 @@ const handleCreate = () => {
   // 重置表单并打开弹窗
   counselorFormApi.resetForm();
   counselorAvailableTimeSlots.value = [];
-  
+
   // 初始化可咨询时间字段用于验证
   counselorFormApi.setValues({
     availableTimeSlots: [],
   });
-  
+
   counselorModalApi.open();
 
   // 设置弹窗标题
@@ -1425,14 +1439,18 @@ const [DurationGrid, durationGridApi] = useVbenVxeGrid({
 });
 
 // 监听可咨询时间变化，同步到表单用于验证
-watch(() => counselorAvailableTimeSlots.value, (newValue) => {
-  // 只有在表单已经初始化时才设置值
-  if (counselorFormApi) {
-    counselorFormApi.setValues({
-      availableTimeSlots: newValue,
-    });
-  }
-}, { deep: true });
+watch(
+  () => counselorAvailableTimeSlots.value,
+  (newValue) => {
+    // 只有在表单已经初始化时才设置值
+    if (counselorFormApi) {
+      counselorFormApi.setValues({
+        availableTimeSlots: newValue,
+      });
+    }
+  },
+  { deep: true },
+);
 </script>
 
 <template>
@@ -1620,7 +1638,7 @@ watch(() => counselorAvailableTimeSlots.value, (newValue) => {
     </AuditModal>
 
     <!-- 咨询师弹窗 -->
-    <CounselorModal class="w-[70vw]" style="max-width: 1200px;">
+    <CounselorModal class="w-[70vw]" style="max-width: 1200px">
       <div class="counselor-form-container">
         <CounselorForm>
           <template #availableTimeSlots>
@@ -1630,13 +1648,32 @@ watch(() => counselorAvailableTimeSlots.value, (newValue) => {
                 :current-week="new Date()"
               >
                 <template #extra="{ selectedTimeSlots }">
-                  <div  class="mt-4 p-4 w-full max-w-none bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <div
+                    class="mt-4 w-full max-w-none rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-700 dark:bg-green-900/20"
+                  >
                     <div class="text-sm text-green-700 dark:text-green-300">
                       <p class="mb-2 font-medium">已选择时间段：</p>
                       <div class="space-y-1 text-xs">
-                        <div v-for="slot in selectedTimeSlots" :key="`${slot.day}-${slot.startHour}-${slot.endHour}`">
-                          {{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][slot.day] }}：
-                          {{ String(slot.startHour).padStart(2, '0') }}:{{ String(slot.startMinute || 0).padStart(2, '0') }} - {{ String(slot.endHour).padStart(2, '0') }}:{{ String(slot.endMinute || 0).padStart(2, '0') }}
+                        <div
+                          v-for="slot in selectedTimeSlots"
+                          :key="`${slot.day}-${slot.startHour}-${slot.endHour}`"
+                        >
+                          {{
+                            [
+                              '周一',
+                              '周二',
+                              '周三',
+                              '周四',
+                              '周五',
+                              '周六',
+                              '周日',
+                            ][slot.day]
+                          }}： {{ String(slot.startHour).padStart(2, '0') }}:{{
+                            String(slot.startMinute || 0).padStart(2, '0')
+                          }}
+                          - {{ String(slot.endHour).padStart(2, '0') }}:{{
+                            String(slot.endMinute || 0).padStart(2, '0')
+                          }}
                         </div>
                       </div>
                     </div>
