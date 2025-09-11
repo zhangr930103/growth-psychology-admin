@@ -10,6 +10,7 @@ import {
   getCounselorListApi,
   createCounselorApi,
   editCounselorApi,
+  deleteCounselorApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
@@ -461,21 +462,29 @@ const handleToggleStatus = (row: CounselorData) => {
   }, 1000);
 };
 
-const handleDelete = () => {
-  // 开启全屏loading
-  spinning.value = true;
+const handleDelete = async (row: CounselorData) => {
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用删除API
+    await deleteCounselorApi({ id: row.id });
 
     message.success({
       content: '咨询师删除成功',
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    console.error('删除咨询师失败:', error);
+    message.error({
+      content: '删除失败，请重试',
+    });
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleEdit = (row: CounselorData) => {
@@ -1567,7 +1576,7 @@ watch(
               title="确定要删除这个咨询师吗？"
               ok-text="确定"
               cancel-text="取消"
-              @confirm="handleDelete"
+              @confirm="() => handleDelete(row)"
             >
               <Button type="link" danger size="small"> 删除 </Button>
             </Popconfirm>

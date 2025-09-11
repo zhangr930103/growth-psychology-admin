@@ -128,6 +128,22 @@ export interface EditCounselorResponse {
 }
 
 /**
+ * 删除咨询师参数类型
+ */
+export interface DeleteCounselorParams {
+  id: number;
+}
+
+/**
+ * 删除咨询师响应类型
+ */
+export interface DeleteCounselorResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -156,4 +172,11 @@ export async function createCounselorApi(params: CreateCounselorParams): Promise
  */
 export async function editCounselorApi(params: EditCounselorParams): Promise<EditCounselorResponse> {
   return requestClient.post<EditCounselorResponse>('/counselors/edit', params);
+}
+
+/**
+ * 删除咨询师
+ */
+export async function deleteCounselorApi(params: DeleteCounselorParams): Promise<DeleteCounselorResponse> {
+  return requestClient.post<DeleteCounselorResponse>('/counselors/delete', params);
 }
