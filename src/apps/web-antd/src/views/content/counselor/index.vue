@@ -11,6 +11,7 @@ import {
   createCounselorApi,
   editCounselorApi,
   deleteCounselorApi,
+  toggleCounselorStatusApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
@@ -447,23 +448,35 @@ const handleDurationModalConfirm = () => {
   closeDurationModal();
 };
 
-const handleToggleStatus = (row: CounselorData) => {
+const handleToggleStatus = async (row: CounselorData) => {
   const action = row.status === 'enabled' ? '停用' : '启用';
+  const newStatus = row.status === 'enabled' ? 'disabled' : 'enabled';
 
-  // 开启全屏loading
-  spinning.value = true;
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用状态切换API
+    await toggleCounselorStatusApi({
+      id: row.id,
+      status: newStatus,
+    });
 
     message.success({
       content: `咨询师${action}成功`,
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    console.error('状态切换失败:', error);
+    message.error({
+      content: `${action}失败，请重试`,
+    });
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleDelete = async (row: CounselorData) => {

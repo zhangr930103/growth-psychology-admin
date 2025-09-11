@@ -144,6 +144,23 @@ export interface DeleteCounselorResponse {
 }
 
 /**
+ * 切换咨询师状态参数类型
+ */
+export interface ToggleStatusParams {
+  id: number;
+  status: 'enabled' | 'disabled';
+}
+
+/**
+ * 切换咨询师状态响应类型
+ */
+export interface ToggleStatusResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -179,4 +196,11 @@ export async function editCounselorApi(params: EditCounselorParams): Promise<Edi
  */
 export async function deleteCounselorApi(params: DeleteCounselorParams): Promise<DeleteCounselorResponse> {
   return requestClient.post<DeleteCounselorResponse>('/counselors/delete', params);
+}
+
+/**
+ * 切换咨询师状态（启用/停用）
+ */
+export async function toggleCounselorStatusApi(params: ToggleStatusParams): Promise<ToggleStatusResponse> {
+  return requestClient.post<ToggleStatusResponse>('/counselors/toggle-status', params);
 }
