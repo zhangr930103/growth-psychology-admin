@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getActivityListApi, type ActivityData as ApiActivityData, type ActivityListParams } from '#/api';
+import { getActivityListApi, createActivityApi, updateActivityApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams } from '#/api';
 
 defineOptions({
   name: 'ActivityManagement',
@@ -22,6 +22,9 @@ const spinning = ref(false);
 const modalVisible = ref(false);
 const modalLoading = ref(false);
 const editingId = ref<number | null>(null);
+
+// 编辑器key，用于强制重新渲染编辑器
+const editorKey = ref(0);
 
 // 表单 ref
 const formRef = ref();
@@ -72,6 +75,37 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
     creatorId: apiData.creator_id,
     createTime: apiData.create_time,
     isEnabled: apiData.is_enabled,
+  };
+};
+
+// 数据转换函数：将前端表单数据（驼峰格式）转换为API所需格式（下划线格式）
+const transformFormDataToApi = (formData: any): CreateActivityParams => {
+  return {
+    activity_name: formData.activityName,
+    activity_content: formData.activityContent,
+    instructor: formData.instructor,
+    activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    registration_deadline: formData.registrationDeadline?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    duration: formData.duration,
+    min_participants: formData.minParticipants,
+    max_registrations: formData.maxRegistrations,
+    is_enabled: formData.isEnabled,
+  };
+};
+
+// 数据转换函数：将前端表单数据转换为编辑API所需格式（包含ID）
+const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivityParams => {
+  return {
+    id: id,
+    activity_name: formData.activityName,
+    activity_content: formData.activityContent,
+    instructor: formData.instructor,
+    activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    registration_deadline: formData.registrationDeadline?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    duration: formData.duration,
+    min_participants: formData.minParticipants,
+    max_registrations: formData.maxRegistrations,
+    is_enabled: formData.isEnabled,
   };
 };
 
@@ -251,6 +285,8 @@ const resetFormData = () => {
 
 const openCreateModal = async () => {
   resetFormData();
+  // 强制重新渲染编辑器
+  editorKey.value++;
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -261,8 +297,9 @@ const openCreateModal = async () => {
 const openEditModal = async (row: ActivityData) => {
   resetFormData();
   editingId.value = row.id;
+  
+  // 设置基本表单数据
   formData.activityName = row.activityName;
-  formData.activityContent = row.activityContent;
   formData.instructor = row.instructor;
   formData.activityTime = dayjs(row.activityTime * 1000);
   formData.registrationDeadline = dayjs(row.registrationDeadline * 1000);
@@ -270,6 +307,14 @@ const openEditModal = async (row: ActivityData) => {
   formData.minParticipants = row.minParticipants;
   formData.maxRegistrations = row.maxRegistrations;
   formData.isEnabled = row.isEnabled;
+  
+  // 先设置编辑器内容，再打开模态框
+  const content = row.activityContent || '';
+  formData.activityContent = content;
+  
+  // 强制重新渲染编辑器，避免 DOM 范围错误
+  editorKey.value++;
+  
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -281,6 +326,8 @@ const closeModal = () => {
   modalVisible.value = false;
   formRef.value?.resetFields();
   resetFormData();
+  // 重置编辑器key，确保下次打开时是全新的编辑器实例
+  editorKey.value++;
 };
 
 const handleSubmit = async () => {
@@ -290,20 +337,34 @@ const handleSubmit = async () => {
 
     modalLoading.value = true;
 
-    // 模拟API请求
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const action = editingId.value ? '编辑' : '新增';
-    message.success(`${action}活动成功`);
+    if (editingId.value) {
+      // 编辑功能调用真实API
+      const apiParams = transformFormDataToUpdateApi(formData, editingId.value);
+      await updateActivityApi(apiParams);
+      message.success('编辑活动成功');
+    } else {
+      // 新增功能调用真实API
+      const apiParams = transformFormDataToApi(formData);
+      await createActivityApi(apiParams);
+      message.success('新增活动成功');
+    }
 
     // 刷新列表
     gridApi.query();
 
     // 关闭弹窗
     closeModal();
-  } catch (error) {
-    // 校验失败时不做处理，表单会自动显示红色校验信息
-    console.log('表单校验失败:', error);
+  } catch (error: any) {
+    // 区分校验错误和API错误
+    if (error?.response || error?.message) {
+      // API错误
+      const errorMsg = error?.response?.data?.message || error?.message || '操作失败，请稍后重试';
+      message.error(errorMsg);
+      console.error('API错误:', error);
+    } else {
+      // 表单校验失败时不做处理，表单会自动显示红色校验信息
+      console.log('表单校验失败:', error);
+    }
   } finally {
     modalLoading.value = false;
   }
@@ -530,6 +591,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
           :rules="[{ required: true, message: '请输入活动内容' }]"
         >
           <WangEditor
+            :key="editorKey"
             v-model:model-value="formData.activityContent"
             placeholder="请输入活动的详细内容，支持富文本格式和图片上传"
             :height="300"

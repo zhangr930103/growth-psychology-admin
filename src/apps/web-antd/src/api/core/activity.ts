@@ -92,7 +92,7 @@ export async function createActivityApi(params: CreateActivityParams): Promise<A
  * 更新活动
  */
 export async function updateActivityApi(params: UpdateActivityParams): Promise<ActivityOperationResponse> {
-  return requestClient.post<ActivityOperationResponse>('/activities/update', params);
+  return requestClient.post<ActivityOperationResponse>('/activities/edit', params);
 }
 
 /**
