@@ -108,7 +108,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   height: 600,
   slotMinTime: '00:00:00',
   slotMaxTime: '24:00:00',
-  slotDuration: '00:15:00', // 15分钟间隔
+  slotDuration: '00:30:00', // 30分钟间隔
   slotLabelInterval: '01:00:00', // 时间轴标签仍然显示小时
   allDaySlot: false,
   scrollTime: null, // 禁用初始滚动
