@@ -3,7 +3,7 @@ import { defineConfig } from '@vben/vite-config';
 export default defineConfig(async (config) => {
   const { mode } = config;
   const isDev = mode === 'development';
-  
+
   return {
     application: {},
     vite: {
@@ -19,7 +19,7 @@ export default defineConfig(async (config) => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, '/api'),
             // 代理到实际的API服务器
-            target: 'http://tongchengzhang.com',
+            target: 'https://tongchengzhang.com',
             ws: true,
           },
         },
