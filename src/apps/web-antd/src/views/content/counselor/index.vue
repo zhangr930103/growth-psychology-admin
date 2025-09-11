@@ -680,20 +680,6 @@ const handleEdit = (row: CounselorData) => {
 
   // 延迟设置表单值，确保表单组件已经渲染完成
   setTimeout(() => {
-    console.log('编辑数据回显 - 原始数据:', row);
-    console.log('编辑数据回显 - 映射后的表单数据:', formData);
-    console.log('编辑数据回显 - 可咨询时间:', counselorAvailableTimeSlots.value);
-    console.log('编辑数据回显 - 头像数据:', formData.avatar);
-    console.log('编辑数据回显 - 证书数据:', formData.credentials);
-    console.log('编辑数据回显 - 时长证明数据:', formData.durationProof);
-    console.log('编辑数据回显 - 擅长流派处理结果:', {
-      原始数组: row.specializations,
-      原始字符串: row.specialization,
-      获取列表: getSpecializationsList(row),
-      处理后: formData.specializations,
-      其他流派: formData.otherSpecialization
-    });
-
     counselorFormApi.setValues({
       ...formData,
       availableTimeSlots: counselorAvailableTimeSlots.value,
@@ -1237,12 +1223,9 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
         availableTimeSlots: counselorAvailableTimeSlots.value,
       };
 
-      console.log('提交的咨询师数据:', submitData);
-
       if (counselorModalMode.value === 'add') {
         // 新增咨询师：调用创建API
         const apiData = adaptFormDataToApi(submitData);
-        console.log('转换后的API数据:', apiData);
 
         await createCounselorApi(apiData);
         message.success('新增咨询师成功');
@@ -1253,7 +1236,6 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
         }
 
         const editApiData = adaptFormDataToEditApi(submitData, currentEditCounselor.value.id);
-        console.log('转换后的编辑API数据:', editApiData);
 
         await editCounselorApi(editApiData);
         message.success('编辑咨询师成功');
