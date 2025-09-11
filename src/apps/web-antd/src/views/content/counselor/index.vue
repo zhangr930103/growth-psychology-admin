@@ -14,11 +14,13 @@ import {
   toggleCounselorStatusApi,
   getCounselingDurationListApi,
   createCounselingDurationApi,
+  auditCounselingDurationApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
   type CounselingDurationListParams,
   type CreateCounselingDurationParams,
+  type AuditCounselingDurationParams,
   type CounselingDurationRecord as ApiCounselingDurationRecord,
   type CounselorData as ApiCounselorData,
 } from '#/api/core/counselor';
@@ -1184,8 +1186,20 @@ const [AuditModal, auditModalApi] = useVbenModal({
 
       const formValues = await auditFormApi.getValues();
 
-      // 模拟API请求
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 确保有审核记录ID
+      if (!currentAuditRecord.value?.id) {
+        throw new Error('缺少审核记录ID，无法进行审核');
+      }
+
+      // 将表单数据转换为API格式
+      const apiData: AuditCounselingDurationParams = {
+        id: currentAuditRecord.value.id,
+        audit_status: formValues.auditStatus,
+        audit_comment: formValues.auditComment,
+      };
+
+      // 调用审核API
+      await auditCounselingDurationApi(apiData);
 
       const statusText =
         formValues.auditStatus === 'approved' ? '审核通过' : '审核不通过';

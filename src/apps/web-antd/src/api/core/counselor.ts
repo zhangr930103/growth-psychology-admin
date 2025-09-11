@@ -218,6 +218,24 @@ export interface CreateCounselingDurationResponse {
 }
 
 /**
+ * 审批咨询时长参数类型
+ */
+export interface AuditCounselingDurationParams {
+  id: number;
+  audit_status: 'approved' | 'rejected';
+  audit_comment?: string;
+}
+
+/**
+ * 审批咨询时长响应类型
+ */
+export interface AuditCounselingDurationResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -274,4 +292,11 @@ export async function getCounselingDurationListApi(params: CounselingDurationLis
  */
 export async function createCounselingDurationApi(params: CreateCounselingDurationParams): Promise<CreateCounselingDurationResponse> {
   return requestClient.post<CreateCounselingDurationResponse>('/counselors/duration/create', params);
+}
+
+/**
+ * 审批咨询时长记录
+ */
+export async function auditCounselingDurationApi(params: AuditCounselingDurationParams): Promise<AuditCounselingDurationResponse> {
+  return requestClient.post<AuditCounselingDurationResponse>('/counselors/duration/audit', params);
 }
