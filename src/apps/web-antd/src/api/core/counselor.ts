@@ -200,6 +200,24 @@ export interface CounselingDurationListResponse {
 }
 
 /**
+ * 创建咨询时长参数类型
+ */
+export interface CreateCounselingDurationParams {
+  counselor_id: number;
+  duration: number;
+  certificate: string;
+}
+
+/**
+ * 创建咨询时长响应类型
+ */
+export interface CreateCounselingDurationResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
  * API响应包装类型
  */
 export interface ApiResponse<T = any> {
@@ -249,4 +267,11 @@ export async function toggleCounselorStatusApi(params: ToggleStatusParams): Prom
  */
 export async function getCounselingDurationListApi(params: CounselingDurationListParams): Promise<CounselingDurationListResponse> {
   return requestClient.post<CounselingDurationListResponse>('/counselors/duration/list', params);
+}
+
+/**
+ * 创建咨询时长记录
+ */
+export async function createCounselingDurationApi(params: CreateCounselingDurationParams): Promise<CreateCounselingDurationResponse> {
+  return requestClient.post<CreateCounselingDurationResponse>('/counselors/duration/create', params);
 }

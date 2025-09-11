@@ -13,10 +13,12 @@ import {
   deleteCounselorApi,
   toggleCounselorStatusApi,
   getCounselingDurationListApi,
+  createCounselingDurationApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
   type CounselingDurationListParams,
+  type CreateCounselingDurationParams,
   type CounselingDurationRecord as ApiCounselingDurationRecord,
   type CounselorData as ApiCounselorData,
 } from '#/api/core/counselor';
@@ -161,6 +163,24 @@ const adaptDurationApiDataToLocal = (apiData: ApiCounselingDurationRecord): Coun
     creatorName: apiData.creator_name,
     auditTime: apiData.audit_time_stamp || Math.floor(new Date(apiData.audit_time).getTime() / 1000),
     auditComment: apiData.audit_comment,
+  };
+};
+
+// 创建咨询时长数据适配器函数：将表单数据转换为API格式
+const adaptDurationFormToApi = (formData: any, counselorId: number): CreateCounselingDurationParams => {
+  // 处理上传文件的URL提取
+  const extractFileUrl = (fileList: any[]): string => {
+    if (!Array.isArray(fileList) || fileList.length === 0) return '';
+
+    const file = fileList[0];
+    if (typeof file === 'string') return file;
+    return file?.response?.file_url || file?.url || '';
+  };
+
+  return {
+    counselor_id: counselorId,
+    duration: Number(formData.duration) || 0,
+    certificate: extractFileUrl(formData.certificate || []),
   };
 };
 
@@ -1099,10 +1119,18 @@ const [DurationModal, durationModalApi] = useVbenModal({
         return;
       }
 
-      await durationFormApi.getValues();
+      const formValues = await durationFormApi.getValues();
 
-      // 模拟API请求
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 确保有咨询师ID
+      if (!currentCounselorId.value) {
+        throw new Error('缺少咨询师ID，无法创建咨询时长记录');
+      }
+
+      // 将表单数据转换为API格式
+      const apiData = adaptDurationFormToApi(formValues, currentCounselorId.value);
+
+      // 调用创建咨询时长API
+      await createCounselingDurationApi(apiData);
 
       message.success('新增咨询时长成功');
 
