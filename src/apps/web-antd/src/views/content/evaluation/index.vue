@@ -8,6 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { getEvaluationListApi, type EvaluationRecord } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -69,33 +70,8 @@ const evaluationTypeOptions = [
 ];
 
 // 类型定义
-interface EvaluationData {
-  id: number;
-  evaluationName: string;
-  evaluationTitle: string;
-  creatorName: string;
-  creatorId: number;
-  createTime: number;
-  publishTime?: number;
-  publishStatus: 'published' | 'unpublished' | 'draft';
-  evaluationCount: number;
-  status: 'active' | 'inactive';
-}
+type EvaluationData = EvaluationRecord;
 
-interface SearchParams {
-  page?: number;
-  size?: number;
-  evaluationName?: string;
-  creator?: string;
-  publishStatus?: string;
-  createStartTime?: number;
-  createEndTime?: number;
-}
-
-interface ApiResponse {
-  list: EvaluationData[];
-  total: number;
-}
 
 // 评价数据相关类型定义
 interface EvaluationDataRecord {
@@ -141,18 +117,11 @@ const formOptions: VbenFormProps = {
       },
     },
     {
-      component: 'Select',
+      component: 'Input',
       fieldName: 'creator',
       label: '创建人',
       componentProps: {
-        placeholder: '全部',
-        options: [
-          { label: '全部', value: '' },
-          { label: '张三', value: '张三' },
-          { label: '李四', value: '李四' },
-          { label: '王五', value: '王五' },
-          { label: '赵六', value: '赵六' },
-        ],
+        placeholder: '请输入创建人姓名',
       },
     },
     {
@@ -184,123 +153,8 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 模拟评价管理数据API
-const getEvaluationList = async (params: SearchParams): Promise<ApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockData: EvaluationData[] = [
-    {
-      id: 1,
-      evaluationName: '咨询师的评价',
-      evaluationTitle: '咨询师服务质量评价表',
-      creatorName: '张三',
-      creatorId: 1,
-      createTime: dayjs().subtract(30, 'day').unix(),
-      publishTime: dayjs().subtract(25, 'day').unix(),
-      publishStatus: 'published',
-      evaluationCount: 156,
-      status: 'active',
-    },
-    {
-      id: 2,
-      evaluationName: '服务体验评价',
-      evaluationTitle: '整体服务体验满意度调查',
-      creatorName: '李四',
-      creatorId: 2,
-      createTime: dayjs().subtract(20, 'day').unix(),
-      publishTime: dayjs().subtract(15, 'day').unix(),
-      publishStatus: 'published',
-      evaluationCount: 89,
-      status: 'active',
-    },
-    {
-      id: 3,
-      evaluationName: '平台功能评价',
-      evaluationTitle: '平台功能使用体验反馈',
-      creatorName: '王五',
-      creatorId: 3,
-      createTime: dayjs().subtract(15, 'day').unix(),
-      publishStatus: 'unpublished',
-      evaluationCount: 0,
-      status: 'active',
-    },
-    {
-      id: 4,
-      evaluationName: '课程质量评价',
-      evaluationTitle: '在线课程质量评估表',
-      creatorName: '赵六',
-      creatorId: 4,
-      createTime: dayjs().subtract(10, 'day').unix(),
-      publishStatus: 'draft',
-      evaluationCount: 0,
-      status: 'active',
-    },
-    {
-      id: 5,
-      evaluationName: '客服评价',
-      evaluationTitle: '客服服务质量评价调查',
-      creatorName: '孙七',
-      creatorId: 5,
-      createTime: dayjs().subtract(8, 'day').unix(),
-      publishTime: dayjs().subtract(5, 'day').unix(),
-      publishStatus: 'published',
-      evaluationCount: 234,
-      status: 'active',
-    },
-    {
-      id: 6,
-      evaluationName: '活动满意度',
-      evaluationTitle: '线上活动参与满意度调研',
-      creatorName: '周八',
-      creatorId: 6,
-      createTime: dayjs().subtract(5, 'day').unix(),
-      publishStatus: 'unpublished',
-      evaluationCount: 0,
-      status: 'inactive',
-    },
-  ];
-
-  // 模拟搜索过滤
-  let filteredData = mockData;
-
-  if (params.evaluationName) {
-    filteredData = filteredData.filter((item) =>
-      item.evaluationName.includes(params.evaluationName!),
-    );
-  }
-
-  if (params.creator) {
-    filteredData = filteredData.filter((item) =>
-      item.creatorName.includes(params.creator!),
-    );
-  }
-
-  if (params.publishStatus) {
-    filteredData = filteredData.filter((item) =>
-      item.publishStatus === params.publishStatus,
-    );
-  }
-
-  if (params.createStartTime && params.createEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.createTime >= params.createStartTime! &&
-        item.createTime <= params.createEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
-  return {
-    list,
-    total,
-  };
-};
+// 获取评价列表
+const getEvaluationList = getEvaluationListApi;
 
 // 模拟评价数据API
 const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> => {
@@ -428,7 +282,7 @@ const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promis
 // 操作函数
 const handleViewData = (row: EvaluationData) => {
   currentEvaluationId.value = row.id;
-  currentEvaluationName.value = row.evaluationName;
+  currentEvaluationName.value = row.title;
   dataModalVisible.value = true;
   dataModalLoading.value = true;
 
@@ -508,7 +362,7 @@ const closeDataModal = () => {
 
 const handlePublish = (row: EvaluationData) => {
   console.log('发布/撤回:', row);
-  const action = row.publishStatus === 'published' ? '撤回' : '发布';
+  const action = row.status === 'approved' ? '撤回' : '发布';
 
   // 开启全屏loading
   spinning.value = true;
@@ -619,24 +473,24 @@ const openCreateModal = async () => {
 const openEditModal = async (row: EvaluationData) => {
   resetFormData();
   editingId.value = row.id;
-  formData.evaluationName = row.evaluationName;
-  formData.isPublished = row.publishStatus === 'published';
+  formData.evaluationName = row.title;
+  formData.isPublished = row.status === 'approved';
 
   // 创建一个示例模块（实际项目中应该从后端获取）
   const exampleModule = createNewModule();
-  exampleModule.title = row.evaluationTitle;
+  exampleModule.title = row.content;
   exampleModule.isRequired = true;
 
   // 根据评价名称推断类型，这里简化处理
-  if (row.evaluationName.includes('服务')) {
+  if (row.title.includes('服务')) {
     exampleModule.evaluationType = 'service_quality';
-  } else if (row.evaluationName.includes('体验')) {
+  } else if (row.title.includes('体验')) {
     exampleModule.evaluationType = 'product_experience';
-  } else if (row.evaluationName.includes('课程')) {
+  } else if (row.title.includes('课程')) {
     exampleModule.evaluationType = 'course_content';
-  } else if (row.evaluationName.includes('客服')) {
+  } else if (row.title.includes('客服')) {
     exampleModule.evaluationType = 'customer_service';
-  } else if (row.evaluationName.includes('平台')) {
+  } else if (row.title.includes('平台')) {
     exampleModule.evaluationType = 'platform_function';
   } else {
     exampleModule.evaluationType = 'activity_satisfaction';
@@ -696,9 +550,14 @@ const handleCreate = () => {
 // 获取状态标签
 const getStatusTag = (status: string) => {
   const statusMap = {
+    // 保持原有状态映射
     published: { color: 'green', text: '已发布' },
     unpublished: { color: 'orange', text: '未发布' },
     draft: { color: 'gray', text: '草稿' },
+    // 新增API状态映射
+    approved: { color: 'green', text: '已发布' },
+    pending: { color: 'orange', text: '未发布' },
+    rejected: { color: 'gray', text: '草稿' },
   };
   return statusMap[status as keyof typeof statusMap] || { color: 'gray', text: '未知' };
 };
@@ -708,42 +567,42 @@ const gridOptions: VxeTableGridOptions = {
   columns: [
     { title: '序号', type: 'seq', width: 60 },
     {
-      field: 'evaluationName',
+      field: 'title',
       title: '评价名称',
       minWidth: 150,
       showOverflow: 'tooltip',
     },
     {
-      field: 'evaluationTitle',
+      field: 'content',
       title: '评价题目',
       minWidth: 200,
       showOverflow: 'tooltip',
     },
     {
-      field: 'createTime',
+      field: 'created_at',
       title: '创建时间',
       width: 180,
       slots: { default: 'createTime' },
     },
     {
-      field: 'creatorName',
+      field: 'evaluator_name',
       title: '创建人',
       width: 100,
     },
     {
-      field: 'publishTime',
+      field: 'review_time',
       title: '发布的时间',
       width: 180,
       slots: { default: 'publishTime' },
     },
     {
-      field: 'publishStatus',
+      field: 'status',
       title: '发布状态',
       width: 120,
       slots: { default: 'publishStatus' },
     },
     {
-      field: 'evaluationCount',
+      field: 'helpful_count',
       title: '评价数',
       width: 100,
       slots: { default: 'evaluationCount' },
@@ -928,26 +787,26 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
 
       <template #createTime="{ row }">
         <span>
-          {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+          {{ dayjs(row.created_at).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
       </template>
 
       <template #publishTime="{ row }">
-        <span v-if="row.publishTime">
-          {{ dayjs(row.publishTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+        <span v-if="row.review_time">
+          {{ dayjs(row.review_time).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
         <span v-else class="text-gray-400 dark:text-gray-300">-</span>
       </template>
 
       <template #publishStatus="{ row }">
-        <Tag :color="getStatusTag(row.publishStatus).color">
-          {{ getStatusTag(row.publishStatus).text }}
+        <Tag :color="getStatusTag(row.status).color">
+          {{ getStatusTag(row.status).text }}
         </Tag>
       </template>
 
       <template #evaluationCount="{ row }">
         <span class="font-semibold text-blue-600 dark:text-blue-400">
-          {{ row.evaluationCount }}
+          {{ row.helpful_count }}
         </span>
       </template>
 
@@ -961,7 +820,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
             数据
           </Button>
           <Popconfirm
-            v-if="row.publishStatus === 'published'"
+            v-if="row.status === 'approved'"
             title="确定要撤回这个评价吗？"
             ok-text="确定"
             cancel-text="取消"
