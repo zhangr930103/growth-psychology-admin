@@ -43,6 +43,7 @@ const spinning = ref(false);
 const modalVisible = ref(false);
 const modalLoading = ref(false);
 const editingId = ref<number | null>(null);
+const editorKey = ref(0); // 编辑器唯一key
 
 // 表单 ref
 const formRef = ref();
@@ -196,6 +197,7 @@ const resetFormData = () => {
 
 const openCreateModal = async () => {
   resetFormData();
+  editorKey.value++; // 强制重新创建编辑器
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -205,16 +207,20 @@ const openCreateModal = async () => {
 
 const openEditModal = async (row: FaqData) => {
   resetFormData();
+  editorKey.value++; // 强制重新创建编辑器
   editingId.value = row.id;
   formData.question = row.question;
-  formData.answer = row.answer;
   formData.is_featured = row.is_featured;
   formData.order_index = row.order_index;
   formData.is_wechat_display = row.is_wechat_display || false;
   modalVisible.value = true;
 
-  // 等待 DOM 更新后重置表单校验状态
+  // 等待 DOM 更新后再设置编辑器内容和重置表单校验状态
   await nextTick();
+  // 延迟设置编辑器内容，确保编辑器完全初始化
+  setTimeout(() => {
+    formData.answer = row.answer;
+  }, 100);
   formRef.value?.clearValidate();
 };
 
@@ -222,6 +228,7 @@ const closeModal = () => {
   modalVisible.value = false;
   formRef.value?.resetFields();
   resetFormData();
+  editorKey.value++; // 重置编辑器
 };
 
 const handleSubmit = async () => {
@@ -477,6 +484,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
           :rules="[{ required: true, message: '请输入问题答案' }]"
         >
           <WangEditor
+            :key="editorKey"
             v-model:model-value="formData.answer"
             placeholder="请输入问题的详细回答"
             :height="300"
