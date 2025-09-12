@@ -25,9 +25,11 @@ import {
   toggleFaqStatusApi,
   deleteFaqApi,
   createFaqApi,
+  updateFaqApi,
   type FaqData,
   type FaqListParams,
-  type CreateFaqParams
+  type CreateFaqParams,
+  type UpdateFaqParams
 } from '#/api/core/faq';
 
 defineOptions({
@@ -230,8 +232,18 @@ const handleSubmit = async () => {
     modalLoading.value = true;
 
     if (editingId.value) {
-      // TODO: 编辑功能后续实现
-      message.error('编辑功能暂未实现');
+      // 编辑
+      const params: UpdateFaqParams = {
+        id: editingId.value,
+        question: formData.question,
+        answer: formData.answer,
+        is_featured: formData.is_featured,
+        order_index: formData.order_index,
+        wechat_display: formData.wechat_display,
+      };
+
+      await updateFaqApi(params);
+      message.success('编辑FAQ成功');
     } else {
       // 新增
       const params: CreateFaqParams = {
