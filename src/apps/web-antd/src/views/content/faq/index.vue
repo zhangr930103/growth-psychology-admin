@@ -97,8 +97,8 @@ const formOptions: VbenFormProps = {
         placeholder: '全部',
         options: [
           { label: '全部', value: '' },
-          { label: '激活', value: 'active' },
-          { label: '非激活', value: 'inactive' },
+          { label: '禁用', value: 'active' },
+          { label: '启用', value: 'inactive' },
         ],
       },
     },
