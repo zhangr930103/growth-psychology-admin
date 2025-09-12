@@ -155,8 +155,8 @@ const getAssessmentList = async (params: SearchParams): Promise<{ list: Assessme
     id: item.id,
     questionnaireName: item.title,
     questionnaireIntro: item.description,
-    questionnaireNotice: '', // API暂无此字段，使用默认值
-    questionnaireUrl: '', // API暂无此字段，使用默认值
+    questionnaireNotice: item.notice, // 映射到 notice 字段
+    questionnaireUrl: item.survey_url, // 映射到 survey_url 字段
     creatorName: item.creator_name,
     createTime: new Date(item.created_at).getTime() / 1000, // 转换为时间戳
     publishTime: item.start_time ? new Date(item.start_time).getTime() / 1000 : undefined,
@@ -390,7 +390,7 @@ const handleSubmit = async () => {
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
         status: formData.isPublished ? 'published' : 'draft',
-        questionnaire_url: formData.questionnaireUrl, // 问卷星地址
+        survey_url: formData.questionnaireUrl, // 问卷星地址
         notice: formData.questionnaireNotice, // 测评须知
       });
     } else {
@@ -400,7 +400,7 @@ const handleSubmit = async () => {
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
         status: formData.isPublished ? 'published' : 'draft',
-        questionnaire_url: formData.questionnaireUrl, // 问卷星地址
+        survey_url: formData.questionnaireUrl, // 问卷星地址
         notice: formData.questionnaireNotice, // 测评须知
       });
     }

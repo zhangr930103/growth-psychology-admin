@@ -27,6 +27,8 @@ export interface QuestionnaireData {
   creator_name: string;
   created_at: string;
   updated_at: string;
+  notice: string; // 测评须知
+  survey_url: string; // 问卷星地址
 }
 
 /**
@@ -61,7 +63,7 @@ export interface CreateQuestionnaireParams {
   title: string;
   description: string;
   status: 'draft' | 'published' | 'unpublished';
-  questionnaire_url?: string; // 问卷星地址
+  survey_url?: string; // 问卷星地址
   notice?: string; // 测评须知
 }
 
