@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, T
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getQuestionnaireListApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
+import { getQuestionnaireListApi, deleteQuestionnaireApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
 
 defineOptions({
   name: 'AssessmentManagement',
@@ -311,23 +311,27 @@ const handleEdit = (row: AssessmentData) => {
   openEditModal(row);
 };
 
-const handleDelete = (row: AssessmentData) => {
-  console.log('删除问卷:', row);
+const handleDelete = async (row: AssessmentData) => {
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用删除接口
+    await deleteQuestionnaireApi({ id: row.id });
 
     message.success({
       content: '问卷删除成功',
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    console.error('删除问卷失败:', error);
+    message.error('删除问卷失败，请重试');
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 // 弹窗相关函数

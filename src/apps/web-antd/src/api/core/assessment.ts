@@ -48,8 +48,22 @@ export interface ApiResponse<T = any> {
 }
 
 /**
+ * 删除问卷参数类型
+ */
+export interface DeleteQuestionnaireParams {
+  id: number;
+}
+
+/**
  * 获取问卷列表
  */
 export async function getQuestionnaireListApi(params: QuestionnaireListParams): Promise<QuestionnaireListResponse> {
   return requestClient.post<QuestionnaireListResponse>('/questionnaires/list', params);
+}
+
+/**
+ * 删除问卷
+ */
+export async function deleteQuestionnaireApi(params: DeleteQuestionnaireParams): Promise<void> {
+  return requestClient.post<void>('/questionnaires/delete', params);
 }
