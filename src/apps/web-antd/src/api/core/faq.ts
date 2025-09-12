@@ -62,7 +62,7 @@ export interface CreateFaqParams {
   answer: string;
   is_featured?: boolean;
   order_index?: number;
-  wechat_display?: boolean;
+  is_wechat_display?: boolean;
 }
 
 /**

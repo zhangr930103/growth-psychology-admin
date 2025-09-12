@@ -53,7 +53,7 @@ const formData = reactive({
   answer: '',
   is_featured: false,
   order_index: 0,
-  wechat_display: false,
+  is_wechat_display: false,
 });
 
 // 搜索参数接口
@@ -190,7 +190,7 @@ const resetFormData = () => {
   formData.answer = '';
   formData.is_featured = false;
   formData.order_index = 0;
-  formData.wechat_display = false;
+  formData.is_wechat_display = false;
   editingId.value = null;
 };
 
@@ -210,7 +210,7 @@ const openEditModal = async (row: FaqData) => {
   formData.answer = row.answer;
   formData.is_featured = row.is_featured;
   formData.order_index = row.order_index;
-  formData.wechat_display = row.is_wechat_display || false;
+  formData.is_wechat_display = row.is_wechat_display || false;
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -239,7 +239,7 @@ const handleSubmit = async () => {
         answer: formData.answer,
         is_featured: formData.is_featured,
         order_index: formData.order_index,
-        wechat_display: formData.wechat_display,
+        is_wechat_display: formData.is_wechat_display,
       };
 
       await updateFaqApi(params);
@@ -251,7 +251,7 @@ const handleSubmit = async () => {
         answer: formData.answer,
         is_featured: formData.is_featured,
         order_index: formData.order_index,
-        wechat_display: formData.wechat_display,
+        is_wechat_display: formData.is_wechat_display,
       };
 
       await createFaqApi(params);
@@ -494,7 +494,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         </Form.Item>
 
         <Form.Item label="是否在客服微信页面显示">
-          <Radio.Group v-model:value="formData.wechat_display">
+          <Radio.Group v-model:value="formData.is_wechat_display">
             <Radio :value="true">是</Radio>
             <Radio :value="false">否</Radio>
           </Radio.Group>

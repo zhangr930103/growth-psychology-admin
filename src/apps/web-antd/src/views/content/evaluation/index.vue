@@ -870,7 +870,7 @@ const dataGridOptions: VxeTableGridOptions = {
       slots: { default: 'dataActions' },
     },
   ],
-  height: '60vh',
+  height: 600,
   keepSource: true,
   autoResize: true,
   pagerConfig: {},
