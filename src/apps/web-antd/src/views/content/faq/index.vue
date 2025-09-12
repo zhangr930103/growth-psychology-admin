@@ -20,12 +20,14 @@ import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { 
-  getFaqListApi, 
-  toggleFaqStatusApi, 
+import {
+  getFaqListApi,
+  toggleFaqStatusApi,
   deleteFaqApi,
+  createFaqApi,
   type FaqData,
-  type FaqListParams 
+  type FaqListParams,
+  type CreateFaqParams
 } from '#/api/core/faq';
 
 defineOptions({
@@ -47,11 +49,9 @@ const formRef = ref();
 const formData = reactive({
   question: '',
   answer: '',
-  category: '',
   is_featured: false,
   order_index: 0,
-  tags: '',
-  keywords: '',
+  wechat_display: false,
 });
 
 // 搜索参数接口
@@ -134,11 +134,9 @@ const getFaqList = async (params: SearchParams) => {
     page: params.page || 1,
     size: params.size || 10,
     question: params.question,
-    category: params.category,
     status: params.status,
-    keyword: params.keyword,
   };
-  
+
   return await getFaqListApi(apiParams);
 };
 
@@ -186,11 +184,9 @@ const handleDelete = async (row: FaqData) => {
 const resetFormData = () => {
   formData.question = '';
   formData.answer = '';
-  formData.category = '';
   formData.is_featured = false;
   formData.order_index = 0;
-  formData.tags = '';
-  formData.keywords = '';
+  formData.wechat_display = false;
   editingId.value = null;
 };
 
@@ -208,11 +204,9 @@ const openEditModal = async (row: FaqData) => {
   editingId.value = row.id;
   formData.question = row.question;
   formData.answer = row.answer;
-  formData.category = row.category;
   formData.is_featured = row.is_featured;
   formData.order_index = row.order_index;
-  formData.tags = row.tags;
-  formData.keywords = row.keywords;
+  formData.wechat_display = row.is_wechat_display || false;
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -233,11 +227,22 @@ const handleSubmit = async () => {
 
     modalLoading.value = true;
 
-    // 模拟API请求
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (editingId.value) {
+      // TODO: 编辑功能后续实现
+      message.error('编辑功能暂未实现');
+    } else {
+      // 新增
+      const params: CreateFaqParams = {
+        question: formData.question,
+        answer: formData.answer,
+        is_featured: formData.is_featured,
+        order_index: formData.order_index,
+        wechat_display: formData.wechat_display,
+      };
 
-    const action = editingId.value ? '编辑' : '新增';
-    message.success(`${action}FAQ成功`);
+      await createFaqApi(params);
+      message.success('新增FAQ成功');
+    }
 
     // 刷新列表
     gridApi.query();
@@ -246,7 +251,10 @@ const handleSubmit = async () => {
     closeModal();
   } catch (error) {
     // 校验失败时不做处理，表单会自动显示红色校验信息
-    console.log('表单校验失败:', error);
+    console.log('表单校验失败或API调用失败:', error);
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error('操作失败');
+    }
   } finally {
     modalLoading.value = false;
   }
@@ -460,15 +468,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
           />
         </Form.Item>
 
-        <Form.Item label="分类">
-          <Input
-            v-model:value="formData.category"
-            placeholder="请输入分类"
-          />
+        <Form.Item label="是否首页顶置">
+          <Radio.Group v-model:value="formData.is_featured">
+            <Radio :value="true">是</Radio>
+            <Radio :value="false">否</Radio>
+          </Radio.Group>
         </Form.Item>
 
-        <Form.Item label="是否置顶">
-          <Radio.Group v-model:value="formData.is_featured">
+        <Form.Item label="是否在客服微信页面显示">
+          <Radio.Group v-model:value="formData.wechat_display">
             <Radio :value="true">是</Radio>
             <Radio :value="false">否</Radio>
           </Radio.Group>
@@ -483,20 +491,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <div style="color: #999; font-size: 12px; margin-top: 5px">
             值越大越显示在前面
           </div>
-        </Form.Item>
-
-        <Form.Item label="标签">
-          <Input
-            v-model:value="formData.tags"
-            placeholder="请输入标签（多个标签用逗号分隔）"
-          />
-        </Form.Item>
-
-        <Form.Item label="关键词">
-          <Input
-            v-model:value="formData.keywords"
-            placeholder="请输入关键词（多个关键词用逗号分隔）"
-          />
         </Form.Item>
       </Form>
     </Modal>

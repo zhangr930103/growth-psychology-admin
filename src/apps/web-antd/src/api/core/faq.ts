@@ -7,10 +7,10 @@ export interface FaqListParams {
   page: number;
   size: number;
   question?: string;
-  category?: string;
+  creator?: string;
   status?: string;
-  is_featured?: boolean;
-  keyword?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 /**
@@ -31,6 +31,9 @@ export interface FaqData {
   creator_name: string;
   created_at: string;
   updated_at: string;
+  // 前端扩展字段
+  is_wechat_display?: boolean;
+  published_at?: string;
 }
 
 /**
@@ -57,12 +60,9 @@ export interface FaqApiResponse<T> {
 export interface CreateFaqParams {
   question: string;
   answer: string;
-  category?: string;
-  status?: string;
-  order_index?: number;
   is_featured?: boolean;
-  tags?: string;
-  keywords?: string;
+  order_index?: number;
+  wechat_display?: boolean;
 }
 
 /**
