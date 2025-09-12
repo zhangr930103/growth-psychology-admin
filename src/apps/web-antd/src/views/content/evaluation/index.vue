@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, type EvaluationRecord } from '#/api/core';
+import { getEvaluationListApi } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -70,8 +70,33 @@ const evaluationTypeOptions = [
 ];
 
 // 类型定义
-type EvaluationData = EvaluationRecord;
+interface EvaluationData {
+  id: number;
+  evaluationName: string;
+  evaluationTitle: string;
+  creatorName: string;
+  creatorId: number;
+  createTime: number;
+  publishTime?: number;
+  publishStatus: 'published' | 'unpublished' | 'draft';
+  evaluationCount: number;
+  status: 'active' | 'inactive';
+}
 
+interface SearchParams {
+  page?: number;
+  size?: number;
+  evaluationName?: string;
+  creator?: string;
+  publishStatus?: string;
+  createStartTime?: number;
+  createEndTime?: number;
+}
+
+interface ApiResponse {
+  list: EvaluationData[];
+  total: number;
+}
 
 // 评价数据相关类型定义
 interface EvaluationDataRecord {
@@ -117,11 +142,18 @@ const formOptions: VbenFormProps = {
       },
     },
     {
-      component: 'Input',
+      component: 'Select',
       fieldName: 'creator',
       label: '创建人',
       componentProps: {
-        placeholder: '请输入创建人姓名',
+        placeholder: '全部',
+        options: [
+          { label: '全部', value: '' },
+          { label: '张三', value: '张三' },
+          { label: '李四', value: '李四' },
+          { label: '王五', value: '王五' },
+          { label: '赵六', value: '赵六' },
+        ],
       },
     },
     {
@@ -282,7 +314,7 @@ const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promis
 // 操作函数
 const handleViewData = (row: EvaluationData) => {
   currentEvaluationId.value = row.id;
-  currentEvaluationName.value = row.title;
+  currentEvaluationName.value = row.evaluationName;
   dataModalVisible.value = true;
   dataModalLoading.value = true;
 
@@ -482,15 +514,15 @@ const openEditModal = async (row: EvaluationData) => {
   exampleModule.isRequired = true;
 
   // 根据评价名称推断类型，这里简化处理
-  if (row.title.includes('服务')) {
+  if (row.evaluationName.includes('服务')) {
     exampleModule.evaluationType = 'service_quality';
-  } else if (row.title.includes('体验')) {
+  } else if (row.evaluationName.includes('体验')) {
     exampleModule.evaluationType = 'product_experience';
-  } else if (row.title.includes('课程')) {
+  } else if (row.evaluationName.includes('课程')) {
     exampleModule.evaluationType = 'course_content';
-  } else if (row.title.includes('客服')) {
+  } else if (row.evaluationName.includes('客服')) {
     exampleModule.evaluationType = 'customer_service';
-  } else if (row.title.includes('平台')) {
+  } else if (row.evaluationName.includes('平台')) {
     exampleModule.evaluationType = 'platform_function';
   } else {
     exampleModule.evaluationType = 'activity_satisfaction';

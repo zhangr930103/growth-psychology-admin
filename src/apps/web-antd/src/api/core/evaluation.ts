@@ -56,6 +56,16 @@ export interface EvaluationListResponse {
 }
 
 /**
+ * API响应包装类型
+ */
+export interface ApiResponse<T = any> {
+  code: number;
+  message: string;
+  rid: string;
+  data: T;
+}
+
+/**
  * 获取评价列表
  */
 export async function getEvaluationListApi(params: EvaluationListParams): Promise<EvaluationListResponse> {
