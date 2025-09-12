@@ -119,17 +119,27 @@ const formOptions: VbenFormProps = {
 
 // 获取FAQ列表
 const getFaqList = async (params: SearchParams) => {
-  const apiParams: FaqListParams = {
-    page: params.page || 1,
-    size: params.size || 10,
-    question: params.question,
-    creator: params.creator,
-    status: params.status,
-    start_date: params.start_date,
-    end_date: params.end_date,
-  };
+  try {
+    const apiParams: FaqListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      question: params.question,
+      creator: params.creator,
+      status: params.status,
+      start_date: params.start_date,
+      end_date: params.end_date,
+    };
 
-  return await getFaqListApi(apiParams);
+    const result = await getFaqListApi(apiParams);
+    return result;
+  } catch (error) {
+    console.error('获取FAQ列表失败:', error);
+    message.error('获取FAQ列表失败，请稍后重试');
+    return {
+      list: [],
+      total: 0,
+    };
+  }
 };
 
 // 操作函数
@@ -263,6 +273,7 @@ const handleEdit = (row: FaqData) => {
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
+    { title: '序号', type: 'seq', width: 60 },
     {
       field: 'question',
       title: '问题名称',
@@ -276,7 +287,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'is_wechat_display',
       title: '是否客服显示',
-      slots: { default: 'wechat_display' },
+      slots: { default: 'is_wechat_display' },
     },
     {
       field: 'created_at',
@@ -288,9 +299,9 @@ const gridOptions: VxeTableGridOptions = {
       title: '创建人',
     },
     {
-      field: 'published_at',
+      field: 'updated_at',
       title: '发布时间',
-      slots: { default: 'published_at' },
+      slots: { default: 'updated_at' },
     },
     {
       field: 'status',
@@ -318,7 +329,12 @@ const gridOptions: VxeTableGridOptions = {
         const result = await getFaqList({
           page: page.currentPage,
           size: page.pageSize,
-          ...formValues,
+          question: formValues.question,
+          creator: formValues.creator,
+          status: formValues.status,
+          // 处理时间范围搜索
+          start_date: formValues.start_date,
+          end_date: formValues.end_date,
         });
         return result;
       },
@@ -353,7 +369,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </Tag>
         </template>
 
-        <template #wechat_display="{ row }">
+        <template #is_wechat_display="{ row }">
           <Tag :color="row.is_wechat_display ? 'blue' : 'gray'">
             {{ row.is_wechat_display ? '是' : '否' }}
           </Tag>
@@ -365,9 +381,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </span>
         </template>
 
-        <template #published_at="{ row }">
+        <template #updated_at="{ row }">
           <span>
-            {{ row.published_at ? dayjs(row.published_at).format('YYYY-MM-DD HH:mm:ss') : '-' }}
+            {{ row.updated_at ? dayjs(row.updated_at).format('YYYY-MM-DD HH:mm:ss') : '-' }}
           </span>
         </template>
 

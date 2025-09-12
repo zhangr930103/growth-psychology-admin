@@ -85,8 +85,7 @@ export interface FaqOperationResponse {
  * 获取FAQ列表
  */
 export async function getFaqListApi(params: FaqListParams): Promise<FaqListResponse> {
-  const response = await requestClient.post<FaqApiResponse<FaqListResponse>>('/faqs/list', params);
-  return response.data;
+  return requestClient.post<FaqListResponse>('/faqs/list', params);
 }
 
 /**
