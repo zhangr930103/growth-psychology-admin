@@ -31,9 +31,9 @@ export interface FaqData {
   creator_name: string;
   created_at: string;
   updated_at: string;
-  // 前端扩展字段
-  is_wechat_display?: boolean;
+  // 新增字段
   published_at?: string;
+  is_wechat_display?: boolean;
 }
 
 /**

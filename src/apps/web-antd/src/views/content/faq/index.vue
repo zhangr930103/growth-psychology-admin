@@ -59,13 +59,10 @@ interface SearchParams {
   page?: number;
   size?: number;
   question?: string;
-  category?: string;
   creator?: string;
   status?: string;
-  is_featured?: boolean;
-  keyword?: string;
-  createStartTime?: number;
-  createEndTime?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 // 搜索表单配置
@@ -74,7 +71,7 @@ const formOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['rangePicker', ['createStartTime', 'createEndTime']]],
+  fieldMappingTime: [['rangePicker', ['start_date', 'end_date']]],
   schema: [
     {
       component: 'Input',
@@ -106,14 +103,6 @@ const formOptions: VbenFormProps = {
       },
     },
     {
-      component: 'Input',
-      fieldName: 'keyword',
-      label: '关键词',
-      componentProps: {
-        placeholder: '请输入关键词',
-      },
-    },
-    {
       component: 'RangePicker',
       defaultValue: undefined,
       fieldName: 'rangePicker',
@@ -134,7 +123,10 @@ const getFaqList = async (params: SearchParams) => {
     page: params.page || 1,
     size: params.size || 10,
     question: params.question,
+    creator: params.creator,
     status: params.status,
+    start_date: params.start_date,
+    end_date: params.end_date,
   };
 
   return await getFaqListApi(apiParams);
@@ -277,22 +269,14 @@ const gridOptions: VxeTableGridOptions = {
       showOverflow: 'tooltip',
     },
     {
-      field: 'answer',
-      title: '问题答案',
-      slots: { default: 'answer' },
-    },
-    {
-      field: 'category',
-      title: '分类',
-    },
-    {
       field: 'is_featured',
       title: '是否置顶',
       slots: { default: 'is_featured' },
     },
     {
-      field: 'order_index',
-      title: '排序',
+      field: 'is_wechat_display',
+      title: '是否客服显示',
+      slots: { default: 'wechat_display' },
     },
     {
       field: 'created_at',
@@ -304,12 +288,13 @@ const gridOptions: VxeTableGridOptions = {
       title: '创建人',
     },
     {
-      field: 'view_count',
-      title: '查看次数',
+      field: 'published_at',
+      title: '发布时间',
+      slots: { default: 'published_at' },
     },
     {
       field: 'status',
-      title: '状态',
+      title: '是否启用',
       slots: { default: 'status' },
     },
     {
@@ -368,23 +353,28 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </Tag>
         </template>
 
+        <template #wechat_display="{ row }">
+          <Tag :color="row.is_wechat_display ? 'blue' : 'gray'">
+            {{ row.is_wechat_display ? '是' : '否' }}
+          </Tag>
+        </template>
+
         <template #created_at="{ row }">
           <span>
             {{ dayjs(row.created_at).format('YYYY-MM-DD HH:mm:ss') }}
           </span>
         </template>
 
-        <template #status="{ row }">
-          <Tag :color="row.status === 'active' ? 'green' : 'red'">
-            {{ row.status === 'active' ? '激活' : '非激活' }}
-          </Tag>
+        <template #published_at="{ row }">
+          <span>
+            {{ row.published_at ? dayjs(row.published_at).format('YYYY-MM-DD HH:mm:ss') : '-' }}
+          </span>
         </template>
 
-        <template #answer="{ row }">
-          <div
-            class="answer-content"
-            v-html="row.answer"
-          />
+        <template #status="{ row }">
+          <Tag :color="row.status === 'active' ? 'green' : 'red'">
+            {{ row.status === 'active' ? '已启用' : '未启用' }}
+          </Tag>
         </template>
 
         <template #actions="{ row }">
@@ -498,30 +488,4 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </template>
 
 <style scoped>
-.answer-content {
-  line-height: 1.5;
-}
-
-.answer-content :deep(p) {
-  margin: 0 0 8px 0;
-}
-
-.answer-content :deep(img) {
-  max-width: 100%;
-  height: auto;
-  border-radius: 4px;
-}
-
-.answer-content :deep(ul),
-.answer-content :deep(ol) {
-  margin: 0 0 8px 0;
-  padding-left: 20px;
-}
-
-.answer-content :deep(blockquote) {
-  margin: 0 0 8px 0;
-  padding: 8px 12px;
-  border-left: 4px solid #d9d9d9;
-  background-color: #f6f6f6;
-}
 </style>
