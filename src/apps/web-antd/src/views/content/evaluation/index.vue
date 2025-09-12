@@ -83,20 +83,6 @@ interface EvaluationData {
   status: 'active' | 'inactive';
 }
 
-interface SearchParams {
-  page?: number;
-  size?: number;
-  evaluationName?: string;
-  creator?: string;
-  publishStatus?: string;
-  createStartTime?: number;
-  createEndTime?: number;
-}
-
-interface ApiResponse {
-  list: EvaluationData[];
-  total: number;
-}
 
 // 评价数据相关类型定义
 interface EvaluationDataRecord {
@@ -142,18 +128,11 @@ const formOptions: VbenFormProps = {
       },
     },
     {
-      component: 'Select',
+      component: 'Input',
       fieldName: 'creator',
       label: '创建人',
       componentProps: {
-        placeholder: '全部',
-        options: [
-          { label: '全部', value: '' },
-          { label: '张三', value: '张三' },
-          { label: '李四', value: '李四' },
-          { label: '王五', value: '王五' },
-          { label: '赵六', value: '赵六' },
-        ],
+        placeholder: '请输入创建人姓名',
       },
     },
     {
@@ -188,126 +167,13 @@ const formOptions: VbenFormProps = {
 // 获取评价列表
 const getEvaluationList = getEvaluationListApi;
 
-// 模拟评价数据API
+// 评价数据API - 调用真实API
 const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockDataList: EvaluationDataRecord[] = [
-    {
-      id: 1,
-      consultantName: '王心理咨询师',
-      evaluationTime: dayjs().subtract(2, 'hour').unix(),
-      evaluationScore: 95,
-      comment: '非常专业，给了我很多启发和帮助',
-      evaluatorName: '李女士',
-      evaluatorId: 101,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 2,
-      consultantName: '张心理医生',
-      evaluationTime: dayjs().subtract(1, 'day').unix(),
-      evaluationScore: 88,
-      comment: '态度很好，建议很实用',
-      evaluatorName: '陈先生',
-      evaluatorId: 102,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 3,
-      consultantName: '李资深咨询师',
-      evaluationTime: dayjs().subtract(2, 'day').unix(),
-      evaluationScore: 92,
-      comment: '专业水准很高，解决了我的困惑',
-      evaluatorName: '王小姐',
-      evaluatorId: 103,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 4,
-      consultantName: '赵心理专家',
-      evaluationTime: dayjs().subtract(3, 'day').unix(),
-      evaluationScore: 90,
-      comment: '很有耐心，方法很有效',
-      evaluatorName: '刘先生',
-      evaluatorId: 104,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 5,
-      consultantName: '王心理咨询师',
-      evaluationTime: dayjs().subtract(4, 'day').unix(),
-      evaluationScore: 96,
-      comment: '非常满意，解决了长期困扰的问题',
-      evaluatorName: '周女士',
-      evaluatorId: 105,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 6,
-      consultantName: '孙资深心理师',
-      evaluationTime: dayjs().subtract(5, 'day').unix(),
-      evaluationScore: 85,
-      comment: '专业性强，建议中肯',
-      evaluatorName: '吴先生',
-      evaluatorId: 106,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 7,
-      consultantName: '李资深咨询师',
-      evaluationTime: dayjs().subtract(6, 'day').unix(),
-      evaluationScore: 93,
-      comment: '方法很实用，效果明显',
-      evaluatorName: '徐小姐',
-      evaluatorId: 107,
-      evaluationId: params.evaluationId,
-    },
-    {
-      id: 8,
-      consultantName: '陈心理医生',
-      evaluationTime: dayjs().subtract(7, 'day').unix(),
-      evaluationScore: 89,
-      comment: '态度温和，专业度高',
-      evaluatorName: '马先生',
-      evaluatorId: 108,
-      evaluationId: params.evaluationId,
-    },
-  ];
-
-  // 模拟搜索过滤
-  let filteredData = mockDataList;
-
-  if (params.consultantName) {
-    filteredData = filteredData.filter((item) =>
-      item.consultantName.includes(params.consultantName!),
-    );
-  }
-
-  if (params.evaluatorName) {
-    filteredData = filteredData.filter((item) =>
-      item.evaluatorName.includes(params.evaluatorName!),
-    );
-  }
-
-  if (params.evaluationStartTime && params.evaluationEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.evaluationTime >= params.evaluationStartTime! &&
-        item.evaluationTime <= params.evaluationEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
-
+  // TODO: 需要在evaluation.ts中添加对应的API方法
+  // 暂时返回空数据，等待后端API实现
   return {
-    list,
-    total,
+    list: [],
+    total: 0,
   };
 };
 
@@ -394,7 +260,7 @@ const closeDataModal = () => {
 
 const handlePublish = (row: EvaluationData) => {
   console.log('发布/撤回:', row);
-  const action = row.status === 'approved' ? '撤回' : '发布';
+  const action = row.publishStatus === 'published' ? '撤回' : '发布';
 
   // 开启全屏loading
   spinning.value = true;
@@ -505,12 +371,12 @@ const openCreateModal = async () => {
 const openEditModal = async (row: EvaluationData) => {
   resetFormData();
   editingId.value = row.id;
-  formData.evaluationName = row.title;
-  formData.isPublished = row.status === 'approved';
+  formData.evaluationName = row.evaluationName;
+  formData.isPublished = row.publishStatus === 'published';
 
   // 创建一个示例模块（实际项目中应该从后端获取）
   const exampleModule = createNewModule();
-  exampleModule.title = row.content;
+  exampleModule.title = row.evaluationTitle;
   exampleModule.isRequired = true;
 
   // 根据评价名称推断类型，这里简化处理
