@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, T
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getQuestionnaireListApi, deleteQuestionnaireApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
+import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
 
 defineOptions({
   name: 'AssessmentManagement',
@@ -382,10 +382,29 @@ const handleSubmit = async () => {
 
     modalLoading.value = true;
 
-    // 模拟API请求
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
     const action = editingId.value ? '编辑' : '新增';
+
+    if (!editingId.value) {
+      // 新增操作，调用创建接口
+      await createQuestionnaireApi({
+        title: formData.questionnaireName,
+        description: formData.questionnaireIntro,
+        status: formData.isPublished ? 'published' : 'draft',
+        questionnaire_url: formData.questionnaireUrl, // 问卷星地址
+        notice: formData.questionnaireNotice, // 测评须知
+      });
+    } else {
+      // 编辑操作，调用编辑接口
+      await editQuestionnaireApi({
+        id: editingId.value,
+        title: formData.questionnaireName,
+        description: formData.questionnaireIntro,
+        status: formData.isPublished ? 'published' : 'draft',
+        questionnaire_url: formData.questionnaireUrl, // 问卷星地址
+        notice: formData.questionnaireNotice, // 测评须知
+      });
+    }
+
     message.success(`${action}问卷成功`);
 
     // 刷新列表
@@ -394,8 +413,8 @@ const handleSubmit = async () => {
     // 关闭弹窗
     closeModal();
   } catch (error) {
-    // 校验失败时不做处理，表单会自动显示红色校验信息
-    console.log('表单校验失败:', error);
+    console.error(`${editingId.value ? '编辑' : '新增'}问卷失败:`, error);
+    message.error(`${editingId.value ? '编辑' : '新增'}问卷失败，请重试`);
   } finally {
     modalLoading.value = false;
   }

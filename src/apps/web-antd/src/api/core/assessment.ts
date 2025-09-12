@@ -55,10 +55,42 @@ export interface DeleteQuestionnaireParams {
 }
 
 /**
+ * 创建问卷参数类型
+ */
+export interface CreateQuestionnaireParams {
+  title: string;
+  description: string;
+  status: 'draft' | 'published' | 'unpublished';
+  questionnaire_url?: string; // 问卷星地址
+  notice?: string; // 测评须知
+}
+
+/**
+ * 编辑问卷参数类型
+ */
+export interface EditQuestionnaireParams extends CreateQuestionnaireParams {
+  id: number;
+}
+
+/**
  * 获取问卷列表
  */
 export async function getQuestionnaireListApi(params: QuestionnaireListParams): Promise<QuestionnaireListResponse> {
   return requestClient.post<QuestionnaireListResponse>('/questionnaires/list', params);
+}
+
+/**
+ * 创建问卷
+ */
+export async function createQuestionnaireApi(params: CreateQuestionnaireParams): Promise<void> {
+  return requestClient.post<void>('/questionnaires/create', params);
+}
+
+/**
+ * 编辑问卷
+ */
+export async function editQuestionnaireApi(params: EditQuestionnaireParams): Promise<void> {
+  return requestClient.post<void>('/questionnaires/edit', params);
 }
 
 /**
