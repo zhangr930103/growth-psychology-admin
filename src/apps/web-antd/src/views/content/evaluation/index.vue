@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, type EvaluationRecord, type EvaluationListResponse } from '#/api/core';
+import { getEvaluationListApi, createEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -65,6 +65,12 @@ const evaluationTypeOptions = [
   { label: '评论', value: 'comment' },
 ];
 
+// 获取评价类型标签
+const getEvaluationTypeLabel = (value: string): string => {
+  const option = evaluationTypeOptions.find(opt => opt.value === value);
+  return option ? option.label : value;
+};
+
 // 使用API中定义的类型
 type EvaluationData = EvaluationRecord;
 
@@ -79,21 +85,6 @@ interface EvaluationDataRecord {
   evaluatorName: string;
   evaluatorId: number;
   evaluationId: number;
-}
-
-interface EvaluationDataSearchParams {
-  page?: number;
-  size?: number;
-  consultantName?: string;
-  evaluatorName?: string;
-  evaluationStartTime?: number;
-  evaluationEndTime?: number;
-  evaluationId: number;
-}
-
-interface EvaluationDataApiResponse {
-  list: EvaluationDataRecord[];
-  total: number;
 }
 
 // 搜索表单配置
@@ -444,22 +435,40 @@ const handleSubmit = async () => {
 
     modalLoading.value = true;
 
-    // 模拟API请求
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (editingId.value) {
+      // 编辑模式 - 暂时使用模拟API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      message.success('编辑评价成功');
+    } else {
+      // 新增模式 - 使用真实API
+      const createParams: CreateEvaluationParams = {
+        name: formData.evaluationName,
+        items: formData.modules.map(module => ({
+          type: getEvaluationTypeLabel(module.evaluationType || ''),
+          title: module.title,
+          is_required: module.isRequired,
+        })),
+        publishStatus: formData.isPublished ? 'published' : 'unpublished',
+      };
 
-    const action = editingId.value ? '编辑' : '新增';
-    message.success(`${action}评价成功`);
+      const response = await createEvaluationApi(createParams);
+      message.success(response.message || '评价创建成功');
+    }
 
+    // 成功后立即关闭弹窗
+    modalLoading.value = false;
+    closeModal();
+    
     // 刷新列表
     gridApi.query();
-
-    // 关闭弹窗
-    closeModal();
   } catch (error) {
-    // 校验失败时不做处理，表单会自动显示红色校验信息
-    console.log('表单校验失败:', error);
-  } finally {
+    // 校验失败或API错误时保持弹窗打开，显示错误信息
     modalLoading.value = false;
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(`操作失败：${error.message}`);
+    } else {
+      console.log('表单校验失败:', error);
+    }
   }
 };
 

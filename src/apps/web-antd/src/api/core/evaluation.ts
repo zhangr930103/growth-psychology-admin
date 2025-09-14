@@ -123,8 +123,42 @@ export async function getEvaluationListApi(params: EvaluationListParams): Promis
 }
 
 /**
+ * 创建评价项目类型
+ */
+export interface CreateEvaluationItem {
+  type: string;                               // 评价类型，如"评分"、"评论"
+  title: string;                              // 评价标题，长度2-200字符
+  is_required?: boolean;                      // 是否必填，默认false
+}
+
+/**
+ * 创建评价请求参数类型
+ */
+export interface CreateEvaluationParams {
+  name: string;                               // 评价名称，长度2-200字符
+  items: CreateEvaluationItem[];              // 评价项目数组，至少包含一个项目
+  publishStatus?: 'published' | 'unpublished'; // 发布状态，默认"unpublished"
+}
+
+/**
+ * 创建评价响应类型
+ */
+export interface CreateEvaluationResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "评价创建成功，共创建1个项目"
+  rid: string;                                // 请求ID
+}
+
+/**
  * 获取评价数据详情列表
  */
 export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
   return requestClient.post<EvaluationDataApiResponse>('/evaluations/data/list', params);
+}
+
+/**
+ * 创建评价
+ */
+export async function createEvaluationApi(params: CreateEvaluationParams): Promise<CreateEvaluationResponse> {
+  return await requestClient.post<CreateEvaluationResponse>('/evaluations/create', params);
 }
