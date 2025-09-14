@@ -49,7 +49,7 @@ interface AssessmentData {
   creatorName: string; // 映射到 creator_name
   createTime: number; // 转换自 created_at
   publishTime?: number; // 转换自 start_time 或其他字段
-  publishStatus: 'published' | 'unpublished' | 'draft'; // 映射到 status
+  publishStatus: 'published' | 'unpublished'; // 映射到 status
 }
 
 interface SearchParams {
@@ -119,7 +119,6 @@ const formOptions: VbenFormProps = {
           { label: '全部', value: '' },
           { label: '已启用', value: 'published' },
           { label: '未启用', value: 'unpublished' },
-          { label: '草稿', value: 'draft' },
         ],
       },
     },
@@ -145,7 +144,7 @@ const getAssessmentList = async (params: SearchParams): Promise<{ list: Assessme
     size: params.size || 10,
     title: params.title,
     creator: params.creator,
-    status: params.status as 'draft' | 'published' | 'unpublished',
+    status: params.status as 'published' | 'unpublished',
   };
 
   const response = await getQuestionnaireListApi(apiParams);
@@ -389,7 +388,7 @@ const handleSubmit = async () => {
       await createQuestionnaireApi({
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
-        status: formData.isPublished ? 'published' : 'draft',
+        status: formData.isPublished ? 'published' : 'unpublished',
         survey_url: formData.questionnaireUrl, // 问卷星地址
         notice: formData.questionnaireNotice, // 测评须知
       });
@@ -399,7 +398,7 @@ const handleSubmit = async () => {
         id: editingId.value,
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
-        status: formData.isPublished ? 'published' : 'draft',
+        status: formData.isPublished ? 'published' : 'unpublished',
         survey_url: formData.questionnaireUrl, // 问卷星地址
         notice: formData.questionnaireNotice, // 测评须知
       });
@@ -429,7 +428,6 @@ const getStatusTag = (status: string) => {
   const statusMap = {
     published: { color: 'green', text: '已启用' },
     unpublished: { color: 'orange', text: '未启用' },
-    draft: { color: 'gray', text: '草稿' },
   };
   return statusMap[status as keyof typeof statusMap] || { color: 'gray', text: '未知' };
 };

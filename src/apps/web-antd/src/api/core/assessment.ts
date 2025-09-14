@@ -7,7 +7,7 @@ export interface QuestionnaireListParams {
   page: number;
   size: number;
   title?: string;
-  status?: 'draft' | 'published' | 'unpublished';
+  status?: 'published' | 'unpublished';
   creator?: string;
 }
 
@@ -15,20 +15,21 @@ export interface QuestionnaireListParams {
  * 问卷数据类型
  */
 export interface QuestionnaireData {
+  id: number;
   title: string;
   description: string;
+  notice: string; // 测评须知
+  category: string; // 问卷分类
+  status: 'published' | 'unpublished';
   is_anonymous: boolean;
   allow_multiple_submissions: boolean;
   start_time: string;
   end_time: string;
-  id: number;
-  status: 'draft' | 'published' | 'unpublished';
+  survey_url: string; // 问卷星地址
   creator_id: number;
   creator_name: string;
   created_at: string;
-  updated_at: string;
-  notice: string; // 测评须知
-  survey_url: string; // 问卷星地址
+  updated_at?: string;
 }
 
 /**
@@ -62,7 +63,8 @@ export interface DeleteQuestionnaireParams {
 export interface CreateQuestionnaireParams {
   title: string;
   description: string;
-  status: 'draft' | 'published' | 'unpublished';
+  status: 'published' | 'unpublished';
+  category?: string; // 问卷分类
   survey_url?: string; // 问卷星地址
   notice?: string; // 测评须知
 }
