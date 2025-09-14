@@ -72,15 +72,31 @@ const evaluationTypeOptions = [
 // 类型定义
 interface EvaluationData {
   id: number;
-  evaluationName: string;
-  evaluationTitle: string;
-  creatorName: string;
-  creatorId: number;
-  createTime: number;
-  publishTime?: number;
-  publishStatus: 'published' | 'unpublished' | 'draft';
-  evaluationCount: number;
-  status: 'active' | 'inactive';
+  name: string;                    // 评价名称
+  type: string;                    // 评价类型
+  title: string;                   // 评价标题
+  content: string;                 // 评价内容
+  rating: number;                  // 总评分
+  service_rating: number;          // 服务评分
+  professional_rating: number;     // 专业评分
+  attitude_rating: number;         // 态度评分
+  environment_rating: number;      // 环境评分
+  target_id: number;               // 评价目标ID
+  target_name: string;             // 评价目标名称
+  evaluator_id: number;            // 评价人 ID
+  evaluator_name: string;          // 评价人名称
+  publishStatus: 'published' | 'unpublished';
+  status: 'approved' | 'pending';
+  reviewer_name: string;           // 审核人名称
+  review_time: string;             // 审核时间
+  review_comment: string;          // 审核意见
+  helpful_count: number;           // 有用投票数
+  unhelpful_count: number;         // 无用投票数
+  reply_count: number;             // 回复数量
+  is_anonymous: boolean;           // 是否匿名
+  is_required: boolean;            // 是否必填
+  is_published: boolean;           // 是否发布
+  created_at: string;              // 创建时间
 }
 
 
@@ -117,11 +133,11 @@ const formOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 130,
   },
-  fieldMappingTime: [['rangePicker', ['createStartTime', 'createEndTime']]],
+  fieldMappingTime: [['rangePicker', ['start_time', 'end_time']]],
   schema: [
     {
       component: 'Input',
-      fieldName: 'evaluationName',
+      fieldName: 'name',
       label: '评价名称',
       componentProps: {
         placeholder: '请输入',
@@ -145,7 +161,6 @@ const formOptions: VbenFormProps = {
           { label: '全部', value: '' },
           { label: '已发布', value: 'published' },
           { label: '未发布', value: 'unpublished' },
-          { label: '草稿', value: 'draft' },
         ],
       },
     },
@@ -171,6 +186,7 @@ const getEvaluationList = getEvaluationListApi;
 const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> => {
   // TODO: 需要在evaluation.ts中添加对应的API方法
   // 暂时返回空数据，等待后端API实现
+  console.log('评价数据查询参数:', params);
   return {
     list: [],
     total: 0,
@@ -180,7 +196,7 @@ const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promis
 // 操作函数
 const handleViewData = (row: EvaluationData) => {
   currentEvaluationId.value = row.id;
-  currentEvaluationName.value = row.evaluationName;
+  currentEvaluationName.value = row.name;
   dataModalVisible.value = true;
   dataModalLoading.value = true;
 
@@ -260,7 +276,7 @@ const closeDataModal = () => {
 
 const handlePublish = (row: EvaluationData) => {
   console.log('发布/撤回:', row);
-  const action = row.publishStatus === 'published' ? '撤回' : '发布';
+  const action = (row.status === 'approved' || row.publishStatus === 'published') ? '撤回' : '发布';
 
   // 开启全屏loading
   spinning.value = true;
@@ -371,27 +387,32 @@ const openCreateModal = async () => {
 const openEditModal = async (row: EvaluationData) => {
   resetFormData();
   editingId.value = row.id;
-  formData.evaluationName = row.evaluationName;
-  formData.isPublished = row.publishStatus === 'published';
+  formData.evaluationName = row.name;
+  formData.isPublished = (row.status === 'approved' || row.publishStatus === 'published');
 
   // 创建一个示例模块（实际项目中应该从后端获取）
   const exampleModule = createNewModule();
-  exampleModule.title = row.evaluationTitle;
-  exampleModule.isRequired = true;
+  exampleModule.title = row.title;
+  exampleModule.isRequired = row.is_required;
 
-  // 根据评价名称推断类型，这里简化处理
-  if (row.evaluationName.includes('服务')) {
-    exampleModule.evaluationType = 'service_quality';
-  } else if (row.evaluationName.includes('体验')) {
-    exampleModule.evaluationType = 'product_experience';
-  } else if (row.evaluationName.includes('课程')) {
-    exampleModule.evaluationType = 'course_content';
-  } else if (row.evaluationName.includes('客服')) {
-    exampleModule.evaluationType = 'customer_service';
-  } else if (row.evaluationName.includes('平台')) {
-    exampleModule.evaluationType = 'platform_function';
+  // 根据评价类型设置模块类型
+  if (row.type) {
+    exampleModule.evaluationType = row.type;
   } else {
-    exampleModule.evaluationType = 'activity_satisfaction';
+    // 如果没有type字段，根据名称推断
+    if (row.name.includes('服务')) {
+      exampleModule.evaluationType = 'service_quality';
+    } else if (row.name.includes('体验')) {
+      exampleModule.evaluationType = 'product_experience';
+    } else if (row.name.includes('课程')) {
+      exampleModule.evaluationType = 'course_content';
+    } else if (row.name.includes('客服')) {
+      exampleModule.evaluationType = 'customer_service';
+    } else if (row.name.includes('平台')) {
+      exampleModule.evaluationType = 'platform_function';
+    } else {
+      exampleModule.evaluationType = 'activity_satisfaction';
+    }
   }
 
   formData.modules = [exampleModule];
@@ -448,16 +469,14 @@ const handleCreate = () => {
 // 获取状态标签
 const getStatusTag = (status: string) => {
   const statusMap = {
-    // 保持原有状态映射
+    // API返回的状态映射
     published: { color: 'green', text: '已发布' },
     unpublished: { color: 'orange', text: '未发布' },
-    draft: { color: 'gray', text: '草稿' },
-    // 新增API状态映射
+    // 兼容可能的其他字段名
     approved: { color: 'green', text: '已发布' },
     pending: { color: 'orange', text: '未发布' },
-    rejected: { color: 'gray', text: '草稿' },
   };
-  return statusMap[status as keyof typeof statusMap] || { color: 'gray', text: '未知' };
+  return statusMap[status as keyof typeof statusMap] || { color: 'orange', text: '未发布' };
 };
 
 // 表格配置
@@ -465,13 +484,13 @@ const gridOptions: VxeTableGridOptions = {
   columns: [
     { title: '序号', type: 'seq', width: 60 },
     {
-      field: 'title',
+      field: 'name',
       title: '评价名称',
       minWidth: 150,
       showOverflow: 'tooltip',
     },
     {
-      field: 'content',
+      field: 'title',
       title: '评价题目',
       minWidth: 200,
       showOverflow: 'tooltip',
@@ -518,7 +537,7 @@ const gridOptions: VxeTableGridOptions = {
   pagerConfig: {},
   proxyConfig: {
     response: {
-      result: 'list',
+      result: 'data',
       total: 'total',
       list: 'list',
     },
@@ -529,11 +548,11 @@ const gridOptions: VxeTableGridOptions = {
           size: page.pageSize,
           ...formValues,
           // 处理时间范围搜索
-          createStartTime: formValues.createStartTime
-            ? (Date.parse(formValues.createStartTime) - 28800000) / 1000
+          start_time: formValues.start_time
+            ? Math.floor((Date.parse(formValues.start_time) - 28800000) / 1000)
             : undefined,
-          createEndTime: formValues.createEndTime
-            ? (Date.parse(formValues.createEndTime) - 28800000) / 1000 + 86399
+          end_time: formValues.end_time
+            ? Math.floor((Date.parse(formValues.end_time) - 28800000) / 1000) + 86399
             : undefined,
         });
         return result;
@@ -718,7 +737,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
             数据
           </Button>
           <Popconfirm
-            v-if="row.status === 'approved'"
+            v-if="row.status === 'approved' || row.publishStatus === 'published'"
             title="确定要撤回这个评价吗？"
             ok-text="确定"
             cancel-text="取消"
