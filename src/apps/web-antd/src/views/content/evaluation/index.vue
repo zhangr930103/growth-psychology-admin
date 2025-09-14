@@ -61,12 +61,8 @@ const formData = reactive({
 
 // 评价类型选项
 const evaluationTypeOptions = [
-  { label: '服务质量评价', value: 'service_quality' },
-  { label: '产品体验评价', value: 'product_experience' },
-  { label: '课程内容评价', value: 'course_content' },
-  { label: '客服服务评价', value: 'customer_service' },
-  { label: '平台功能评价', value: 'platform_function' },
-  { label: '活动满意度评价', value: 'activity_satisfaction' },
+  { label: '评分', value: 'rating' },
+  { label: '评论', value: 'comment' },
 ];
 
 // 使用API中定义的类型
@@ -413,18 +409,10 @@ const openEditModal = async (row: EvaluationData) => {
     exampleModule.evaluationType = row.type;
   } else {
     // 如果没有type字段，根据名称推断
-    if (row.name.includes('服务')) {
-      exampleModule.evaluationType = 'service_quality';
-    } else if (row.name.includes('体验')) {
-      exampleModule.evaluationType = 'product_experience';
-    } else if (row.name.includes('课程')) {
-      exampleModule.evaluationType = 'course_content';
-    } else if (row.name.includes('客服')) {
-      exampleModule.evaluationType = 'customer_service';
-    } else if (row.name.includes('平台')) {
-      exampleModule.evaluationType = 'platform_function';
+    if (row.name.includes('评分') || row.name.includes('分数') || row.name.includes('星级')) {
+      exampleModule.evaluationType = 'rating';
     } else {
-      exampleModule.evaluationType = 'activity_satisfaction';
+      exampleModule.evaluationType = 'comment';
     }
   }
 
