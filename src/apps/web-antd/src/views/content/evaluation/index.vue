@@ -202,8 +202,7 @@ const handleViewDetail = async (row: any) => {
 
     // 调用真实API获取评价详情
     const response = await getEvaluationDetailApi(row.id);
-    console.log('评价详情API响应:', response);
-    currentEvaluationDimensions.value = response?.list || [];
+    currentEvaluationDimensions.value = response?.data?.list || [];
   } catch (error) {
     currentEvaluationDimensions.value = [];
   } finally {
@@ -248,7 +247,6 @@ const handlePublish = async (row: EvaluationData) => {
     } else {
       message.error('操作失败，请稍后重试');
     }
-    console.error('切换发布状态失败:', error);
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -279,7 +277,6 @@ const handleDelete = async (row: EvaluationData) => {
     } else {
       message.error('删除失败，请稍后重试');
     }
-    console.error('删除评价失败:', error);
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -446,8 +443,6 @@ const handleSubmit = async () => {
     modalLoading.value = false;
     if (error && typeof error === 'object' && 'message' in error) {
       message.error(`操作失败：${error.message}`);
-    } else {
-      console.log('表单校验失败:', error);
     }
   }
 };
