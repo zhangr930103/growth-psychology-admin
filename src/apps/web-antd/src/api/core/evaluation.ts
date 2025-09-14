@@ -150,6 +150,15 @@ export interface CreateEvaluationResponse {
 }
 
 /**
+ * 删除评价响应类型
+ */
+export interface DeleteEvaluationResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "评价删除成功"
+  data: null;                                 // 数据为null
+}
+
+/**
  * 获取评价数据详情列表
  */
 export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
@@ -161,4 +170,11 @@ export async function getEvaluationDataListApi(params: EvaluationDataSearchParam
  */
 export async function createEvaluationApi(params: CreateEvaluationParams): Promise<CreateEvaluationResponse> {
   return await requestClient.post<CreateEvaluationResponse>('/evaluations/create', params);
+}
+
+/**
+ * 删除评价
+ */
+export async function deleteEvaluationApi(evaluationId: number): Promise<DeleteEvaluationResponse> {
+  return await requestClient.delete<DeleteEvaluationResponse>(`/evaluations/${evaluationId}`);
 }

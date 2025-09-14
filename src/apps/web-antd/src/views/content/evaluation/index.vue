@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, createEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
+import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -297,23 +297,31 @@ const handleEdit = (row: EvaluationData) => {
   openEditModal(row);
 };
 
-const handleDelete = (row: EvaluationData) => {
-  console.log('删除评价:', row);
+const handleDelete = async (row: EvaluationData) => {
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
-
-    message.success({
-      content: '评价删除成功',
-    });
+    // 调用删除API
+    const response = await deleteEvaluationApi(row.id);
+    
+    // 显示成功消息
+    message.success(response?.message || '评价删除成功');
+    
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    // 显示错误消息
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(`删除失败：${error.message}`);
+    } else {
+      message.error('删除失败，请稍后重试');
+    }
+    console.error('删除评价失败:', error);
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 // 生成唯一ID
