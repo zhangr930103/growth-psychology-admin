@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, togglePublishApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
+import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, togglePublishApi, updateEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams, type UpdateEvaluationParams } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -449,9 +449,19 @@ const handleSubmit = async () => {
     modalLoading.value = true;
 
     if (editingId.value) {
-      // 编辑模式 - 暂时使用模拟API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      message.success('编辑评价成功');
+      // 编辑模式 - 使用真实API
+      const updateParams: UpdateEvaluationParams = {
+        name: formData.evaluationName,
+        items: formData.modules.map(module => ({
+          type: getEvaluationTypeLabel(module.evaluationType || ''),
+          title: module.title,
+          is_required: module.isRequired,
+        })),
+        publishStatus: formData.isPublished ? 'published' : 'unpublished',
+      };
+
+      const response = await updateEvaluationApi(editingId.value, updateParams);
+      message.success(response?.message || '编辑评价成功');
     } else {
       // 新增模式 - 使用真实API
       const createParams: CreateEvaluationParams = {
@@ -766,14 +776,15 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
           >
             <Button type="link" size="small"> 撤回 </Button>
           </Popconfirm>
-          <Button
+          <Popconfirm
             v-else
-            type="link"
-            size="small"
-            @click="handlePublish(row)"
+            title="确定要发布这个评价吗？"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="handlePublish(row)"
           >
-            发布
-          </Button>
+            <Button type="link" size="small"> 发布 </Button>
+          </Popconfirm>
           <Button
             type="link"
             size="small"
@@ -822,7 +833,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
 
       <!-- 动态模块列表 -->
       <div class="modules-section">
-        <div class="modules-header">
+        <div class="modules-header" v-if="!editingId">
           <Button
             type="primary"
             size="small"
@@ -872,7 +883,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
               </Form.Item>
             </div>
 
-            <div class="module-actions">
+            <div class="module-actions" v-if="!editingId">
               <Button
                 danger
                 size="small"

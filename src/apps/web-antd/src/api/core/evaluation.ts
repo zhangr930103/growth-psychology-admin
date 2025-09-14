@@ -176,6 +176,24 @@ export interface TogglePublishResponse {
 }
 
 /**
+ * 编辑评价请求参数类型
+ */
+export interface UpdateEvaluationParams {
+  name?: string;                              // 评价名称，长度2-200字符
+  items?: CreateEvaluationItem[];             // 评价项目数组，至少包含一个项目
+  publishStatus?: 'published' | 'unpublished'; // 发布状态
+}
+
+/**
+ * 编辑评价响应类型
+ */
+export interface UpdateEvaluationResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "评价更新成功"
+  data: null;                                 // 数据为null
+}
+
+/**
  * 获取评价数据详情列表
  */
 export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
@@ -201,4 +219,11 @@ export async function deleteEvaluationApi(evaluationId: number): Promise<DeleteE
  */
 export async function togglePublishApi(evaluationId: number): Promise<TogglePublishResponse> {
   return await requestClient.post<TogglePublishResponse>(`/evaluations/toggle-publish/${evaluationId}`);
+}
+
+/**
+ * 编辑评价
+ */
+export async function updateEvaluationApi(evaluationId: number, params: UpdateEvaluationParams): Promise<UpdateEvaluationResponse> {
+  return await requestClient.put<UpdateEvaluationResponse>(`/evaluations/${evaluationId}`, params);
 }
