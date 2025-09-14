@@ -79,6 +79,7 @@ export interface ActivityOrderData {
   updated_at: string; // ISO 字符串格式
   registration_time: number; // 时间戳
   create_time: number; // 时间戳
+  evaluations?: EvaluationItem[]; // 评价数据
 }
 
 /**
@@ -104,6 +105,15 @@ export async function getActivityOrderListApi(
 }
 
 /**
+ * 评价项目数据类型
+ */
+export interface EvaluationItem {
+  title: string;
+  question: string;
+  rating: number;
+}
+
+/**
  * 咨询订单详情数据类型
  */
 export interface ConsultationOrderDetailData {
@@ -120,6 +130,7 @@ export interface ConsultationOrderDetailData {
   created_at: string; // ISO 字符串格式
   updated_at: string; // ISO 字符串格式
   create_time: number; // 时间戳
+  evaluations?: EvaluationItem[]; // 评价数据
 }
 
 /**

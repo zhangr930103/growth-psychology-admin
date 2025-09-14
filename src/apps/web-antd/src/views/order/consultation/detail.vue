@@ -10,42 +10,9 @@ defineOptions({
   name: 'ConsultationOrderDetail',
 });
 
-interface EvaluationItem {
-  title: string;
-  question: string;
-  rating: number;
-}
-
 const route = useRoute();
 const router = useRouter();
 const orderDetail = ref<ConsultationOrderDetailData | null>(null);
-const evaluations = ref<EvaluationItem[]>([
-  {
-    title: '信任与连接',
-    question: '我认为我的咨询师是值得信赖的，我能在一个安全、不受评判的氛围中坦诚地表达自己的想法和感受；',
-    rating: 5
-  },
-  {
-    title: '专业与目标',
-    question: '咨询师能清晰地理解我的核心问题，并和我一起制定了明确、可行的咨询目标和计划；',
-    rating: 5
-  },
-  {
-    title: '赋能与效果问题：',
-    question: '通过咨询，我获得了新的视角、知识或技巧，这帮助我更好地应对当前面临的挑战；',
-    rating: 5
-  },
-  {
-    title: '倾听与沟通',
-    question: '我的咨询师能够积极、专注地倾听，并能用易于理解的方式与我沟通。',
-    rating: 5
-  },
-  {
-    title: '整体满意度',
-    question: '总体而言，我对这位咨询师提供的服务感到满意，并会愿意向有需要的朋友推荐他/她。',
-    rating: 5
-  }
-]);
 
 // 获取咨询方式文本
 const getMethodText = (method: string): string => {
@@ -161,9 +128,9 @@ onMounted(async () => {
 
       <!-- 评价 -->
       <Card title="评价">
-        <div class="space-y-8">
+        <div v-if="orderDetail.evaluations && orderDetail.evaluations.length > 0" class="space-y-8">
           <div 
-            v-for="(item, index) in evaluations" 
+            v-for="(item, index) in orderDetail.evaluations" 
             :key="index"
             class="border-b border-gray-100 dark:border-gray-700 pb-6 last:border-b-0 last:pb-0"
           >
@@ -186,6 +153,11 @@ onMounted(async () => {
               />
             </div>
           </div>
+        </div>
+        
+        <!-- 无评价数据时的提示 -->
+        <div v-else class="text-center py-8">
+          <div class="text-gray-500 dark:text-gray-400">暂无评价数据</div>
         </div>
       </Card>
     </div>
