@@ -77,6 +77,59 @@ export interface EditQuestionnaireParams extends CreateQuestionnaireParams {
 }
 
 /**
+ * 切换问卷状态参数类型
+ */
+export interface ToggleQuestionnaireStatusParams {
+  id: number;
+}
+
+/**
+ * 问卷回答列表查询参数类型
+ */
+export interface QuestionnaireResponsesListParams {
+  page: number;
+  size: number;
+  questionnaire_id: number;
+  respondent_name?: string;
+  start_time?: number;
+  end_time?: number;
+}
+
+/**
+ * 问卷答案类型
+ */
+export interface QuestionnaireAnswer {
+  id: number;
+  response_id: number;
+  question_id: number;
+  answer_text?: string;
+  answer_options?: string[];
+  answer_rating?: number;
+  created_at: string;
+}
+
+/**
+ * 问卷回答记录类型
+ */
+export interface QuestionnaireResponse {
+  id: number;
+  questionnaire_id: number;
+  respondent_id?: number;
+  respondent_name: string;
+  ip_address: string;
+  created_at: string;
+  answers: QuestionnaireAnswer[];
+}
+
+/**
+ * 问卷回答列表响应类型
+ */
+export interface QuestionnaireResponsesListResponse {
+  list: QuestionnaireResponse[];
+  total: number;
+}
+
+/**
  * 获取问卷列表
  */
 export async function getQuestionnaireListApi(params: QuestionnaireListParams): Promise<QuestionnaireListResponse> {
@@ -102,4 +155,21 @@ export async function editQuestionnaireApi(params: EditQuestionnaireParams): Pro
  */
 export async function deleteQuestionnaireApi(params: DeleteQuestionnaireParams): Promise<void> {
   return requestClient.post<void>('/questionnaires/delete', params);
+}
+
+/**
+ * 切换问卷状态
+ */
+export async function toggleQuestionnaireStatusApi(params: ToggleQuestionnaireStatusParams): Promise<void> {
+  return requestClient.post<void>('/questionnaires/toggle-status', params);
+}
+
+/**
+ * 获取问卷回答列表
+ */
+export async function getQuestionnaireResponsesApi(questionnaireId: number, params: Omit<QuestionnaireResponsesListParams, 'questionnaire_id'>): Promise<QuestionnaireResponsesListResponse> {
+  return requestClient.post<QuestionnaireResponsesListResponse>(`/questionnaires/${questionnaireId}/responses`, {
+    ...params,
+    questionnaire_id: questionnaireId,
+  });
 }

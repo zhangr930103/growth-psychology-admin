@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, T
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, type QuestionnaireData, type QuestionnaireListParams } from '#/api/core/assessment';
+import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, toggleQuestionnaireStatusApi, getQuestionnaireResponsesApi, type QuestionnaireData, type QuestionnaireListParams, type QuestionnaireResponse } from '#/api/core/assessment';
 
 defineOptions({
   name: 'AssessmentManagement',
@@ -74,9 +74,9 @@ interface AssessmentDataRecord {
 interface AssessmentDataSearchParams {
   page?: number;
   size?: number;
-  submitterName?: string;
-  submitStartTime?: number;
-  submitEndTime?: number;
+  respondent_name?: string; // 修改为与API匹配
+  start_time?: number;      // 修改为与API匹配
+  end_time?: number;        // 修改为与API匹配
   assessmentId: number;
 }
 
@@ -168,96 +168,35 @@ const getAssessmentList = async (params: SearchParams): Promise<{ list: Assessme
   };
 };
 
-// 模拟问卷数据API
+// 问卷数据API调用
 const getAssessmentDataList = async (params: AssessmentDataSearchParams): Promise<AssessmentDataApiResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  const response = await getQuestionnaireResponsesApi(params.assessmentId, {
+    page: params.page || 1,
+    size: params.size || 10,
+    respondent_name: params.respondent_name,
+    start_time: params.start_time,
+    end_time: params.end_time,
+  });
 
-  const mockDataList: AssessmentDataRecord[] = [
-    {
-      id: 1,
-      submitterName: '王小明',
-      submitTime: dayjs().subtract(2, 'hour').unix(),
-      score: 75,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 2,
-      submitterName: '李小红',
-      submitTime: dayjs().subtract(1, 'day').unix(),
-      score: 82,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 3,
-      submitterName: '张小华',
-      submitTime: dayjs().subtract(2, 'day').unix(),
-      score: 68,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 4,
-      submitterName: '陈小强',
-      submitTime: dayjs().subtract(3, 'day').unix(),
-      score: 91,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 5,
-      submitterName: '刘小美',
-      submitTime: dayjs().subtract(4, 'day').unix(),
-      score: 77,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 6,
-      submitterName: '赵小军',
-      submitTime: dayjs().subtract(5, 'day').unix(),
-      score: 85,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 7,
-      submitterName: '孙小丽',
-      submitTime: dayjs().subtract(6, 'day').unix(),
-      score: 73,
-      assessmentId: params.assessmentId,
-    },
-    {
-      id: 8,
-      submitterName: '周小伟',
-      submitTime: dayjs().subtract(7, 'day').unix(),
-      score: 88,
-      assessmentId: params.assessmentId,
-    },
-  ];
+  // 将API返回的数据转换为组件需要的格式
+  const mappedList: AssessmentDataRecord[] = response.list.map((item: QuestionnaireResponse) => {
+    // 计算评分：取所有答案中 answer_rating 的平均值
+    const ratings = item.answers.filter(answer => answer.answer_rating !== null && answer.answer_rating !== undefined)
+                               .map(answer => answer.answer_rating!);
+    const averageScore = ratings.length > 0 ? Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) : undefined;
 
-  // 模拟搜索过滤
-  let filteredData = mockDataList;
-
-  if (params.submitterName) {
-    filteredData = filteredData.filter((item) =>
-      item.submitterName.includes(params.submitterName!),
-    );
-  }
-
-  if (params.submitStartTime && params.submitEndTime) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.submitTime >= params.submitStartTime! &&
-        item.submitTime <= params.submitEndTime!,
-    );
-  }
-
-  // 模拟分页
-  const { page = 1, size = 10 } = params;
-  const total = filteredData.length;
-  const start = (page - 1) * size;
-  const end = start + size;
-  const list = filteredData.slice(start, end);
+    return {
+      id: item.id,
+      submitterName: item.respondent_name,
+      submitTime: new Date(item.created_at).getTime() / 1000, // 转换为时间戳
+      score: averageScore,
+      assessmentId: item.questionnaire_id,
+    };
+  });
 
   return {
-    list,
-    total,
+    list: mappedList,
+    total: response.total,
   };
 };
 
@@ -286,24 +225,29 @@ const handleViewDetail = (row: AssessmentDataRecord) => {
   message.info(`查看${row.submitterName}的提交详情`);
 };
 
-const handlePublish = (row: AssessmentData) => {
-  console.log('启用/停用:', row);
-  const action = row.publishStatus === 'published' ? '停用' : '启用';
+const handlePublish = async (row: AssessmentData) => {
+  try {
+    const action = row.publishStatus === 'published' ? '停用' : '启用';
 
-  // 开启全屏loading
-  spinning.value = true;
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
+    // 调用切换状态接口
+    await toggleQuestionnaireStatusApi({ id: row.id });
 
     message.success({
       content: `问卷${action}成功`,
     });
+
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    console.error('切换问卷状态失败:', error);
+    message.error('切换问卷状态失败，请重试');
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleEdit = (row: AssessmentData) => {
@@ -467,11 +411,6 @@ const gridOptions: VxeTableGridOptions = {
       slots: { default: 'createTime' },
     },
     {
-      field: 'publishTime',
-      title: '发布时间',
-      slots: { default: 'publishTime' },
-    },
-    {
       field: 'publishStatus',
       title: '是否启用',
       slots: { default: 'publishStatus' },
@@ -532,11 +471,11 @@ const dataFormOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['submitRangePicker', ['submitStartTime', 'submitEndTime']]],
+  fieldMappingTime: [['submitRangePicker', ['start_time', 'end_time']]],
   schema: [
     {
       component: 'Input',
-      fieldName: 'submitterName',
+      fieldName: 'respondent_name',
       label: '提交人',
       componentProps: {
         placeholder: '请输入',
@@ -599,13 +538,13 @@ const dataGridOptions: VxeTableGridOptions = {
           page: page.currentPage,
           size: page.pageSize,
           assessmentId: currentAssessmentId.value,
-          submitterName: formValues.submitterName,
+          respondent_name: formValues.respondent_name,
           // 处理时间范围搜索
-          submitStartTime: formValues.submitStartTime
-            ? (Date.parse(formValues.submitStartTime) - 28800000) / 1000
+          start_time: formValues.start_time
+            ? (Date.parse(formValues.start_time) - 28800000) / 1000
             : undefined,
-          submitEndTime: formValues.submitEndTime
-            ? (Date.parse(formValues.submitEndTime) - 28800000) / 1000 + 86399
+          end_time: formValues.end_time
+            ? (Date.parse(formValues.end_time) - 28800000) / 1000 + 86399
             : undefined,
         });
         return result;
@@ -640,13 +579,6 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
         <span>
           {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
-      </template>
-
-      <template #publishTime="{ row }">
-        <span v-if="row.publishTime">
-          {{ dayjs(row.publishTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
-        </span>
-        <span v-else class="text-gray-400 dark:text-gray-300">-</span>
       </template>
 
       <template #publishStatus="{ row }">
@@ -684,14 +616,15 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
           >
             <Button type="link" size="small"> 停用 </Button>
           </Popconfirm>
-          <Button
+          <Popconfirm
             v-else
-            type="link"
-            size="small"
-            @click="handlePublish(row)"
+            title="确定要启用这个问卷吗？"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="handlePublish(row)"
           >
-            启用
-          </Button>
+            <Button type="link" size="small"> 启用 </Button>
+          </Popconfirm>
           <Button
             type="link"
             size="small"
