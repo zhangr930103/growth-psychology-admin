@@ -452,7 +452,7 @@ const handleSubmit = async () => {
       };
 
       const response = await createEvaluationApi(createParams);
-      message.success(response.message || '评价创建成功');
+      message.success(response?.message || '评价创建成功');
     }
 
     // 成功后立即关闭弹窗
