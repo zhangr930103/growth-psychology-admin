@@ -194,10 +194,80 @@ export interface UpdateEvaluationResponse {
 }
 
 /**
- * 获取评价数据详情列表
+ * 评价详情项目类型
  */
-export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
-  return requestClient.post<EvaluationDataApiResponse>('/evaluations/data/list', params);
+export interface EvaluationDetailItem {
+  id: number;                                 // 评价项目ID
+  title: string;                              // 评价标题
+  question: string;                           // 评价问题/内容
+  score: number;                              // 评分
+}
+
+/**
+ * 评价详情响应类型
+ */
+export interface EvaluationDetailResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "获取评价详情成功"
+  data: EvaluationDetailItem[];               // 评价详情数组
+}
+
+/**
+ * 评价数据记录类型
+ */
+export interface EvaluationDataItem {
+  id: number;                                 // 评价记录ID
+  sequence: number;                           // 序号
+  counselor_name: string;                     // 咨询师姓名
+  evaluator_name: string;                     // 评价人姓名
+  evaluation_time: string;                    // 评价时间 (YYYY-MM-DD HH:mm:ss)
+  rating: number;                             // 评分
+  content: string;                            // 评价内容
+  type: string;                               // 评价类型 (如: "评分", "评论")
+  title: string;                              // 评价标题
+  is_required: boolean;                       // 是否必填
+  publishStatus: 'published' | 'unpublished'; // 发布状态
+}
+
+/**
+ * 评价数据列表查询参数类型
+ */
+export interface EvaluationDataListParams {
+  page?: number;                              // 页码，默认1
+  size?: number;                              // 每页数量，默认20，最大100
+  counselor_name?: string;                    // 咨询师姓名（模糊搜索）
+  evaluator_name?: string;                    // 评价人姓名（模糊搜索）
+  start_date?: string;                        // 评价开始时间（YYYY-MM-DD格式）
+  end_date?: string;                          // 评价结束时间（YYYY-MM-DD格式）
+}
+
+/**
+ * 评价数据列表响应数据类型
+ */
+export interface EvaluationDataListData {
+  list: EvaluationDataItem[];                 // 评价记录列表
+  total: number;                              // 总数量
+  page: number;                               // 当前页码
+  size: number;                               // 每页数量
+  pages: number;                              // 总页数
+  evaluation_name: string;                    // 评价名称
+  evaluation_title: string;                   // 评价标题
+}
+
+/**
+ * 评价数据列表响应类型
+ */
+export interface EvaluationDataListResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "获取评价数据成功"
+  data: EvaluationDataListData;               // 响应数据
+}
+
+/**
+ * 获取评价数据列表
+ */
+export async function getEvaluationDataApi(evaluationId: number, params: EvaluationDataListParams): Promise<EvaluationDataListResponse> {
+  return await requestClient.get<EvaluationDataListResponse>(`/evaluations/${evaluationId}/data`, { params });
 }
 
 /**
@@ -226,4 +296,11 @@ export async function togglePublishApi(evaluationId: number): Promise<TogglePubl
  */
 export async function updateEvaluationApi(evaluationId: number, params: UpdateEvaluationParams): Promise<UpdateEvaluationResponse> {
   return await requestClient.put<UpdateEvaluationResponse>(`/evaluations/${evaluationId}`, params);
+}
+
+/**
+ * 获取评价详情
+ */
+export async function getEvaluationDetailApi(evaluationId: number): Promise<EvaluationDetailResponse> {
+  return await requestClient.get<EvaluationDetailResponse>(`/evaluations/detail/${evaluationId}`);
 }

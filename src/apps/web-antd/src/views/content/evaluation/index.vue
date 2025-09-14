@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, togglePublishApi, updateEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams, type UpdateEvaluationParams } from '#/api/core';
+import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, togglePublishApi, updateEvaluationApi, getEvaluationDataApi, getEvaluationDetailApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams, type UpdateEvaluationParams, type EvaluationDetailItem } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -30,13 +30,10 @@ const currentEvaluationName = ref('');
 
 // 评价详情弹窗相关状态
 const detailModalVisible = ref(false);
-const currentDetailData = ref<EvaluationDataRecord | null>(null);
-const currentEvaluationDimensions = ref<Array<{
-  id: number;
-  title: string;
-  question: string;
-  score: number;
-}>>([]);
+const currentDetailData = ref<any | null>(null);
+const currentEvaluationDimensions = ref<EvaluationDetailItem[]>([]);
+const detailLoading = ref(false);
+
 
 // 滚动容器 ref
 const modulesListRef = ref<HTMLElement>();
@@ -75,17 +72,6 @@ const getEvaluationTypeLabel = (value: string): string => {
 type EvaluationData = EvaluationRecord;
 
 
-// 评价数据相关类型定义
-interface EvaluationDataRecord {
-  id: number;
-  consultantName: string;
-  evaluationTime: number;
-  evaluationScore: number;
-  comment?: string;
-  evaluatorName: string;
-  evaluatorId: number;
-  evaluationId: number;
-}
 
 // 搜索表单配置
 const formOptions: VbenFormProps = {
@@ -207,54 +193,23 @@ const handleViewData = (row: EvaluationData) => {
   }, 100);
 };
 
-// 获取评价维度数据
-const getEvaluationDimensions = (recordId: number) => {
-  const dimensionsData = {
-    1: [5, 5, 5, 5], // 优秀评价
-    2: [4, 4, 5, 4], // 良好评价
-    3: [5, 4, 5, 5], // 很好评价
-    4: [4, 5, 4, 5], // 良好评价
-    5: [5, 5, 5, 5], // 优秀评价
-    6: [4, 4, 4, 4], // 一般评价
-    7: [5, 4, 5, 4], // 良好评价
-    8: [4, 5, 4, 5], // 良好评价
-  };
-
-  const scores = dimensionsData[recordId as keyof typeof dimensionsData] || [4, 4, 4, 4];
-
-  return [
-    {
-      id: 1,
-      title: '信任与连接',
-      question: '我认为我的咨询师是值得信赖的，我能在一个安全、不受评判的氛围中坦诚地表达自己的想法和感受；',
-      score: scores[0] || 4,
-    },
-    {
-      id: 2,
-      title: '专业与目标',
-      question: '咨询师能清晰地理解我的核心问题，并和我一起制定了明确、可行的咨询目标和计划；',
-      score: scores[1] || 4,
-    },
-    {
-      id: 3,
-      title: '赋能与效果',
-      question: '通过咨询，我获得了新的视角、知识或技巧，这帮助我更好地应对当前面临的挑战；',
-      score: scores[2] || 4,
-    },
-    {
-      id: 4,
-      title: '倾听与沟通',
-      question: '我的咨询师能够积极、专注地倾听，并能用易于理解的方式与我沟通。',
-      score: scores[3] || 4,
-    },
-  ];
-};
-
 // 查看评价详情
-const handleViewDetail = (row: EvaluationDataRecord) => {
-  currentDetailData.value = row;
-  currentEvaluationDimensions.value = getEvaluationDimensions(row.id);
-  detailModalVisible.value = true;
+const handleViewDetail = async (row: any) => {
+  try {
+    currentDetailData.value = row;
+    detailModalVisible.value = true;
+    detailLoading.value = true;
+
+    // 调用真实API获取评价详情
+    const response = await getEvaluationDetailApi(row.id);
+    currentEvaluationDimensions.value = response?.data || [];
+  } catch (error) {
+    message.error('获取评价详情失败，请稍后重试');
+    console.error('获取评价详情失败:', error);
+    currentEvaluationDimensions.value = [];
+  } finally {
+    detailLoading.value = false;
+  }
 };
 
 // 关闭评价详情弹窗
@@ -262,7 +217,10 @@ const closeDetailModal = () => {
   detailModalVisible.value = false;
   currentDetailData.value = null;
   currentEvaluationDimensions.value = [];
+  detailLoading.value = false;
 };
+
+
 
 // 关闭数据查看弹窗
 const closeDataModal = () => {
@@ -609,11 +567,11 @@ const dataFormOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['evaluationRangePicker', ['evaluationStartTime', 'evaluationEndTime']]],
+  fieldMappingTime: [['evaluationRangePicker', ['start_date', 'end_date']]],
   schema: [
     {
       component: 'Input',
-      fieldName: 'consultantName',
+      fieldName: 'counselor_name',
       label: '咨询师',
       componentProps: {
         placeholder: '请输入咨询师姓名',
@@ -621,7 +579,7 @@ const dataFormOptions: VbenFormProps = {
     },
     {
       component: 'Input',
-      fieldName: 'evaluatorName',
+      fieldName: 'evaluator_name',
       label: '评价人',
       componentProps: {
         placeholder: '请输入评价人姓名',
@@ -645,35 +603,25 @@ const dataFormOptions: VbenFormProps = {
 // 数据查看弹窗表格配置
 const dataGridOptions: VxeTableGridOptions = {
   columns: [
-    { title: '序号', type: 'seq' },
     {
-      field: 'consultantName',
+      field: 'counselor_name',
       title: '咨询师',
       showOverflow: 'tooltip',
     },
     {
-      field: 'evaluatorName',
-      title: '评价人',
-      showOverflow: 'tooltip',
-    },
-    {
-      field: 'evaluationTime',
+      field: 'evaluation_time',
       title: '评价时间',
       slots: { default: 'dataEvaluationTime' },
     },
     {
-      field: 'evaluationScore',
+      field: 'rating',
       title: '评价分数',
-      slots: { default: 'dataEvaluationScore' },
-    },
-    {
-      field: 'comment',
-      title: '评价内容',
-      showOverflow: 'tooltip',
+      slots: { default: 'dataRating' },
     },
     {
       field: 'actions',
       title: '操作',
+      width: 80,
       slots: { default: 'dataActions' },
     },
   ],
@@ -685,27 +633,25 @@ const dataGridOptions: VxeTableGridOptions = {
     response: {
       result: 'list',
       total: 'total',
-      list: 'list',
     },
     ajax: {
       query: async ({ page }, formValues) => {
-        if (!currentEvaluationId.value) return { list: [], total: 0 };
+        if (!currentEvaluationId.value) return { data: { list: [], total: 0 } };
 
-        const result = await getEvaluationList({
+        const response = await getEvaluationDataApi(currentEvaluationId.value, {
           page: page.currentPage,
           size: page.pageSize,
-          evaluationId: currentEvaluationId.value,
-          consultantName: formValues.consultantName,
-          evaluatorName: formValues.evaluatorName,
-          // 处理时间范围搜索
-          evaluationStartTime: formValues.evaluationStartTime
-            ? (Date.parse(formValues.evaluationStartTime) - 28800000) / 1000
+          counselor_name: formValues.counselor_name,
+          evaluator_name: formValues.evaluator_name,
+          // 处理时间范围搜索 - 转换为YYYY-MM-DD格式
+          start_date: formValues.start_date
+            ? dayjs(formValues.start_date).format('YYYY-MM-DD')
             : undefined,
-          evaluationEndTime: formValues.evaluationEndTime
-            ? (Date.parse(formValues.evaluationEndTime) - 28800000) / 1000 + 86399
+          end_date: formValues.end_date
+            ? dayjs(formValues.end_date).format('YYYY-MM-DD')
             : undefined,
         });
-        return result;
+        return response;
       },
     },
   },
@@ -914,20 +860,20 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
         <DataGrid>
         <template #dataEvaluationTime="{ row }">
           <span>
-            {{ dayjs(row.evaluationTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+            {{ row.evaluation_time }}
           </span>
         </template>
 
-        <template #dataEvaluationScore="{ row }">
+        <template #dataRating="{ row }">
           <span
             :class="[
               'font-semibold',
-              row.evaluationScore >= 90 ? 'text-green-600' :
-              row.evaluationScore >= 80 ? 'text-blue-600' :
-              row.evaluationScore >= 70 ? 'text-orange-600' : 'text-red-600'
+              row.rating >= 4 ? 'text-green-600' :
+              row.rating >= 3 ? 'text-blue-600' :
+              row.rating >= 2 ? 'text-orange-600' : 'text-red-600'
             ]"
           >
-            {{ row.evaluationScore }}分
+            {{ row.rating }}分
           </span>
         </template>
 
@@ -953,34 +899,41 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
     @cancel="closeDetailModal"
   >
     <div class="h-[75vh] overflow-y-auto md:py-5 py-2.5 leading-relaxed bg-transparent dark:text-gray-300">
-      <div class="mb-5">
-        <div
-          v-for="(dimension, index) in currentEvaluationDimensions"
-          :key="dimension.id"
-          class="border-2 border-blue-500 rounded-lg md:p-5 p-4 mb-5 bg-white dark:bg-gray-800"
-        >
-          <div class="text-blue-600 dark:text-blue-400 font-bold text-base mb-4">
-            {{ index + 1 }}、{{ dimension.title }}
-          </div>
+      <Spin :spinning="detailLoading" tip="正在加载评价详情...">
+        <div class="mb-5">
+          <div
+            v-for="(dimension, index) in currentEvaluationDimensions"
+            :key="dimension.id"
+            class="border-2 border-blue-500 rounded-lg md:p-5 p-4 mb-5 bg-white dark:bg-gray-800"
+          >
+            <div class="text-blue-600 dark:text-blue-400 font-bold text-base mb-4">
+              {{ index + 1 }}、{{ dimension.title }}
+            </div>
 
-          <div class="mb-5 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-            <span class="font-medium dark:text-gray-200">问题：</span>{{ dimension.question }}
-          </div>
+            <div class="mb-5 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+              <span class="font-medium dark:text-gray-200">内容：</span>{{ dimension.question }}
+            </div>
 
-          <div class="flex justify-center my-5">
-            <span
-              v-for="star in 5"
-              :key="star"
-              class="md:text-2xl text-xl mx-0.5 transition-colors duration-200"
-              :class="star <= dimension.score ? 'text-yellow-400' : 'text-gray-300'"
-            >
-              ★
-            </span>
+            <div class="flex justify-center my-5">
+              <span
+                v-for="star in 5"
+                :key="star"
+                class="md:text-2xl text-xl mx-0.5 transition-colors duration-200"
+                :class="star <= dimension.score ? 'text-yellow-400' : 'text-gray-300'"
+              >
+                ★
+              </span>
+            </div>
+          </div>
+          
+          <div v-if="!detailLoading && currentEvaluationDimensions.length === 0" class="text-center text-gray-500 py-10">
+            暂无评价详情数据
           </div>
         </div>
-      </div>
+      </Spin>
     </div>
   </Modal>
+
   </Spin>
 
 </template>
