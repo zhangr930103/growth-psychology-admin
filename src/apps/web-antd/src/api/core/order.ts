@@ -109,7 +109,7 @@ export async function getActivityOrderListApi(
  */
 export interface EvaluationItem {
   title: string;
-  question: string;
+  content: string;
   rating: number;
 }
 
