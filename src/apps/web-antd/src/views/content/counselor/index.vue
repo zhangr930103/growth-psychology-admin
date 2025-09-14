@@ -16,6 +16,7 @@ import {
   createCounselingDurationApi,
   auditCounselingDurationApi,
   importCounselorExcelApi,
+  type ImportCounselorResponse,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
@@ -1380,30 +1381,49 @@ const customUpload = async (options: any) => {
 
   try {
     // 调用真实的导入API
-    const response = await importCounselorExcelApi(file);
+    const response: ImportCounselorResponse = await importCounselorExcelApi(file);
     
     // 打印响应内容用于调试
     console.log('导入API响应:', response);
+    console.log('响应类型:', typeof response);
+    console.log('响应code:', response?.code);
+    console.log('响应message:', response?.message);
+    
+    // 验证响应是否有效
+    if (!response || typeof response !== 'object') {
+      throw new Error('API返回无效响应');
+    }
     
     // 处理导入结果
     let successCount = 0;
     let errorCount = 0;
     
     // 从 message 中解析成功数量，如："成功导入5条咨询师记录"
-    const successMatch = response.message.match(/成功导入(\d+)条/);
-    if (successMatch && successMatch[1]) {
-      successCount = parseInt(successMatch[1], 10);
+    if (response.message) {
+      const successMatch = response.message.match(/成功导入(\d+)条/);
+      if (successMatch && successMatch[1]) {
+        successCount = parseInt(successMatch[1], 10);
+      } else {
+        // 如果无法解析数量，但响应成功，至少设置为1
+        successCount = (response.code === 200 || response.code === 201) ? 1 : 0;
+      }
+      
+      // 检查message中是否包含失败信息
+      const failureMatch = response.message.match(/失败(\d+)条/);
+      if (failureMatch && failureMatch[1]) {
+        errorCount = parseInt(failureMatch[1], 10);
+      } else {
+        errorCount = 0;
+      }
     } else {
-      // 如果无法解析数量，但响应成功，至少设置为1
-      successCount = response.code === 200 ? 1 : 0;
-    }
-    
-    // 检查message中是否包含失败信息
-    const failureMatch = response.message.match(/失败(\d+)条/);
-    if (failureMatch && failureMatch[1]) {
-      errorCount = parseInt(failureMatch[1], 10);
-    } else {
-      errorCount = 0;
+      // 没有message时的处理
+      if (response.code === 200 || response.code === 201) {
+        successCount = 1;
+        errorCount = 0;
+      } else {
+        successCount = 0;
+        errorCount = 1;
+      }
     }
     
     // 准备结果数据
@@ -1411,7 +1431,7 @@ const customUpload = async (options: any) => {
       success_count: successCount,
       error_count: errorCount,
       total_count: successCount + errorCount,
-      server_message: response.message
+      server_message: response.message || (response.code === 200 ? '导入成功' : '导入失败')
     };
 
     // 关闭导入弹窗
@@ -1431,6 +1451,27 @@ const customUpload = async (options: any) => {
     
     // 解析错误信息
     let errorMessage = '导入失败，请重试';
+    
+    // 如果是ImportCounselorResponse类型的错误（来自API函数的错误处理）
+    if (error && typeof error === 'object' && error.code && error.message) {
+      errorMessage = error.message;
+      
+      // 显示导入结果（即使是错误也要显示）
+      importResult.value = {
+        success_count: 0,
+        error_count: 1,
+        total_count: 1,
+        server_message: error.message
+      };
+      
+      closeImportModal();
+      showImportResult();
+      
+      onError(error);
+      return;
+    }
+    
+    // 处理其他类型的错误（网络错误等）
     if (error?.message) {
       errorMessage = error.message;
     } else if (typeof error === 'string') {

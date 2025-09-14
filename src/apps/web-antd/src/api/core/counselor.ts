@@ -303,15 +303,82 @@ export async function auditCounselingDurationApi(params: AuditCounselingDuration
 }
 
 /**
+ * 导入咨询师响应类型
+ */
+export interface ImportCounselorResponse {
+  code: number;
+  message: string;
+  rid: string;
+  data?: any;
+}
+
+/**
  * Excel 批量导入咨询师
  */
-export async function importCounselorExcelApi(file: File) {
+export async function importCounselorExcelApi(file: File): Promise<ImportCounselorResponse> {
   const formData = new FormData();
   formData.append('file', file);
   
-  return requestClient.post('/counselors/import-excel', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  try {
+    console.log('开始上传文件:', file.name, '大小:', file.size);
+    
+    // 创建一个新的RequestClient实例用于文件上传，避免双重数据提取
+    const { RequestClient } = await import('@vben/request');
+    const { useAppConfig } = await import('@vben/hooks');
+    const { useAccessStore } = await import('@vben/stores');
+    
+    const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+    const accessStore = useAccessStore();
+    
+    const uploadClient = new RequestClient({
+      baseURL: apiURL,
+      // 不设置 responseReturn，获取完整响应
+    });
+    
+    // 添加请求拦截器处理认证
+    uploadClient.addRequestInterceptor({
+      fulfilled: async (config) => {
+        if (accessStore.accessToken) {
+          config.headers.Authorization = `Bearer ${accessStore.accessToken}`;
+        }
+        return config;
+      },
+    });
+    
+    const response = await uploadClient.post('/counselors/import-excel', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('API完整响应:', response);
+    console.log('响应状态:', response.status);
+    console.log('响应数据:', response.data);
+    
+    // 确保返回正确的数据结构
+    const result = response.data;
+    
+    return {
+      code: result?.code || response.status || 200,
+      message: result?.message || '导入成功',
+      rid: result?.rid || '',
+      data: result?.data || result
+    };
+  } catch (error: any) {
+    console.error('导入API调用失败:', error);
+    
+    // 如果是HTTP错误，尝试从错误响应中获取信息
+    if (error.response) {
+      const errorData = error.response.data || {};
+      return {
+        code: errorData.code || error.response.status || 500,
+        message: errorData.message || errorData.error || '导入失败',
+        rid: errorData.rid || '',
+        data: null
+      };
+    }
+    
+    // 重新抛出网络错误等其他错误
+    throw error;
+  }
 }
