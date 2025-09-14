@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi } from '#/api/core';
+import { getEvaluationListApi, type EvaluationRecord, type EvaluationListResponse } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -69,35 +69,8 @@ const evaluationTypeOptions = [
   { label: '活动满意度评价', value: 'activity_satisfaction' },
 ];
 
-// 类型定义
-interface EvaluationData {
-  id: number;
-  name: string;                    // 评价名称
-  type: string;                    // 评价类型
-  title: string;                   // 评价标题
-  content: string;                 // 评价内容
-  rating: number;                  // 总评分
-  service_rating: number;          // 服务评分
-  professional_rating: number;     // 专业评分
-  attitude_rating: number;         // 态度评分
-  environment_rating: number;      // 环境评分
-  target_id: number;               // 评价目标ID
-  target_name: string;             // 评价目标名称
-  evaluator_id: number;            // 评价人 ID
-  evaluator_name: string;          // 评价人名称
-  publishStatus: 'published' | 'unpublished';
-  status: 'approved' | 'pending';
-  reviewer_name: string;           // 审核人名称
-  review_time: string;             // 审核时间
-  review_comment: string;          // 审核意见
-  helpful_count: number;           // 有用投票数
-  unhelpful_count: number;         // 无用投票数
-  reply_count: number;             // 回复数量
-  is_anonymous: boolean;           // 是否匿名
-  is_required: boolean;            // 是否必填
-  is_published: boolean;           // 是否发布
-  created_at: string;              // 创建时间
-}
+// 使用API中定义的类型
+type EvaluationData = EvaluationRecord;
 
 
 // 评价数据相关类型定义
@@ -179,19 +152,56 @@ const formOptions: VbenFormProps = {
   submitOnEnter: true,
 };
 
-// 获取评价列表
-const getEvaluationList = getEvaluationListApi;
+// 评价管理数据API调用 - 完全参考assessment/index.vue的实现方式
+const getEvaluationList = async (params: any): Promise<{ list: EvaluationData[]; total: number }> => {
+  const apiParams = {
+    page: params.page || 1,
+    size: params.size || 10,
+    name: params.name,
+    creator: params.creator,
+    publishStatus: params.publishStatus,
+    start_time: params.start_time,
+    end_time: params.end_time,
+  };
 
-// 评价数据API - 调用真实API
-const getEvaluationDataList = async (params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> => {
-  // TODO: 需要在evaluation.ts中添加对应的API方法
-  // 暂时返回空数据，等待后端API实现
-  console.log('评价数据查询参数:', params);
+  const response: EvaluationListResponse = await getEvaluationListApi(apiParams);
+
+  // 将API返回的数据转换为组件需要的格式
+  const mappedList: EvaluationData[] = response.list.map((item: EvaluationRecord) => ({
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    title: item.title,
+    content: item.content,
+    rating: item.rating,
+    service_rating: item.service_rating,
+    professional_rating: item.professional_rating,
+    attitude_rating: item.attitude_rating,
+    environment_rating: item.environment_rating,
+    target_id: item.target_id,
+    target_name: item.target_name,
+    evaluator_id: item.evaluator_id,
+    evaluator_name: item.evaluator_name,
+    publishStatus: item.publishStatus,
+    status: item.status,
+    reviewer_name: item.reviewer_name,
+    review_time: item.review_time,
+    review_comment: item.review_comment,
+    helpful_count: item.helpful_count,
+    unhelpful_count: item.unhelpful_count,
+    reply_count: item.reply_count,
+    is_anonymous: item.is_anonymous,
+    is_required: item.is_required,
+    is_published: item.is_published,
+    created_at: item.created_at,
+  }));
+
   return {
-    list: [],
-    total: 0,
+    list: mappedList,
+    total: response.total,
   };
 };
+
 
 // 操作函数
 const handleViewData = (row: EvaluationData) => {
@@ -276,7 +286,9 @@ const closeDataModal = () => {
 
 const handlePublish = (row: EvaluationData) => {
   console.log('发布/撤回:', row);
-  const action = (row.status === 'approved' || row.publishStatus === 'published') ? '撤回' : '发布';
+  // 判断是否已发布状态
+  const isPublished = row.publishStatus === 'published' || row.status === 'approved';
+  const action = isPublished ? '撤回' : '发布';
 
   // 开启全屏loading
   spinning.value = true;
@@ -388,7 +400,8 @@ const openEditModal = async (row: EvaluationData) => {
   resetFormData();
   editingId.value = row.id;
   formData.evaluationName = row.name;
-  formData.isPublished = (row.status === 'approved' || row.publishStatus === 'published');
+  // 判断是否已发布状态
+  formData.isPublished = row.publishStatus === 'published' || row.status === 'approved';
 
   // 创建一个示例模块（实际项目中应该从后端获取）
   const exampleModule = createNewModule();
@@ -467,16 +480,12 @@ const handleCreate = () => {
 };
 
 // 获取状态标签
-const getStatusTag = (status: string) => {
-  const statusMap = {
-    // API返回的状态映射
-    published: { color: 'green', text: '已发布' },
-    unpublished: { color: 'orange', text: '未发布' },
-    // 兼容可能的其他字段名
-    approved: { color: 'green', text: '已发布' },
-    pending: { color: 'orange', text: '未发布' },
-  };
-  return statusMap[status as keyof typeof statusMap] || { color: 'orange', text: '未发布' };
+const getStatusTag = (row: EvaluationData) => {
+  // 判断是否已发布状态
+  const isPublished = row.publishStatus === 'published' || row.status === 'approved';
+  return isPublished 
+    ? { color: 'green', text: '已发布' }
+    : { color: 'orange', text: '未发布' };
 };
 
 // 表格配置
@@ -537,7 +546,7 @@ const gridOptions: VxeTableGridOptions = {
   pagerConfig: {},
   proxyConfig: {
     response: {
-      result: 'data',
+      result: 'list',
       total: 'total',
       list: 'list',
     },
@@ -546,7 +555,9 @@ const gridOptions: VxeTableGridOptions = {
         const result = await getEvaluationList({
           page: page.currentPage,
           size: page.pageSize,
-          ...formValues,
+          name: formValues.name,
+          creator: formValues.creator,
+          publishStatus: formValues.publishStatus,
           // 处理时间范围搜索
           start_time: formValues.start_time
             ? Math.floor((Date.parse(formValues.start_time) - 28800000) / 1000)
@@ -660,7 +671,7 @@ const dataGridOptions: VxeTableGridOptions = {
       query: async ({ page }, formValues) => {
         if (!currentEvaluationId.value) return { list: [], total: 0 };
 
-        const result = await getEvaluationDataList({
+        const result = await getEvaluationList({
           page: page.currentPage,
           size: page.pageSize,
           evaluationId: currentEvaluationId.value,
@@ -716,8 +727,8 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
       </template>
 
       <template #publishStatus="{ row }">
-        <Tag :color="getStatusTag(row.status).color">
-          {{ getStatusTag(row.status).text }}
+        <Tag :color="getStatusTag(row).color">
+          {{ getStatusTag(row).text }}
         </Tag>
       </template>
 
@@ -737,7 +748,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
             数据
           </Button>
           <Popconfirm
-            v-if="row.status === 'approved' || row.publishStatus === 'published'"
+            v-if="row.publishStatus === 'published' || row.status === 'approved'"
             title="确定要撤回这个评价吗？"
             ok-text="确定"
             cancel-text="取消"

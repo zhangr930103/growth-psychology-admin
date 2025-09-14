@@ -6,45 +6,43 @@ import { requestClient } from '#/api/request';
 export interface EvaluationListParams {
   page: number;
   size: number;
-  question?: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  evaluator_name?: string;
-  start_time?: number;
-  end_time?: number;
+  name?: string;                              // 评价名称搜索
+  creator?: string;                           // 创建人搜索
+  publishStatus?: 'published' | 'unpublished'; // 发布状态筛选
+  start_time?: number;                        // 开始时间戳
+  end_time?: number;                          // 结束时间戳
 }
 
 /**
- * 评价记录数据类型
+ * 评价记录数据类型 - 完全按照API文档定义
  */
 export interface EvaluationRecord {
-  type: 'counselor';
-  target_id: number;
-  target_name: string;
-  rating: number;
-  title: string;
-  content: string;
-  pros: string;
-  cons: string;
-  suggestions: string;
-  service_rating: number;
-  professional_rating: number;
-  attitude_rating: number;
-  environment_rating: number;
-  is_anonymous: boolean;
   id: number;
-  evaluator_id: number;
-  evaluator_name: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewer_id: number;
-  reviewer_name: string;
-  review_time: string;
-  review_comment: string;
-  helpful_count: number;
-  unhelpful_count: number;
-  reply_count: number;
-  created_at: string;
-  updated_at: string;
-  replies: any[];
+  name: string;                               // 评价名称
+  type: string;                               // 评价类型 (如: "counselor")
+  title: string;                              // 评价标题
+  content: string;                            // 评价内容
+  rating: number;                             // 总评分(1-5)
+  service_rating: number;                     // 服务评分
+  professional_rating: number;               // 专业评分
+  attitude_rating: number;                   // 态度评分
+  environment_rating: number;                // 环境评分
+  target_id: number;                         // 评价目标ID
+  target_name: string;                       // 评价目标名称 (如: "李咨询师")
+  evaluator_id: number;                      // 评价人ID
+  evaluator_name: string;                    // 评价人名称 (如: "张三")
+  publishStatus: 'published' | 'unpublished'; // 发布状态
+  status: 'approved' | 'pending';            // 审核状态
+  reviewer_name: string;                     // 审核人名称 (如: "管理员")
+  review_time: string;                       // 审核时间 (ISO格式: "2024-01-02T10:00:00")
+  review_comment: string;                    // 审核意见 (如: "评价客观真实")
+  helpful_count: number;                     // 有用投票数
+  unhelpful_count: number;                   // 无用投票数
+  reply_count: number;                       // 回复数量
+  is_anonymous: boolean;                     // 是否匿名
+  is_required: boolean;                      // 是否必填
+  is_published: boolean;                     // 是否发布
+  created_at: string;                        // 创建时间 (ISO格式: "2024-01-01T14:00:00")
 }
 
 /**
@@ -53,6 +51,23 @@ export interface EvaluationRecord {
 export interface EvaluationListResponse {
   list: EvaluationRecord[];
   total: number;
+}
+
+/**
+ * API响应数据部分类型 - 按照API文档定义
+ */
+export interface EvaluationListData {
+  list: EvaluationRecord[];
+  total: number;                              // 总数量: 45
+}
+
+/**
+ * 完整的API响应类型 - 按照API文档定义
+ */
+export interface EvaluationListApiResponse {
+  code: number;                               // 状态码: 200
+  data: EvaluationListData;                   // 数据部分
+  message: string;                            // 响应消息: "查询成功"
 }
 
 /**
@@ -66,8 +81,50 @@ export interface ApiResponse<T = any> {
 }
 
 /**
+ * 评价数据查询参数类型
+ */
+export interface EvaluationDataSearchParams {
+  page?: number;
+  size?: number;
+  consultantName?: string;
+  evaluatorName?: string;
+  evaluationStartTime?: number;
+  evaluationEndTime?: number;
+  evaluationId: number;
+}
+
+/**
+ * 评价数据记录类型
+ */
+export interface EvaluationDataRecord {
+  id: number;
+  consultantName: string;
+  evaluationTime: number;
+  evaluationScore: number;
+  comment?: string;
+  evaluatorName: string;
+  evaluatorId: number;
+  evaluationId: number;
+}
+
+/**
+ * 评价数据响应类型
+ */
+export interface EvaluationDataApiResponse {
+  list: EvaluationDataRecord[];
+  total: number;
+}
+
+/**
  * 获取评价列表
  */
 export async function getEvaluationListApi(params: EvaluationListParams): Promise<EvaluationListResponse> {
   return requestClient.post<EvaluationListResponse>('/evaluations/list', params);
+}
+
+/**
+ * 获取评价数据详情列表
+ */
+export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
+  return requestClient.post<EvaluationDataApiResponse>('/evaluations/data/list', params);
 }
