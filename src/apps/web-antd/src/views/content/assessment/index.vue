@@ -69,6 +69,7 @@ interface AssessmentDataRecord {
   submitTime: number;
   score?: number;
   assessmentId: number;
+  surveyUrl: string; // 问卷星URL，用于跳转
 }
 
 interface AssessmentDataSearchParams {
@@ -180,17 +181,13 @@ const getAssessmentDataList = async (params: AssessmentDataSearchParams): Promis
 
   // 将API返回的数据转换为组件需要的格式
   const mappedList: AssessmentDataRecord[] = response.list.map((item: QuestionnaireResponse) => {
-    // 计算评分：取所有答案中 answer_rating 的平均值
-    const ratings = item.answers.filter(answer => answer.answer_rating !== null && answer.answer_rating !== undefined)
-                               .map(answer => answer.answer_rating!);
-    const averageScore = ratings.length > 0 ? Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) : undefined;
-
     return {
       id: item.id,
       submitterName: item.respondent_name,
       submitTime: new Date(item.created_at).getTime() / 1000, // 转换为时间戳
-      score: averageScore,
+      score: item.average_score, // 直接使用平均评分
       assessmentId: item.questionnaire_id,
+      surveyUrl: item.survey_url, // 保存问卷星URL
     };
   });
 
@@ -221,8 +218,12 @@ const closeDataModal = () => {
 
 // 查看提交详情
 const handleViewDetail = (row: AssessmentDataRecord) => {
-  console.log('查看提交详情:', row);
-  message.info(`查看${row.submitterName}的提交详情`);
+  if (row.surveyUrl) {
+    // 直接在新页签中打开问卷星URL
+    window.open(row.surveyUrl, '_blank');
+  } else {
+    message.warning('该记录没有可用的问卷链接');
+  }
 };
 
 const handlePublish = async (row: AssessmentData) => {

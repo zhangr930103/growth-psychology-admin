@@ -118,6 +118,8 @@ export interface QuestionnaireResponse {
   respondent_name: string;
   ip_address: string;
   created_at: string;
+  survey_url: string; // 问卷星URL
+  average_score: number; // 平均评分
   answers: QuestionnaireAnswer[];
 }
 
