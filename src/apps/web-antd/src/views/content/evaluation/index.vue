@@ -8,7 +8,7 @@ import { Button, Form, Input, message, Modal, Popconfirm, Select, Space, Spin, S
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
+import { getEvaluationListApi, createEvaluationApi, deleteEvaluationApi, togglePublishApi, type EvaluationRecord, type EvaluationListResponse, type CreateEvaluationParams } from '#/api/core';
 
 defineOptions({
   name: 'EvaluationManagement',
@@ -271,26 +271,31 @@ const closeDataModal = () => {
   currentEvaluationName.value = '';
 };
 
-const handlePublish = (row: EvaluationData) => {
-  console.log('发布/撤回:', row);
-  // 判断是否已发布状态
-  const isPublished = row.publishStatus === 'published' || row.status === 'approved';
-  const action = isPublished ? '撤回' : '发布';
+const handlePublish = async (row: EvaluationData) => {
+  try {
+    // 开启全屏loading
+    spinning.value = true;
 
-  // 开启全屏loading
-  spinning.value = true;
-
-  // 模拟API延迟
-  setTimeout(() => {
-    // 关闭全屏loading
-    spinning.value = false;
-
-    message.success({
-      content: `评价${action}成功`,
-    });
+    // 调用切换发布状态API
+    const response = await togglePublishApi(row.id);
+    
+    // 显示成功消息
+    message.success(response?.message || `评价${response?.data?.action || '操作'}成功`);
+    
     // 刷新列表
     gridApi.query();
-  }, 1000);
+  } catch (error) {
+    // 显示错误消息
+    if (error && typeof error === 'object' && 'message' in error) {
+      message.error(`操作失败：${error.message}`);
+    } else {
+      message.error('操作失败，请稍后重试');
+    }
+    console.error('切换发布状态失败:', error);
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const handleEdit = (row: EvaluationData) => {

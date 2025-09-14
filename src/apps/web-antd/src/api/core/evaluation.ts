@@ -159,6 +159,23 @@ export interface DeleteEvaluationResponse {
 }
 
 /**
+ * 切换发布状态响应数据类型
+ */
+export interface TogglePublishData {
+  action: '发布' | '撤回';                     // 执行的操作
+  new_status: 'published' | 'unpublished';   // 新的状态
+}
+
+/**
+ * 切换发布状态响应类型
+ */
+export interface TogglePublishResponse {
+  code: number;                               // 状态码: 200
+  message: string;                            // 响应消息，如: "评价已发布" 或 "评价已撤回"
+  data: TogglePublishData;                    // 响应数据
+}
+
+/**
  * 获取评价数据详情列表
  */
 export async function getEvaluationDataListApi(params: EvaluationDataSearchParams): Promise<EvaluationDataApiResponse> {
@@ -177,4 +194,11 @@ export async function createEvaluationApi(params: CreateEvaluationParams): Promi
  */
 export async function deleteEvaluationApi(evaluationId: number): Promise<DeleteEvaluationResponse> {
   return await requestClient.delete<DeleteEvaluationResponse>(`/evaluations/${evaluationId}`);
+}
+
+/**
+ * 切换发布状态（发布/撤回）
+ */
+export async function togglePublishApi(evaluationId: number): Promise<TogglePublishResponse> {
+  return await requestClient.post<TogglePublishResponse>(`/evaluations/toggle-publish/${evaluationId}`);
 }
