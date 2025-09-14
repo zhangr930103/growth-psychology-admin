@@ -202,10 +202,9 @@ const handleViewDetail = async (row: any) => {
 
     // 调用真实API获取评价详情
     const response = await getEvaluationDetailApi(row.id);
-    currentEvaluationDimensions.value = response?.data || [];
+    console.log('评价详情API响应:', response);
+    currentEvaluationDimensions.value = response?.list || [];
   } catch (error) {
-    message.error('获取评价详情失败，请稍后重试');
-    console.error('获取评价详情失败:', error);
     currentEvaluationDimensions.value = [];
   } finally {
     detailLoading.value = false;
