@@ -16,6 +16,7 @@ import {
   createCounselingDurationApi,
   auditCounselingDurationApi,
   importCounselorExcelApi,
+  searchCitiesApi,
   type ImportCounselorResponse,
   type CounselorListParams,
   type CreateCounselorParams,
@@ -84,6 +85,10 @@ const currentEditCounselor = ref<CounselorData | null>(null);
 
 // 可咨询时间数据
 const counselorAvailableTimeSlots = ref<TimeSlot[]>([]);
+
+// 城市搜索相关状态
+const cityOptions = ref<{ value: string }[]>([]);
+const citySearchLoading = ref(false);
 
 // 时间段数据结构
 interface TimeSlot {
@@ -781,8 +786,29 @@ const auditFormSchema = [
   },
 ];
 
-// 咨询师表单 Schema 配置
-const counselorFormSchema = [
+// 城市搜索函数
+const handleCitySearch = async (searchText: string) => {
+  if (!searchText || searchText.length < 2) {
+    cityOptions.value = [];
+    return;
+  }
+
+  try {
+    citySearchLoading.value = true;
+    const response = await searchCitiesApi({ keyword: searchText });
+    // API 返回的数据结构：{data: {list: [{name: "北京市"}]}}
+    const cities = response.list || [];
+    cityOptions.value = cities.map(city => ({ value: city.name }));
+  } catch (error) {
+    console.error('城市搜索失败:', error);
+    cityOptions.value = [];
+  } finally {
+    citySearchLoading.value = false;
+  }
+};
+
+// 咨询师表单 Schema 配置 - 使用函数返回动态Schema
+const getCounselorFormSchema = () => [
   {
     component: 'Input',
     fieldName: 'counselorName',
@@ -981,12 +1007,16 @@ const counselorFormSchema = [
     },
   },
   {
-    component: 'Input',
+    component: 'AutoComplete',
     fieldName: 'location',
     label: '所在位置',
     rules: z.string().min(1, '请输入所在位置'),
     componentProps: {
-      placeholder: '请输入所在位置',
+      placeholder: '请输入城市名称进行搜索',
+      options: cityOptions.value,
+      filterOption: false,
+      onSearch: handleCitySearch,
+      notFoundContent: citySearchLoading.value ? '搜索中...' : '暂无数据',
       style: {
         width: '70%',
         boxSizing: 'border-box',
@@ -1203,7 +1233,7 @@ const [AuditModal, auditModalApi] = useVbenModal({
 
 // 创建咨询师表单
 const [CounselorForm, counselorFormApi] = useVbenForm({
-  schema: counselorFormSchema,
+  schema: getCounselorFormSchema(),
   showDefaultActions: false,
   commonConfig: {
     labelWidth: 180,
@@ -1352,6 +1382,7 @@ const closeImportResult = () => {
     server_message: undefined
   };
 };
+
 
 // 自定义上传处理
 const customUpload = async (options: any) => {
@@ -1734,6 +1765,17 @@ watch(
       counselorFormApi.setValues({
         availableTimeSlots: newValue,
       });
+    }
+  },
+  { deep: true },
+);
+
+// 监听城市搜索相关状态变化，更新表单schema
+watch(
+  () => [cityOptions.value, citySearchLoading.value],
+  () => {
+    if (counselorFormApi) {
+      counselorFormApi.updateSchema(getCounselorFormSchema());
     }
   },
   { deep: true },

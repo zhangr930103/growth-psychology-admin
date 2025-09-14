@@ -313,6 +313,36 @@ export interface ImportCounselorResponse {
 }
 
 /**
+ * 城市搜索参数类型
+ */
+export interface CitySearchParams {
+  keyword: string;
+}
+
+/**
+ * 城市数据项
+ */
+export interface CityItem {
+  name: string;
+}
+
+/**
+ * 城市搜索响应类型
+ */
+export interface CitySearchResponse {
+  list: CityItem[];
+}
+
+/**
+ * 搜索城市
+ */
+export async function searchCitiesApi(params: CitySearchParams): Promise<CitySearchResponse> {
+  return requestClient.get<CitySearchResponse>('/counselors/cities', {
+    params
+  });
+}
+
+/**
  * Excel 批量导入咨询师
  */
 export async function importCounselorExcelApi(file: File): Promise<ImportCounselorResponse> {
