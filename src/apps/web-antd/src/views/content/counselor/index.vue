@@ -15,6 +15,7 @@ import {
   getCounselingDurationListApi,
   createCounselingDurationApi,
   auditCounselingDurationApi,
+  importCounselorExcelApi,
   type CounselorListParams,
   type CreateCounselorParams,
   type EditCounselorParams,
@@ -61,6 +62,20 @@ const currentAuditRecord = ref<CounselingDurationRecord | null>(null);
 // Excel导入相关状态
 const importModalVisible = ref(false);
 const uploadLoading = ref(false);
+
+// 导入结果相关状态
+const importResultVisible = ref(false);
+const importResult = ref<{
+  success_count: number;
+  error_count: number;
+  total_count: number;
+  server_message?: string; // 服务器原始消息
+}>({
+  success_count: 0,
+  error_count: 0,
+  total_count: 0,
+  server_message: undefined
+});
 
 // 咨询师表单相关状态
 const counselorModalMode = ref<'add' | 'edit'>('add');
@@ -526,34 +541,12 @@ const handleEdit = (row: CounselorData) => {
     expertiseAreas: row.expertiseAreas || [row.expertise].filter(Boolean) || [],
     consultingStatus: row.consultingStatus || (row.isOnline ? 'online' : 'offline'),
     durationProof: prepareFileListForUpload(row.durationProof), // 时长证明
-    location: mapLocationToValue(row.location), // 使用映射函数
+    location: row.location, // 直接使用位置字符串
     settlementWeight: row.settlementWeight || 0, // 结算权重
     totalDuration: row.totalDuration || row.counselingDuration || 0, // 总咨询时长
     otherSpecialization: prepareSpecializationsForEdit(getSpecializationsList(row)).otherSpecialization || row.otherSpecialization || '',
   };
 
-  // 位置映射函数
-  function mapLocationToValue(location: string): string {
-    const locationMap: Record<string, string> = {
-      '北京': 'beijing',
-      '上海': 'shanghai',
-      '广州': 'guangzhou',
-      '深圳': 'shenzhen',
-      '杭州': 'hangzhou',
-      '成都': 'chengdu',
-      '武汉': 'wuhan',
-      '西安': 'xian',
-      '南京': 'nanjing',
-      '重庆': 'chongqing',
-      '天津': 'tianjin',
-      '苏州': 'suzhou',
-      '长沙': 'changsha',
-      '青岛': 'qingdao',
-      '大连': 'dalian',
-      '厦门': 'xiamen',
-    };
-    return locationMap[location] || location || 'other';
-  }
 
   // 咨询方式映射函数
   function mapConsultingMethodToValue(method: string): string {
@@ -987,31 +980,12 @@ const counselorFormSchema = [
     },
   },
   {
-    component: 'Select',
+    component: 'Input',
     fieldName: 'location',
     label: '所在位置',
-    rules: z.string().min(1, '请选择所在位置'),
+    rules: z.string().min(1, '请输入所在位置'),
     componentProps: {
-      placeholder: '请选择省市',
-      options: [
-        { label: '北京', value: 'beijing' },
-        { label: '上海', value: 'shanghai' },
-        { label: '广州', value: 'guangzhou' },
-        { label: '深圳', value: 'shenzhen' },
-        { label: '杭州', value: 'hangzhou' },
-        { label: '成都', value: 'chengdu' },
-        { label: '武汉', value: 'wuhan' },
-        { label: '西安', value: 'xian' },
-        { label: '南京', value: 'nanjing' },
-        { label: '重庆', value: 'chongqing' },
-        { label: '天津', value: 'tianjin' },
-        { label: '苏州', value: 'suzhou' },
-        { label: '长沙', value: 'changsha' },
-        { label: '青岛', value: 'qingdao' },
-        { label: '大连', value: 'dalian' },
-        { label: '厦门', value: 'xiamen' },
-        { label: '其他', value: 'other' },
-      ],
+      placeholder: '请输入所在位置',
       style: {
         width: '70%',
         boxSizing: 'border-box',
@@ -1361,6 +1335,23 @@ const closeImportModal = () => {
   importModalVisible.value = false;
 };
 
+// 显示导入结果
+const showImportResult = () => {
+  importResultVisible.value = true;
+};
+
+// 关闭导入结果弹窗
+const closeImportResult = () => {
+  importResultVisible.value = false;
+  // 重置结果数据
+  importResult.value = {
+    success_count: 0,
+    error_count: 0,
+    total_count: 0,
+    server_message: undefined
+  };
+};
+
 // 自定义上传处理
 const customUpload = async (options: any) => {
   const { file, onSuccess, onError } = options;
@@ -1388,31 +1379,65 @@ const customUpload = async (options: any) => {
   uploadLoading.value = true;
 
   try {
-    // 创建 FormData
-    const formData = new FormData();
-    formData.append('file', file);
+    // 调用真实的导入API
+    const response = await importCounselorExcelApi(file);
+    
+    // 打印响应内容用于调试
+    console.log('导入API响应:', response);
+    
+    // 处理导入结果
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // 从 message 中解析成功数量，如："成功导入5条咨询师记录"
+    const successMatch = response.message.match(/成功导入(\d+)条/);
+    if (successMatch && successMatch[1]) {
+      successCount = parseInt(successMatch[1], 10);
+    } else {
+      // 如果无法解析数量，但响应成功，至少设置为1
+      successCount = response.code === 200 ? 1 : 0;
+    }
+    
+    // 检查message中是否包含失败信息
+    const failureMatch = response.message.match(/失败(\d+)条/);
+    if (failureMatch && failureMatch[1]) {
+      errorCount = parseInt(failureMatch[1], 10);
+    } else {
+      errorCount = 0;
+    }
+    
+    // 准备结果数据
+    importResult.value = {
+      success_count: successCount,
+      error_count: errorCount,
+      total_count: successCount + errorCount,
+      server_message: response.message
+    };
 
-    // 模拟API调用
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // 在实际项目中，这里应该调用真实的导入接口
-    // const response = await fetch('/api/counselor/import', {
-    //   method: 'POST',
-    //   body: formData,
-    // });
-    // const result = await response.json();
-
-    message.success('Excel文件导入成功！');
-
-    // 刷新列表
-    gridApi.query();
-
-    // 关闭弹窗
+    // 关闭导入弹窗
     closeImportModal();
+    
+    // 显示导入结果
+    showImportResult();
+
+    // 刷新列表（如果有成功导入的数据）
+    if (successCount > 0) {
+      gridApi.query();
+    }
 
     onSuccess();
-  } catch (error) {
-    message.error('导入失败，请重试');
+  } catch (error: any) {
+    console.error('导入失败:', error);
+    
+    // 解析错误信息
+    let errorMessage = '导入失败，请重试';
+    if (error?.message) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    message.error(errorMessage);
     onError(error);
   } finally {
     uploadLoading.value = false;
@@ -1811,11 +1836,40 @@ watch(
       <div style="padding: 20px 0">
         <Alert
           message="导入说明"
-          description="选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过10MB"
           type="info"
           show-icon
           class="mb-4"
-        />
+        >
+          <template #description>
+            <div class="space-y-3">
+              <p>选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过10MB</p>
+              <div class="text-sm space-y-2">
+                <div>
+                  <p class="font-medium mb-1 text-red-600">必填列：</p>
+                  <ul class="list-disc list-inside space-y-1 text-gray-600 ml-4">
+                    <li><code class="bg-gray-100 px-1 rounded">咨询师名称</code> - 咨询师姓名，必须唯一</li>
+                    <li><code class="bg-gray-100 px-1 rounded">学校</code> - 毕业学校</li>
+                    <li><code class="bg-gray-100 px-1 rounded">专业</code> - 专业</li>
+                    <li><code class="bg-gray-100 px-1 rounded">个人简介</code> - 个人介绍</li>
+                  </ul>
+                </div>
+                <div>
+                  <p class="font-medium mb-1 text-blue-600">可选列：</p>
+                  <ul class="list-disc list-inside space-y-1 text-gray-600 ml-4">
+                    <li><code class="bg-gray-100 px-1 rounded">咨询时长</code> - 总咨询时长(小时)</li>
+                    <li><code class="bg-gray-100 px-1 rounded">擅长流派</code> - 多个用逗号分隔，如：认知行为疗法,正念疗法</li>
+                    <li><code class="bg-gray-100 px-1 rounded">擅长领域</code> - 多个用逗号分隔，如：情感困扰,职场压力</li>
+                    <li><code class="bg-gray-100 px-1 rounded">咨询方式</code> - 视频/语音/面对面</li>
+                    <li><code class="bg-gray-100 px-1 rounded">所在位置</code> - 所在城市（可输入任意城市名称）</li>
+                    <li><code class="bg-gray-100 px-1 rounded">咨询价格</code> - 咨询收费价格</li>
+                    <li><code class="bg-gray-100 px-1 rounded">结算价格</code> - 结算价格</li>
+                    <li><code class="bg-gray-100 px-1 rounded">结算权重</code> - 结算权重(%)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Alert>
 
         <Upload.Dragger
           :custom-request="customUpload"
@@ -1846,6 +1900,64 @@ watch(
             <p class="text-gray-500">支持 .xlsx、.xls 格式，最大10MB</p>
           </div>
         </Upload.Dragger>
+      </div>
+    </Modal>
+
+    <!-- 导入结果弹窗 -->
+    <Modal
+      v-model:open="importResultVisible"
+      title="导入结果"
+      width="600px"
+      @cancel="closeImportResult"
+      @ok="closeImportResult"
+    >
+      <template #footer>
+        <Button type="primary" @click="closeImportResult">确定</Button>
+      </template>
+      
+      <div style="padding: 20px 0">
+        <!-- 服务器消息 -->
+        <div v-if="importResult.server_message" class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-blue-800 dark:text-blue-200 font-medium">{{ importResult.server_message }}</span>
+          </div>
+        </div>
+
+        <!-- 导入统计 -->
+        <div class="mb-6 space-y-3">
+          <div class="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+            <span class="text-blue-700 dark:text-blue-300">总计处理：</span>
+            <span class="font-semibold text-blue-800 dark:text-blue-200">{{ importResult.total_count }}条</span>
+          </div>
+          
+          <div class="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
+            <span class="text-green-700 dark:text-green-300">成功导入：</span>
+            <span class="font-semibold text-green-800 dark:text-green-200">{{ importResult.success_count }}条</span>
+          </div>
+          
+          <div 
+            v-if="importResult.error_count > 0"
+            class="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20"
+          >
+            <span class="text-red-700 dark:text-red-300">导入失败：</span>
+            <span class="font-semibold text-red-800 dark:text-red-200">{{ importResult.error_count }}条</span>
+          </div>
+        </div>
+
+        <!-- 结果提示 -->
+        <div v-if="importResult.success_count > 0" class="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-green-800 dark:text-green-200 font-medium">
+              {{ importResult.error_count === 0 ? '所有数据导入成功！' : '导入完成！' }}
+            </span>
+          </div>
+        </div>
       </div>
     </Modal>
     <!-- 咨询时长弹窗（统一处理新增和查看） -->

@@ -235,6 +235,7 @@ export interface AuditCounselingDurationResponse {
   rid: string;
 }
 
+
 /**
  * API响应包装类型
  */
@@ -299,4 +300,18 @@ export async function createCounselingDurationApi(params: CreateCounselingDurati
  */
 export async function auditCounselingDurationApi(params: AuditCounselingDurationParams): Promise<AuditCounselingDurationResponse> {
   return requestClient.post<AuditCounselingDurationResponse>('/counselors/duration/audit', params);
+}
+
+/**
+ * Excel 批量导入咨询师
+ */
+export async function importCounselorExcelApi(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  return requestClient.post('/counselors/import-excel', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
 }
