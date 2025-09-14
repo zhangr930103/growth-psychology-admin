@@ -9,7 +9,7 @@ import { Avatar, Button, message, Popconfirm, Space, Spin } from 'ant-design-vue
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { disableUserApi, enableUserApi, getUserListApi } from '#/api/core/user';
+import { disableUserApi, enableUserApi, getUserListApi, exportUserListApi, type ExportUserParams } from '#/api/core/user';
 
 defineOptions({
   name: 'UserManagement',
@@ -17,6 +17,9 @@ defineOptions({
 
 // 全屏loading状态
 const spinning = ref(false);
+
+// 保存当前的搜索条件
+const currentSearchParams = ref<any>({});
 
 
 // 搜索表单配置
@@ -62,8 +65,6 @@ const formOptions: VbenFormProps = {
 
 // 用户操作函数
 const handleEnable = async (row: UserData) => {
-  console.log('启用用户:', row);
-  
   try {
     // 开启全屏loading
     spinning.value = true;
@@ -86,8 +87,6 @@ const handleEnable = async (row: UserData) => {
 };
 
 const handleDisable = async (row: UserData) => {
-  console.log('禁用用户:', row);
-  
   try {
     // 开启全屏loading
     spinning.value = true;
@@ -109,10 +108,57 @@ const handleDisable = async (row: UserData) => {
   }
 };
 
-// 工具栏操作函数
-const handleExport = () => {
-  console.log('导出数据');
-  // 这里可以调用导出数据的逻辑
+// 工具栏操作函数  
+const handleExport = async () => {
+  try {
+    // 开启全屏loading
+    spinning.value = true;
+    
+    // 使用当前保存的搜索条件
+    const formValues = currentSearchParams.value;
+    
+    // 构建导出参数
+    const exportParams: ExportUserParams = {
+      username: formValues.username,
+      company_name: formValues.company_name,
+      // 处理时间范围搜索参数
+      register_start_time: formValues.registerStartTime
+        ? Math.floor((Date.parse(formValues.registerStartTime) - 28800000) / 1000)
+        : undefined,
+      register_end_time: formValues.registerEndTime
+        ? Math.floor((Date.parse(formValues.registerEndTime) - 28800000) / 1000) + 86399
+        : undefined,
+    };
+    
+    // 调用导出API
+    const response = await exportUserListApi(exportParams);
+    
+    // 处理文件下载
+    if (response && response.download_url) {
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.href = response.download_url;
+      link.download = response.filename;
+      link.style.display = 'none';
+      
+      // 添加到页面并触发下载
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      message.success({
+        content: `导出成功，文件大小：${(response.file_size / 1024).toFixed(2)} KB`,
+      });
+    } else {
+      message.error('导出失败，未获取到下载链接');
+    }
+  } catch (error) {
+    console.error('导出失败:', error);
+    message.error('导出失败，请重试');
+  } finally {
+    // 关闭全屏loading
+    spinning.value = false;
+  }
 };
 
 const gridOptions: VxeTableGridOptions = {
@@ -186,6 +232,9 @@ const gridOptions: VxeTableGridOptions = {
     },
     ajax: {
       query: async ({ page }, formValues) => {
+        // 保存当前搜索条件用于导出
+        currentSearchParams.value = formValues;
+        
         const params: UserListParams = {
           page: page.currentPage,
           size: page.pageSize,
@@ -247,6 +296,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
             title="确定要启用这个用户吗？"
             ok-text="确定"
             cancel-text="取消"
+            :confirm-loading="false"
             @confirm="handleEnable(row)"
           >
             <Button type="link" size="small"> 启用 </Button>
@@ -256,6 +306,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
             title="确定要禁用这个用户吗？"
             ok-text="确定"
             cancel-text="取消"
+            :confirm-loading="false"
             @confirm="handleDisable(row)"
           >
             <Button type="link" danger size="small"> 禁用 </Button>

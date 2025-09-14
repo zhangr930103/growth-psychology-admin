@@ -89,6 +89,29 @@ export interface EnableUserResponse {
 }
 
 /**
+ * 导出用户列表参数类型
+ */
+export interface ExportUserParams {
+  username?: string;
+  company_name?: string;
+  register_start_time?: number;
+  register_end_time?: number;
+}
+
+/**
+ * 导出用户列表响应类型（数据直接在根级别）
+ */
+export interface ExportUserResponse {
+  code: number;
+  message: string;
+  rid: string;
+  download_url: string;
+  filename: string;
+  file_size: number;
+  export_time: string;
+}
+
+/**
  * 获取用户列表
  */
 export async function getUserListApi(params: UserListParams): Promise<UserListResponse> {
@@ -111,4 +134,11 @@ export async function enableUserApi(params: EnableUserParams): Promise<EnableUse
   return requestClient.post<EnableUserResponse>('/users/enable', {}, {
     params: { user_id: params.user_id }
   });
+}
+
+/**
+ * 导出用户列表
+ */
+export async function exportUserListApi(params: ExportUserParams): Promise<ExportUserResponse> {
+  return requestClient.post<ExportUserResponse>('/users/export', params);
 }
