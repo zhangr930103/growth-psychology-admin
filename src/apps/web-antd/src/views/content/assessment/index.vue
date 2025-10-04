@@ -146,6 +146,8 @@ const getAssessmentList = async (params: SearchParams): Promise<{ list: Assessme
     title: params.title,
     creator: params.creator,
     status: params.status as 'published' | 'unpublished',
+    create_start_time: params.createStartTime,
+    create_end_time: params.createEndTime,
   };
 
   const response = await getQuestionnaireListApi(apiParams);
