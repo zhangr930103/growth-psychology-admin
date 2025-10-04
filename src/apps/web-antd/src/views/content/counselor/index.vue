@@ -747,6 +747,15 @@ const getDurationFormSchema = (isReadonly = false) => [
         }
         return true;
       },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
+      },
     },
     renderComponentContent: () => {
       return {
@@ -847,6 +856,15 @@ const getCounselorFormSchema = () => [
         }
         return true;
       },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
+      },
     },
     renderComponentContent: () => {
       return {
@@ -897,6 +915,15 @@ const getCounselorFormSchema = () => [
           return Upload.LIST_IGNORE;
         }
         return true;
+      },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
       },
     },
     renderComponentContent: () => {
@@ -1097,6 +1124,15 @@ const getCounselorFormSchema = () => [
           return Upload.LIST_IGNORE;
         }
         return true;
+      },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
       },
     },
     renderComponentContent: () => {
