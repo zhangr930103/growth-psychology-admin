@@ -163,10 +163,10 @@ const handleExport = async () => {
 
 const gridOptions: VxeTableGridOptions = {
   columns: [
-    { title: '序号', type: 'seq', width: 60 },
     {
       field: 'username',
       title: '用户手机',
+      minWidth: 150,
       showOverflow: 'tooltip',
     },
     {

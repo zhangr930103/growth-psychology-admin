@@ -20,7 +20,6 @@ async function getFeedbackList(params: { page?: number; size?: number }): Promis
 
 const gridOptions: VxeTableGridOptions = {
   columns: [
-    { title: '序号', type: 'seq', width: 60 },
     {
       field: 'title',
       title: '标题',
@@ -85,9 +84,11 @@ const [Grid] = useVbenVxeGrid({
       <template #image="{ row }">
         <div class="flex justify-center">
           <Image
+            v-if="row.image"
             :src="row.image"
-            style="width: 40px; height: 40px; border-radius: 50%"
+            style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"
           />
+          <span v-else class="text-gray-400">无图片</span>
         </div>
       </template>
 
