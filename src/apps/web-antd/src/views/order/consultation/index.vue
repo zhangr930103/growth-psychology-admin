@@ -177,7 +177,6 @@ const handleViewDetail = (row: ConsultationOrder) => {
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
-    { title: '序号', type: 'seq', width: 60 },
     {
       field: 'order_code',
       title: '订单编码',
