@@ -1971,30 +1971,6 @@ watch(
           <template #description>
             <div class="space-y-3">
               <p>选择Excel文件直接上传导入，支持.xlsx和.xls格式，文件大小不超过10MB</p>
-              <div class="text-sm space-y-2">
-                <div>
-                  <p class="font-medium mb-1 text-red-600">必填列：</p>
-                  <ul class="list-disc list-inside space-y-1 text-gray-600 ml-4">
-                    <li><code class="bg-gray-100 px-1 rounded">咨询师名称</code> - 咨询师姓名，必须唯一</li>
-                    <li><code class="bg-gray-100 px-1 rounded">学校</code> - 毕业学校</li>
-                    <li><code class="bg-gray-100 px-1 rounded">专业</code> - 专业</li>
-                    <li><code class="bg-gray-100 px-1 rounded">个人简介</code> - 个人介绍</li>
-                  </ul>
-                </div>
-                <div>
-                  <p class="font-medium mb-1 text-blue-600">可选列：</p>
-                  <ul class="list-disc list-inside space-y-1 text-gray-600 ml-4">
-                    <li><code class="bg-gray-100 px-1 rounded">咨询时长</code> - 总咨询时长(小时)</li>
-                    <li><code class="bg-gray-100 px-1 rounded">擅长流派</code> - 多个用逗号分隔，如：认知行为疗法,正念疗法</li>
-                    <li><code class="bg-gray-100 px-1 rounded">擅长领域</code> - 多个用逗号分隔，如：情感困扰,职场压力</li>
-                    <li><code class="bg-gray-100 px-1 rounded">咨询方式</code> - 视频/语音/面对面</li>
-                    <li><code class="bg-gray-100 px-1 rounded">所在位置</code> - 所在城市（可输入任意城市名称）</li>
-                    <li><code class="bg-gray-100 px-1 rounded">咨询价格</code> - 咨询收费价格</li>
-                    <li><code class="bg-gray-100 px-1 rounded">结算价格</code> - 结算价格</li>
-                    <li><code class="bg-gray-100 px-1 rounded">结算权重</code> - 结算权重(%)</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </template>
         </Alert>
