@@ -19,7 +19,6 @@ import {
   type RechargeRecord as ApiRechargeRecord,
   type RechargeListParams,
   type CreateCompanyParams,
-  type UpdateCompanyParams,
   type CreateRechargeParams
 } from '#/api/core/company';
 
@@ -217,8 +216,8 @@ const getRechargeList = async (params: RechargeSearchParams): Promise<RechargeAp
   }
 };
 
-// 编辑表单配置
-const editFormSchema = [
+// 新增表单配置（包含充值金额）
+const createFormSchema = [
   {
     component: 'Input',
     fieldName: 'companyName',
@@ -296,7 +295,75 @@ const editFormSchema = [
       placeholder: '请输入邮箱或者手机号码',
     },
   },
+];
 
+// 编辑表单配置（不包含充值金额）
+const editFormSchema = [
+  {
+    component: 'Input',
+    fieldName: 'companyName',
+    label: '公司名称',
+    rules: z.string().min(2, '公司名称最少需要2个字符'),
+    componentProps: {
+      placeholder: '请输入公司名称',
+    },
+  },
+  {
+    component: 'Upload',
+    fieldName: 'banner',
+    label: '上传凭证',
+    componentProps: {
+      // 自动携带认证信息
+      customRequest: upload_file,
+      disabled: false,
+      maxCount: 5,
+      multiple: true,
+      showUploadList: true,
+      // 上传列表的内建样式，支持四种基本样式 text, picture, picture-card 和 picture-circle
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        // 检查文件大小是否超过10MB
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        // 允许的文件扩展名
+        const validExtensions = ['jpg', 'png'];
+        // 获取文件扩展名
+        const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+        // 检查文件扩展名是否在允许的范围内
+        const isValidType = validExtensions.includes(fileExtension || '');
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        if (!isValidType) {
+          message.error('仅支持 .jpg, .png 格式的图片');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传图片',
+      };
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'notificationMethod',
+    label: '余额不足时通知方式',
+    componentProps: {
+      placeholder: '请输入邮箱或者手机号码',
+    },
+  },
 ];
 
 // 新增充值记录表单配置
@@ -359,12 +426,19 @@ const rechargeFormSchema = [
   },
 ];
 
-// 编辑模式状态
-const isEditMode = ref(false);
-const currentEditId = ref<number | null>(null);
-
 // 充值弹窗相关状态
 const currentCompany = ref<CompanyData | null>(null);
+const currentEditId = ref<number | null>(null);
+
+// 创建新增表单
+const [CreateForm, createFormApi] = useVbenForm({
+  schema: createFormSchema,
+  showDefaultActions: false,
+  // 设置通用配置，包括 label 宽度
+  commonConfig: {
+    labelWidth: 130,
+  },
+});
 
 // 创建编辑表单
 const [EditForm, editFormApi] = useVbenForm({
@@ -447,9 +521,72 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
   },
 });
 
+// 创建新增弹窗
+const [CreateModal, createModalApi] = useVbenModal({
+  title: '新增公司',
+  onConfirm: async () => {
+    try {
+      const validationResult = await createFormApi.validate();
+      if (validationResult.valid) {
+        const formValues = await createFormApi.getValues();
+
+        message.loading({
+          content: '正在新增，请稍等...',
+          duration: 0,
+          key: 'create_msg',
+        });
+
+        try {
+          // 获取上传文件URL
+          const bannerUrl = formValues.banner?.[0]?.response?.file_url || '';
+
+          const createParams: CreateCompanyParams = {
+            company_name: formValues.companyName,
+          };
+          
+          // 只有在有值时才添加可选字段
+          if (formValues.rechargeAmount && formValues.rechargeAmount > 0) {
+            createParams.recharge_amount = formValues.rechargeAmount;
+          }
+          
+          if (formValues.notificationMethod && formValues.notificationMethod.trim()) {
+            createParams.notification_method = formValues.notificationMethod.trim();
+          }
+          
+          if (bannerUrl) {
+            createParams.banner = bannerUrl;
+          }
+          
+          await createCompanyApi(createParams);
+
+          message.success({
+            content: '新增成功',
+            key: 'create_msg',
+          });
+          createModalApi.close();
+          // 刷新列表
+          gridApi.query();
+        } catch (error) {
+          console.error('新增失败:', error);
+          message.error({
+            content: '新增失败，请重试',
+            key: 'create_msg',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('表单验证失败:', error);
+    }
+  },
+  onCancel: () => {
+    createFormApi.resetForm();
+    createModalApi.close();
+  },
+});
+
 // 创建编辑弹窗
 const [EditModal, editModalApi] = useVbenModal({
-  title: '公司管理',
+  title: '编辑公司',
   onConfirm: async () => {
     try {
       const validationResult = await editFormApi.validate();
@@ -457,50 +594,30 @@ const [EditModal, editModalApi] = useVbenModal({
         const formValues = await editFormApi.getValues();
 
         message.loading({
-          content: isEditMode.value ? '正在保存，请稍等...' : '正在新增，请稍等...',
+          content: '正在保存，请稍等...',
           duration: 0,
-          key: 'save_msg',
+          key: 'edit_msg',
         });
 
         try {
           // 获取上传文件URL
           const bannerUrl = formValues.banner?.[0]?.response?.file_url || '';
 
-          if (isEditMode.value && currentEditId.value) {
-            // 编辑模式
-            const updateParams: UpdateCompanyParams = {
-              id: currentEditId.value,
-              company_name: formValues.companyName,
-              recharge_amount: formValues.rechargeAmount,
-              notification_method: formValues.notificationMethod || '',
-              banner: bannerUrl,
-            };
-            await updateCompanyApi(updateParams);
-          } else {
-            // 新增模式
-            const createParams: CreateCompanyParams = {
-              company_name: formValues.companyName,
-            };
-            
-            // 只有在有值时才添加可选字段
-            if (formValues.rechargeAmount && formValues.rechargeAmount > 0) {
-              createParams.recharge_amount = formValues.rechargeAmount;
-            }
-            
-            if (formValues.notificationMethod && formValues.notificationMethod.trim()) {
-              createParams.notification_method = formValues.notificationMethod.trim();
-            }
-            
-            if (bannerUrl) {
-              createParams.banner = bannerUrl;
-            }
-            
-            await createCompanyApi(createParams);
+          if (!currentEditId.value) {
+            message.error('公司ID丢失，请重新打开编辑窗口');
+            return;
           }
 
+          await updateCompanyApi({
+            id: currentEditId.value,
+            company_name: formValues.companyName,
+            notification_method: formValues.notificationMethod || '',
+            banner: bannerUrl,
+          });
+
           message.success({
-            content: isEditMode.value ? '保存成功' : '新增成功',
-            key: 'save_msg',
+            content: '保存成功',
+            key: 'edit_msg',
           });
           editModalApi.close();
           // 刷新列表
@@ -508,8 +625,8 @@ const [EditModal, editModalApi] = useVbenModal({
         } catch (error) {
           console.error('保存失败:', error);
           message.error({
-            content: isEditMode.value ? '保存失败，请重试' : '新增失败，请重试',
-            key: 'save_msg',
+            content: '保存失败，请重试',
+            key: 'edit_msg',
           });
         }
       }
@@ -519,7 +636,6 @@ const [EditModal, editModalApi] = useVbenModal({
   },
   onCancel: () => {
     editFormApi.resetForm();
-    isEditMode.value = false;
     currentEditId.value = null;
     editModalApi.close();
   },
@@ -549,18 +665,12 @@ const handleRecharge = (row: CompanyData) => {
 const handleEdit = (row: CompanyData) => {
   console.log('编辑公司:', row);
 
-  // 设置编辑模式
-  isEditMode.value = true;
+  // 设置当前编辑ID
   currentEditId.value = row.id;
-
-  // 设置弹窗标题
-  editModalApi.setState({ title: '编辑公司' });
 
   // 设置表单数据
   editFormApi.setValues({
     companyName: row.companyName,
-    rechargeAmount: row.rechargeAmount,
-    status: row.status,
     notificationMethod: row.notificationMethod || '',
     banner: row.banner ? [
       {
@@ -574,7 +684,7 @@ const handleEdit = (row: CompanyData) => {
     ] : [],
   });
 
-  // 打开弹窗
+  // 打开编辑弹窗
   editModalApi.open();
 };
 
@@ -582,18 +692,11 @@ const handleEdit = (row: CompanyData) => {
 const handleCreate = () => {
   console.log('新建公司');
 
-  // 设置新增模式
-  isEditMode.value = false;
-  currentEditId.value = null;
-
-  // 设置弹窗标题
-  editModalApi.setState({ title: '新增公司' });
-
   // 清空表单
-  editFormApi.resetForm();
+  createFormApi.resetForm();
 
-  // 打开弹窗
-  editModalApi.open();
+  // 打开新增弹窗
+  createModalApi.open();
 };
 
 
@@ -808,6 +911,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
         </Space>
       </template>
     </Grid>
+
+    <!-- 新增弹窗 -->
+    <CreateModal class="w-[600px]" :overlay-blur="2">
+      <CreateForm />
+    </CreateModal>
 
     <!-- 编辑弹窗 -->
     <EditModal class="w-[600px]" :overlay-blur="2">

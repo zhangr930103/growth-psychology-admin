@@ -58,20 +58,13 @@ export interface CreateCompanyResponse {
 }
 
 /**
- * 编辑公司参数类型（保留原有的可选字段逻辑）
- */
-export interface CompanyFormParams {
-  company_name: string;
-  recharge_amount: number;
-  notification_method?: string;
-  banner?: string;
-}
-
-/**
  * 编辑公司参数类型
  */
-export interface UpdateCompanyParams extends CompanyFormParams {
+export interface UpdateCompanyParams {
   id: number;
+  company_name: string;
+  notification_method?: string;
+  banner?: string;
 }
 
 /**
