@@ -223,7 +223,7 @@ const editFormSchema = [
     component: 'Input',
     fieldName: 'companyName',
     label: '公司名称',
-    rules: z.string().min(1, '请输入公司名称'),
+    rules: z.string().min(2, '公司名称最少需要2个字符'),
     componentProps: {
       placeholder: '请输入公司名称',
     },
@@ -271,6 +271,15 @@ const editFormSchema = [
           return Upload.LIST_IGNORE;
         }
         return true;
+      },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
       },
     },
     renderComponentContent: () => {
@@ -665,7 +674,6 @@ const viewCertificate = (certificateUrl: string) => {
 
 const gridOptions: VxeTableGridOptions = {
   columns: [
-    { title: '序号', type: 'seq', width: 60 },
     {
       field: 'companyName',
       title: '公司名称',
@@ -754,7 +762,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #rechargeAmount="{ row }">
-        <span class="font-semibold text-green-600">
+        <span class="font-semibold text-red-600">
           {{ formatAmount(row.rechargeAmount) }}
         </span>
       </template>

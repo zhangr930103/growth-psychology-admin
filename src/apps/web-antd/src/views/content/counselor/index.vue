@@ -929,7 +929,9 @@ const getCounselorFormSchema = () => [
     fieldName: 'availableTimeSlots',
     label: '可咨询时间',
     slot: 'availableTimeSlots',
-    rules: z.array(z.any()).min(1, '请选择可咨询时间'),
+    rules: z.array(z.any()).min(1, '请选择可咨询时间').refine((val) => val && val.length > 0, {
+      message: '请选择可咨询时间',
+    }),
   },
   {
     component: 'InputNumber',
@@ -1247,6 +1249,13 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
     try {
       // 开启loading
       counselorModalApi.setState({ loading: true });
+
+      // 先检查可咨询时间是否已选择
+      if (!counselorAvailableTimeSlots.value || counselorAvailableTimeSlots.value.length === 0) {
+        message.error('请选择可咨询时间');
+        counselorModalApi.setState({ loading: false });
+        return;
+      }
 
       // 在验证前设置可咨询时间数据到表单中
       counselorFormApi.setValues({
