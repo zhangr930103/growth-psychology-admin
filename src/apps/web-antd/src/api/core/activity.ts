@@ -26,6 +26,7 @@ export interface ActivityData {
   duration: number;
   min_participants: number;
   max_registrations: number;
+  contact_information?: string;
   is_enabled: boolean;
   creator_name: string;
   creator_id: number;
@@ -55,6 +56,7 @@ export interface CreateActivityParams {
   duration: number;
   min_participants: number;
   max_registrations: number;
+  contact_information?: string;
   is_enabled: boolean;
 }
 

@@ -132,12 +132,12 @@ const getStatusColor = (status: string): string => {
 
 const getMethodText = (method: string): string => {
   const methodMap: Record<string, string> = {
-    online: '线上活动',
-    offline: '线下活动',
-    hybrid: '混合模式',
-    ONLINE: '线上活动',
-    OFFLINE: '线下活动',
-    HYBRID: '混合模式',
+    online: '视频',
+    offline: '语音',
+    hybrid: '面对面',
+    ONLINE: '视频',
+    OFFLINE: '语音',
+    HYBRID: '面对面',
   };
   return methodMap[method] || method;
 };
