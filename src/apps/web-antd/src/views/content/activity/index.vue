@@ -202,8 +202,6 @@ const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
       total: response.total,
     };
   } catch (error) {
-    console.error('获取活动列表失败:', error);
-    message.error('获取活动列表失败，请稍后重试');
     return {
       list: [],
       total: 0,
@@ -232,11 +230,6 @@ const handleEnable = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '启用失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('启用活动失败:', error);
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -263,12 +256,7 @@ const handleDisable = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '禁用失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('禁用活动失败:', error);
-  } finally {
+  }finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -290,12 +278,7 @@ const handleDelete = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '删除失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('删除活动失败:', error);
-  } finally {
+  }finally {
     // 关闭全屏loading
     spinning.value = false;
   }
