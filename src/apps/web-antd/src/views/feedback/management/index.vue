@@ -88,7 +88,6 @@ const [Grid] = useVbenVxeGrid({
             :src="row.image"
             style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"
           />
-          <span v-else class="text-gray-400">无图片</span>
         </div>
       </template>
 
