@@ -240,14 +240,7 @@ const handlePublish = async (row: EvaluationData) => {
     
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    // 显示错误消息
-    if (error && typeof error === 'object' && 'message' in error) {
-      message.error(`操作失败：${error.message}`);
-    } else {
-      message.error('操作失败，请稍后重试');
-    }
-  } finally {
+  }  finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -270,14 +263,7 @@ const handleDelete = async (row: EvaluationData) => {
     
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    // 显示错误消息
-    if (error && typeof error === 'object' && 'message' in error) {
-      message.error(`删除失败：${error.message}`);
-    } else {
-      message.error('删除失败，请稍后重试');
-    }
-  } finally {
+  }  finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -439,11 +425,6 @@ const handleSubmit = async () => {
     // 刷新列表
     gridApi.query();
   } catch (error) {
-    // 校验失败或API错误时保持弹窗打开，显示错误信息
-    modalLoading.value = false;
-    if (error && typeof error === 'object' && 'message' in error) {
-      message.error(`操作失败：${error.message}`);
-    }
   }
 };
 
