@@ -4,9 +4,10 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Space, Spin, Tag } from 'ant-design-vue';
+import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Space, Spin, Tag, Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
+import { upload_file } from '#/api/examples/upload';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getActivityListApi, createActivityApi, updateActivityApi, deleteActivityApi, toggleActivityStatusApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams, type ToggleActivityStatusParams } from '#/api';
@@ -36,6 +37,7 @@ const formRef = ref();
 // 弹窗表单数据
 const formData = reactive({
   activityName: '',
+  cover: [] as any[],
   activityContent: '',
   instructor: '',
   activityTime: null as any,
@@ -43,6 +45,7 @@ const formData = reactive({
   duration: 0,
   minParticipants: 0,
   maxRegistrations: 0,
+  consultationMethod: 'VIDEO',
   contactInformation: '',
   isEnabled: true,
 });
@@ -51,6 +54,7 @@ const formData = reactive({
 interface ActivityData {
   id: number;
   activityName: string;
+  cover: string;
   activityContent: string;
   instructor: string;
   activityTime: number;
@@ -58,6 +62,7 @@ interface ActivityData {
   duration: number;
   minParticipants: number;
   maxRegistrations: number;
+  consultationMethod?: string;
   contactInformation?: string;
   creatorName: string;
   creatorId: number;
@@ -70,6 +75,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
   return {
     id: apiData.id,
     activityName: apiData.activity_name,
+    cover: apiData.cover,
     activityContent: apiData.activity_content,
     instructor: apiData.instructor,
     activityTime: new Date(apiData.activity_time).getTime() / 1000, // 转换为 unix 时间戳（秒）
@@ -77,6 +83,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
     duration: apiData.duration,
     minParticipants: apiData.min_participants,
     maxRegistrations: apiData.max_registrations,
+    consultationMethod: apiData.consultation_method,
     contactInformation: apiData.contact_information,
     creatorName: apiData.creator_name,
     creatorId: apiData.creator_id,
@@ -87,8 +94,12 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
 
 // 数据转换函数：将前端表单数据（驼峰格式）转换为API所需格式（下划线格式）
 const transformFormDataToApi = (formData: any): CreateActivityParams => {
+  // 获取上传图片URL
+  const coverUrl = formData.cover?.[0]?.response?.file_url || formData.cover?.[0]?.url || '';
+  
   return {
     activity_name: formData.activityName,
+    cover: coverUrl,
     activity_content: formData.activityContent,
     instructor: formData.instructor,
     activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
@@ -96,6 +107,7 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
+    consultation_method: formData.consultationMethod || undefined,
     contact_information: formData.contactInformation || undefined,
     is_enabled: formData.isEnabled,
   };
@@ -103,9 +115,13 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
 
 // 数据转换函数：将前端表单数据转换为编辑API所需格式（包含ID）
 const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivityParams => {
+  // 获取上传图片URL
+  const coverUrl = formData.cover?.[0]?.response?.file_url || formData.cover?.[0]?.url || '';
+  
   return {
     id: id,
     activity_name: formData.activityName,
+    cover: coverUrl,
     activity_content: formData.activityContent,
     instructor: formData.instructor,
     activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
@@ -113,6 +129,7 @@ const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivity
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
+    consultation_method: formData.consultationMethod || undefined,
     contact_information: formData.contactInformation || undefined,
     is_enabled: formData.isEnabled,
   };
@@ -296,6 +313,7 @@ const handleDelete = async (row: ActivityData) => {
 // 弹窗相关函数
 const resetFormData = () => {
   formData.activityName = '';
+  formData.cover = [];
   formData.activityContent = '';
   formData.instructor = '';
   formData.activityTime = null;
@@ -303,6 +321,7 @@ const resetFormData = () => {
   formData.duration = 0;
   formData.minParticipants = 0;
   formData.maxRegistrations = 0;
+  formData.consultationMethod = 'VIDEO';
   formData.contactInformation = '';
   formData.isEnabled = true;
   editingId.value = null;
@@ -325,12 +344,23 @@ const openEditModal = async (row: ActivityData) => {
   
   // 设置基本表单数据
   formData.activityName = row.activityName;
+  formData.cover = row.cover ? [
+    {
+      uid: Date.now().toString(),
+      status: 'done',
+      url: row.cover,
+      response: {
+        file_url: row.cover,
+      },
+    }
+  ] : [];
   formData.instructor = row.instructor;
   formData.activityTime = dayjs(row.activityTime * 1000);
   formData.registrationDeadline = dayjs(row.registrationDeadline * 1000);
   formData.duration = row.duration;
   formData.minParticipants = row.minParticipants;
   formData.maxRegistrations = row.maxRegistrations;
+  formData.consultationMethod = row.consultationMethod || 'VIDEO';
   formData.contactInformation = row.contactInformation || '';
   formData.isEnabled = row.isEnabled;
   
@@ -629,6 +659,46 @@ const [Grid, gridApi] = useVbenVxeGrid({
         </Form.Item>
 
         <Form.Item
+          label="团队活动照片"
+          name="cover"
+          :rules="[{ required: true, message: '请上传团队活动照片' }]"
+        >
+          <Upload
+            v-model:file-list="formData.cover"
+            :custom-request="upload_file"
+            list-type="picture-card"
+            :max-count="1"
+            :before-upload="(file) => {
+              const isValidSize = file.size / 1024 / 1024 < 10;
+              const validExtensions = ['jpg', 'png', 'jpeg'];
+              const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+              const isValidType = validExtensions.includes(fileExtension || '');
+              if (!isValidSize) {
+                message.error('文件大小不能超过 10MB');
+                return Upload.LIST_IGNORE;
+              }
+              if (!isValidType) {
+                message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+                return Upload.LIST_IGNORE;
+              }
+              return true;
+            }"
+            @preview="(file) => {
+              const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+              if (imageUrl) {
+                window.open(imageUrl, '_blank');
+              } else {
+                message.warning('无法预览该图片');
+              }
+            }"
+          >
+            <div v-if="!formData.cover || formData.cover.length === 0">
+              <div style="margin-top: 8px">上传图片</div>
+            </div>
+          </Upload>
+        </Form.Item>
+
+        <Form.Item
           label="活动内容"
           name="activityContent"
           :rules="[{ required: true, message: '请输入活动内容' }]"
@@ -738,6 +808,17 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <div style="color: #999; font-size: 12px; margin-top: 5px;">
             建议设置在开团人数以上
           </div>
+        </Form.Item>
+
+        <Form.Item
+          label="咨询方式"
+          name="consultationMethod"
+        >
+          <Radio.Group v-model:value="formData.consultationMethod" button-style="solid">
+            <Radio.Button value="VIDEO">视频</Radio.Button>
+            <Radio.Button value="AUDIO">语音</Radio.Button>
+            <Radio.Button value="FACE_TO_FACE">面对面</Radio.Button>
+          </Radio.Group>
         </Form.Item>
 
         <Form.Item

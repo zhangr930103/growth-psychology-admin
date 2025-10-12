@@ -19,6 +19,7 @@ export interface ActivityListParams {
 export interface ActivityData {
   id: number;
   activity_name: string;
+  cover: string;
   activity_content: string;
   instructor: string;
   activity_time: string;
@@ -26,6 +27,7 @@ export interface ActivityData {
   duration: number;
   min_participants: number;
   max_registrations: number;
+  consultation_method?: string;
   contact_information?: string;
   is_enabled: boolean;
   creator_name: string;
@@ -49,6 +51,7 @@ export interface ActivityListResponse {
  */
 export interface CreateActivityParams {
   activity_name: string;
+  cover: string;
   activity_content: string;
   instructor: string;
   activity_time: string;
@@ -56,6 +59,7 @@ export interface CreateActivityParams {
   duration: number;
   min_participants: number;
   max_registrations: number;
+  consultation_method?: string;
   contact_information?: string;
   is_enabled: boolean;
 }
