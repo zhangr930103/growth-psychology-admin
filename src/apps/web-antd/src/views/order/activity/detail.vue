@@ -23,6 +23,9 @@ const getMethodText = (method: string): string => {
     online: '线上活动',
     offline: '线下活动',
     hybrid: '混合模式',
+    ONLINE: '线上活动',
+    OFFLINE: '线下活动',
+    HYBRID: '混合模式',
   };
   return methodMap[method] || method;
 };

@@ -107,19 +107,27 @@ const getStatusText = (status: string): string => {
     waiting: '待开团',
     formed: '已成团',
     completed: '已完成',
+    reviewed: '已评价',
     cancelled: '已取消',
+    WAITING: '待开团',
+    FORMED: '已成团',
+    COMPLETED: '已完成',
+    REVIEWED: '已评价',
+    CANCELLED: '已取消',
   };
   return statusMap[status] || status;
 };
 
 const getStatusColor = (status: string): string => {
+  const statusKey = status.toLowerCase();
   const colorMap: Record<string, string> = {
     waiting: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded text-xs',
     formed: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded text-xs',
     completed: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs',
+    reviewed: 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-xs',
     cancelled: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs',
   };
-  return colorMap[status] || '';
+  return colorMap[statusKey] || '';
 };
 
 const getMethodText = (method: string): string => {
@@ -127,17 +135,21 @@ const getMethodText = (method: string): string => {
     online: '线上活动',
     offline: '线下活动',
     hybrid: '混合模式',
+    ONLINE: '线上活动',
+    OFFLINE: '线下活动',
+    HYBRID: '混合模式',
   };
   return methodMap[method] || method;
 };
 
 const getMethodColor = (method: string): string => {
+  const methodKey = method.toLowerCase();
   const colorMap: Record<string, string> = {
     online: 'text-blue-600 dark:text-blue-400',
     offline: 'text-green-600 dark:text-green-400',
     hybrid: 'text-purple-600 dark:text-purple-400',
   };
-  return colorMap[method] || '';
+  return colorMap[methodKey] || '';
 };
 
 // 事件处理
