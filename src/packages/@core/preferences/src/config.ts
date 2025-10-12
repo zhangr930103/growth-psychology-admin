@@ -51,8 +51,8 @@ const defaultPreferences: Preferences = {
     mode: 'fixed',
   },
   logo: {
-    enable: true,
-    source: 'https://images.60kongjian.com/test/scrm/common/20250522/de251207b78f8d82f927b5e57460ce6c.png',
+    enable: false,
+    source: '/favicon.ico',
   },
   navigation: {
     accordion: true,

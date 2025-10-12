@@ -43,6 +43,7 @@ const formData = reactive({
   duration: 0,
   minParticipants: 0,
   maxRegistrations: 0,
+  contactInformation: '',
   isEnabled: true,
 });
 
@@ -57,6 +58,7 @@ interface ActivityData {
   duration: number;
   minParticipants: number;
   maxRegistrations: number;
+  contactInformation?: string;
   creatorName: string;
   creatorId: number;
   createTime: number;
@@ -75,6 +77,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
     duration: apiData.duration,
     minParticipants: apiData.min_participants,
     maxRegistrations: apiData.max_registrations,
+    contactInformation: apiData.contact_information,
     creatorName: apiData.creator_name,
     creatorId: apiData.creator_id,
     createTime: apiData.create_time,
@@ -93,6 +96,7 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
+    contact_information: formData.contactInformation || undefined,
     is_enabled: formData.isEnabled,
   };
 };
@@ -109,6 +113,7 @@ const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivity
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
+    contact_information: formData.contactInformation || undefined,
     is_enabled: formData.isEnabled,
   };
 };
@@ -298,6 +303,7 @@ const resetFormData = () => {
   formData.duration = 0;
   formData.minParticipants = 0;
   formData.maxRegistrations = 0;
+  formData.contactInformation = '';
   formData.isEnabled = true;
   editingId.value = null;
 };
@@ -325,6 +331,7 @@ const openEditModal = async (row: ActivityData) => {
   formData.duration = row.duration;
   formData.minParticipants = row.minParticipants;
   formData.maxRegistrations = row.maxRegistrations;
+  formData.contactInformation = row.contactInformation || '';
   formData.isEnabled = row.isEnabled;
   
   // 先设置编辑器内容，再打开模态框
@@ -731,6 +738,18 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <div style="color: #999; font-size: 12px; margin-top: 5px;">
             建议设置在开团人数以上
           </div>
+        </Form.Item>
+
+        <Form.Item
+          label="联系方式"
+          name="contactInformation"
+        >
+          <Input
+            v-model:value="formData.contactInformation"
+            placeholder="请输入联系方式（如微信号、QQ号等）"
+            show-count
+            :maxlength="100"
+          />
         </Form.Item>
 
         <Form.Item label="是否启用">

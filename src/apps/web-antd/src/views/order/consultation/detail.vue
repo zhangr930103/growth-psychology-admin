@@ -20,9 +20,9 @@ const orderDetail = ref<ConsultationOrderDetailData | null>(null);
 // 获取咨询方式文本
 const getMethodText = (method: string): string => {
   const methodMap: Record<string, string> = {
-    online: '在线咨询',
-    offline: '线下面诊',
-    phone: '电话咨询',
+    online: '视频',      // 线上视频咨询
+    phone: '语音',       // 电话/语音咨询
+    offline: '面对面',    // 线下面对面咨询
   };
   return methodMap[method] || method;
 };
@@ -142,12 +142,21 @@ onMounted(async () => {
             }}</span>
           </div>
 
-          <div class="flex items-center">
+          <div v-if="orderDetail.consultation_method === 'offline'" class="flex items-center">
             <span class="w-32 text-right text-gray-600 dark:text-gray-300"
               >咨询地址：</span
             >
             <span class="ml-2">{{
               orderDetail.consultation_address || '-'
+            }}</span>
+          </div>
+
+          <div v-else class="flex items-center">
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300"
+              >会议号：</span
+            >
+            <span class="ml-2">{{
+              orderDetail.meeting_id || '-'
             }}</span>
           </div>
 

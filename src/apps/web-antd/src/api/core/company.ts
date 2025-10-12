@@ -28,6 +28,7 @@ export interface CompanyData {
   created_at: string;
   updated_at: string;
   create_time: number;
+  consultation_address?: string;
 }
 
 /**
@@ -46,6 +47,7 @@ export interface CreateCompanyParams {
   notification_method?: string;
   banner?: string;
   recharge_amount?: number;
+  consultation_address?: string;
 }
 
 /**
@@ -65,6 +67,7 @@ export interface UpdateCompanyParams {
   company_name: string;
   notification_method?: string;
   banner?: string;
+  consultation_address?: string;
 }
 
 /**

@@ -3,14 +3,15 @@ import type { VbenFormProps } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { ref } from 'vue';
-import { Page } from '@vben/common-ui';
-import { Button } from 'ant-design-vue';
+import { Page, useVbenModal } from '@vben/common-ui';
+import { Button, message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
+import { useVbenForm, z } from '#/adapter/form';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import type { ConsultationOrderData } from '#/api/core/order';
-import { getConsultationOrderListApi } from '#/api/core/order';
+import { getConsultationOrderListApi, updateMeetingNumberApi } from '#/api/core/order';
 
 defineOptions({
   name: 'ConsultationOrderList',
@@ -44,6 +45,7 @@ const statusTabs = [
 
 const currentStatus = ref('');
 const router = useRouter();
+const currentOrder = ref<ConsultationOrder | null>(null);
 
 // 搜索表单配置
 const formOptions: VbenFormProps = {
@@ -152,9 +154,9 @@ const getStatusColor = (status: string): string => {
 
 const getMethodText = (method: string): string => {
   const methodMap: Record<string, string> = {
-    online: '在线咨询',
-    offline: '线下面诊',
-    phone: '电话咨询',
+    online: '视频',      // 线上视频咨询
+    phone: '语音',       // 电话/语音咨询
+    offline: '面对面',    // 线下面对面咨询
   };
   return methodMap[method] || method;
 };
@@ -176,6 +178,109 @@ const handleStatusChange = (status: string) => {
 
 const handleViewDetail = (row: ConsultationOrder) => {
   router.push(`/order/consultation/detail/${row.id}`);
+};
+
+// 填写会议号表单配置
+const meetingFormSchema = [
+  {
+    component: 'RadioGroup',
+    fieldName: 'consultationMethod',
+    label: '咨询方式',
+    defaultValue: 'online',
+    componentProps: {
+      options: [
+        { label: '视频', value: 'online' },
+        { label: '语音', value: 'phone' },
+      ],
+      buttonStyle: 'solid',
+      optionType: 'button',
+      style: { width: '100%' },
+    },
+  },
+  {
+    component: 'Textarea',
+    fieldName: 'contactInfo',
+    label: '腾讯会议地址',
+    rules: z.string().min(1, '请输入腾讯会议地址'),
+    componentProps: {
+      placeholder: '请输入',
+      rows: 4,
+      showCount: false,
+    },
+  },
+];
+
+// 创建填写会议号表单
+const [MeetingForm, meetingFormApi] = useVbenForm({
+  schema: meetingFormSchema,
+  showDefaultActions: false,
+  commonConfig: {
+    labelWidth: 100,
+  },
+});
+
+// 创建填写会议号弹窗
+const [MeetingModal, meetingModalApi] = useVbenModal({
+  title: '会议号',
+  onConfirm: async () => {
+    try {
+      const validationResult = await meetingFormApi.validate();
+      if (validationResult.valid) {
+        const formValues = await meetingFormApi.getValues();
+
+        if (!currentOrder.value) {
+          message.error('订单信息丢失，请重新打开');
+          return;
+        }
+
+        message.loading({
+          content: '正在保存，请稍等...',
+          duration: 0,
+          key: 'meeting_msg',
+        });
+
+        try {
+          await updateMeetingNumberApi({
+            order_id: currentOrder.value.id,
+            meeting_id: formValues.contactInfo,
+            consultation_method: formValues.consultationMethod,
+          });
+
+          message.success({
+            content: '保存成功',
+            key: 'meeting_msg',
+          });
+          meetingModalApi.close();
+          // 刷新列表
+          gridApi.query();
+        } catch (error) {
+          message.destroy('meeting_msg');
+          console.error('保存失败:', error);
+        }
+      }
+    } catch (error) {
+      console.error('表单验证失败:', error);
+    }
+  },
+  onCancel: () => {
+    meetingFormApi.resetForm();
+    currentOrder.value = null;
+    meetingModalApi.close();
+  },
+});
+
+// 处理填写会议号
+const handleFillMeetingNumber = (row: ConsultationOrder) => {
+  console.log('填写会议号:', row);
+  
+  // 设置当前订单
+  currentOrder.value = row;
+  
+  // 清空表单
+  meetingFormApi.resetForm();
+  
+  // 打开弹窗
+  meetingModalApi.open();
 };
 
 // 表格配置
@@ -206,9 +311,9 @@ const gridOptions: VxeTableGridOptions = {
     },
     {
       field: 'consultation_address',
-      title: '咨询地址',
+      title: '咨询地址/会议号',
       minWidth: 150,
-      showOverflow: 'tooltip',
+      slots: { default: 'consultationAddress' },
     },
     {
       field: 'situation',
@@ -236,7 +341,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'actions',
       title: '操作',
-      width: 80,
+      width: 180,
       slots: { default: 'actions' },
     },
   ],
@@ -323,6 +428,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
         </span>
       </template>
 
+      <template #consultationAddress="{ row }">
+        <span v-if="row.consultation_method === 'offline'">
+          {{ row.consultation_address || '-' }}
+        </span>
+        <span v-else>
+          {{ row.meeting_id || '-' }}
+        </span>
+      </template>
+
       <template #status="{ row }">
         <span :class="getStatusColor(row.status)">
           {{ getStatusText(row.status) }}
@@ -336,15 +450,30 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #actions="{ row }">
-        <Button
-          type="link"
-          size="small"
-          @click="handleViewDetail(row)"
-        >
-          详情
-        </Button>
+        <div class="flex gap-2">
+          <Button
+            v-if="['online', 'phone'].includes(row.consultation_method)"
+            type="link"
+            size="small"
+            @click="handleFillMeetingNumber(row)"
+          >
+            填写会议号
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            @click="handleViewDetail(row)"
+          >
+            详情
+          </Button>
+        </div>
       </template>
 
     </Grid>
+
+    <!-- 填写会议号弹窗 -->
+    <MeetingModal class="w-[500px]" :overlay-blur="2">
+      <MeetingForm />
+    </MeetingModal>
   </Page>
 </template>

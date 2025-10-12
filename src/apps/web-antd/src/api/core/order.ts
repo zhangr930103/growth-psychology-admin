@@ -23,6 +23,7 @@ export interface ConsultationOrderData {
   appointment_time: string;
   consultation_method: 'online' | 'offline' | 'phone';
   consultation_address: string;
+  meeting_id?: string;
   situation: string;
   customer: string;
   customer_id: number;
@@ -123,6 +124,7 @@ export interface ConsultationOrderDetailData {
   appointment_time: string; // ISO 字符串格式
   consultation_method: 'online' | 'offline' | 'phone';
   consultation_address: string;
+  meeting_id?: string;
   situation: string;
   customer: string;
   customer_id: number | null;
@@ -149,4 +151,31 @@ export async function getActivityOrderDetailApi(
   orderId: string | number
 ): Promise<ActivityOrderData> {
   return requestClient.get<ActivityOrderData>(`/orders/activity/${orderId}`);
+}
+
+/**
+ * 填写会议号参数类型
+ */
+export interface UpdateMeetingNumberParams {
+  order_id: number;
+  meeting_id: string;
+  consultation_method?: string;
+}
+
+/**
+ * 填写会议号响应类型
+ */
+export interface UpdateMeetingNumberResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
+ * 填写会议号
+ */
+export async function updateMeetingNumberApi(
+  params: UpdateMeetingNumberParams
+): Promise<UpdateMeetingNumberResponse> {
+  return requestClient.post<UpdateMeetingNumberResponse>('/orders/consultation/update-meeting', params);
 }

@@ -41,6 +41,7 @@ interface CompanyData {
   status: 'active' | 'inactive';
   notificationMethod?: string;
   banner?: string;
+  consultationAddress?: string;
 }
 
 // 将API数据转换为页面数据的函数
@@ -56,6 +57,7 @@ const transformCompanyData = (apiData: ApiCompanyData): CompanyData => {
     status: apiData.status,
     notificationMethod: apiData.notification_method,
     banner: apiData.banner,
+    consultationAddress: apiData.consultation_address,
   };
 };
 
@@ -224,6 +226,14 @@ const createFormSchema = [
     },
   },
   {
+    component: 'Input',
+    fieldName: 'consultationAddress',
+    label: '咨询地址',
+    componentProps: {
+      placeholder: '请输入咨询地址',
+    },
+  },
+  {
     component: 'InputNumber',
     fieldName: 'rechargeAmount',
     label: '充值金额',
@@ -302,6 +312,14 @@ const editFormSchema = [
     rules: z.string().min(2, '公司名称最少需要2个字符'),
     componentProps: {
       placeholder: '请输入公司名称',
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'consultationAddress',
+    label: '咨询地址',
+    componentProps: {
+      placeholder: '请输入咨询地址',
     },
   },
   {
@@ -480,6 +498,7 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
 
           if (!certificateUrl) {
+            message.destroy('add_recharge_msg');
             message.error('请上传充值凭证');
             return;
           }
@@ -500,6 +519,8 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           // 刷新充值记录列表
           rechargeGridApi.query();
         } catch (error) {
+          // 取消loading提示
+          message.destroy('add_recharge_msg');
           console.error('添加充值记录失败:', error);
         }
       }
@@ -545,6 +566,10 @@ const [CreateModal, createModalApi] = useVbenModal({
             createParams.notification_method = formValues.notificationMethod.trim();
           }
           
+          if (formValues.consultationAddress && formValues.consultationAddress.trim()) {
+            createParams.consultation_address = formValues.consultationAddress.trim();
+          }
+          
           if (bannerUrl) {
             createParams.banner = bannerUrl;
           }
@@ -559,6 +584,8 @@ const [CreateModal, createModalApi] = useVbenModal({
           // 刷新列表
           gridApi.query();
         } catch (error) {
+          // 取消loading提示
+          message.destroy('create_msg');
           console.error('新增失败:', error);
         }
       }
@@ -592,6 +619,7 @@ const [EditModal, editModalApi] = useVbenModal({
           const bannerUrl = formValues.banner?.[0]?.response?.file_url || '';
 
           if (!currentEditId.value) {
+            message.destroy('edit_msg');
             message.error('公司ID丢失，请重新打开编辑窗口');
             return;
           }
@@ -599,6 +627,7 @@ const [EditModal, editModalApi] = useVbenModal({
           await updateCompanyApi({
             id: currentEditId.value,
             company_name: formValues.companyName,
+            consultation_address: formValues.consultationAddress || '',
             notification_method: formValues.notificationMethod || '',
             banner: bannerUrl,
           });
@@ -611,6 +640,8 @@ const [EditModal, editModalApi] = useVbenModal({
           // 刷新列表
           gridApi.query();
         } catch (error) {
+          // 取消loading提示
+          message.destroy('edit_msg');
           console.error('保存失败:', error);
         }
       }
@@ -655,6 +686,7 @@ const handleEdit = (row: CompanyData) => {
   // 设置表单数据
   editFormApi.setValues({
     companyName: row.companyName,
+    consultationAddress: row.consultationAddress || '',
     notificationMethod: row.notificationMethod || '',
     banner: row.banner ? [
       {
