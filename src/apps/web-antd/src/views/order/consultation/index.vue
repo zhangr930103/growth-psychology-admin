@@ -152,9 +152,9 @@ const getStatusColor = (status: string): string => {
 
 const getMethodText = (method: string): string => {
   const methodMap: Record<string, string> = {
-    online: '在线咨询',
-    offline: '线下面诊',
-    phone: '电话咨询',
+    online: '视频',      // 线上视频咨询
+    phone: '语音',       // 电话/语音咨询
+    offline: '面对面',    // 线下面对面咨询
   };
   return methodMap[method] || method;
 };
