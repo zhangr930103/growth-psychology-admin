@@ -28,6 +28,7 @@ export interface TimeSlot {
 export interface CounselorData {
   id: number;
   counselor_name: string;
+  phone: string;
   school: string;
   major: string;
   personal_intro: string;
@@ -67,6 +68,7 @@ export interface CounselorListResponse {
  */
 export interface CreateCounselorParams {
   counselor_name: string;
+  phone: string;
   school: string;
   major: string;
   personal_intro: string;
@@ -100,6 +102,7 @@ export interface CreateCounselorResponse {
 export interface EditCounselorParams {
   id: number;
   counselor_name: string;
+  phone: string;
   school: string;
   major: string;
   personal_intro: string;

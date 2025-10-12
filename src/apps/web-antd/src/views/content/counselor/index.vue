@@ -103,6 +103,7 @@ interface TimeSlot {
 interface CounselorData {
   id: number;
   counselorName: string;
+  phone: string; // 手机号
   school: string;
   major: string;
   personalIntro: string;
@@ -137,6 +138,7 @@ const adaptApiDataToLocal = (apiData: ApiCounselorData): CounselorData => {
   return {
     id: apiData.id,
     counselorName: apiData.counselor_name,
+    phone: apiData.phone || '',
     school: apiData.school,
     major: apiData.major,
     personalIntro: apiData.personal_intro,
@@ -235,6 +237,7 @@ const adaptFormDataToApi = (formData: any): CreateCounselorParams => {
 
   return {
     counselor_name: formData.counselorName || '',
+    phone: formData.phone || '',
     school: formData.school || '',
     major: formData.major || '',
     personal_intro: formData.personalIntro || '',
@@ -283,6 +286,7 @@ const adaptFormDataToEditApi = (formData: any, counselorId: number): EditCounsel
   return {
     id: counselorId,
     counselor_name: formData.counselorName || '',
+    phone: formData.phone || '',
     school: formData.school || '',
     major: formData.major || '',
     personal_intro: formData.personalIntro || '',
@@ -528,6 +532,7 @@ const handleEdit = (row: CounselorData) => {
   // 准备表单数据
   const formData = {
     counselorName: row.counselorName,
+    phone: row.phone || '',
     school: row.school,
     major: row.major,
     personalIntro: row.personalIntro,
@@ -817,6 +822,22 @@ const getCounselorFormSchema = () => [
     rules: z.string().min(1, '请输入咨询师姓名'),
     componentProps: {
       placeholder: '请输入咨询师姓名',
+      style: {
+        width: '70%',
+        boxSizing: 'border-box',
+      },
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'phone',
+    label: '手机号',
+    rules: z.string()
+      .min(1, '请输入手机号')
+      .regex(/^1[3-9]\d{9}$/, '请输入正确的手机号格式'),
+    componentProps: {
+      placeholder: '请输入手机号',
+      maxlength: 11,
       style: {
         width: '70%',
         boxSizing: 'border-box',
