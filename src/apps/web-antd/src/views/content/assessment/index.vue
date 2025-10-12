@@ -244,10 +244,7 @@ const handlePublish = async (row: AssessmentData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    console.error('切换问卷状态失败:', error);
-    message.error('切换问卷状态失败，请重试');
-  } finally {
+  }  finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -271,10 +268,7 @@ const handleDelete = async (row: AssessmentData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    console.error('删除问卷失败:', error);
-    message.error('删除问卷失败，请重试');
-  } finally {
+  }  finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -358,9 +352,6 @@ const handleSubmit = async () => {
 
     // 关闭弹窗
     closeModal();
-  } catch (error) {
-    console.error(`${editingId.value ? '编辑' : '新增'}问卷失败:`, error);
-    message.error(`${editingId.value ? '编辑' : '新增'}问卷失败，请重试`);
   } finally {
     modalLoading.value = false;
   }
