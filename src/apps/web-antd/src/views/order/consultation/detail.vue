@@ -30,11 +30,25 @@ const getMethodText = (method: string): string => {
 // 获取订单状态文本
 const getStatusText = (status: string): string => {
   const statusMap: Record<string, string> = {
-    pending: '待处理',
+    pending: '待咨询',
     completed: '已完成',
     cancelled: '已取消',
+    review_pending: '待评价',
+    reviewed: '已评价',
   };
   return statusMap[status] || status;
+};
+
+// 获取订单状态颜色
+const getStatusColor = (status: string): string => {
+  const colorMap: Record<string, string> = {
+    pending: 'text-orange-600',
+    completed: 'text-green-600',
+    cancelled: 'text-red-600',
+    review_pending: 'text-orange-600',
+    reviewed: 'text-green-600',
+  };
+  return colorMap[status] || '';
 };
 
 // 获取订单详情数据
@@ -105,15 +119,9 @@ onMounted(async () => {
             <span class="w-32 text-right text-gray-600 dark:text-gray-300"
               >订单状态：</span
             >
-            <span
-              class="ml-2"
-              :class="{
-                'text-orange-600': orderDetail.status === 'pending',
-                'text-green-600': orderDetail.status === 'completed',
-                'text-red-600': orderDetail.status === 'cancelled',
-              }"
-              >{{ getStatusText(orderDetail.status) }}</span
-            >
+            <span class="ml-2" :class="getStatusColor(orderDetail.status)">
+              {{ getStatusText(orderDetail.status) }}
+            </span>
           </div>
 
           <div class="flex items-center">

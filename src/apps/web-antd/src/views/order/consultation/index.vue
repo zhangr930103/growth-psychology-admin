@@ -133,6 +133,8 @@ const getStatusText = (status: string): string => {
     pending: '待咨询',
     completed: '已完成',
     cancelled: '已取消',
+    review_pending: '待评价',
+    reviewed: '已评价',
   };
   return statusMap[status] || status;
 };
@@ -142,6 +144,8 @@ const getStatusColor = (status: string): string => {
     pending: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded text-xs',
     completed: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs',
     cancelled: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs',
+    review_pending: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded text-xs',
+    reviewed: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs',
   };
   return colorMap[status] || '';
 };
