@@ -1339,10 +1339,7 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
 
       // 刷新列表
       gridApi.query();
-    } catch (error) {
-      const actionText = counselorModalMode.value === 'add' ? '新增' : '编辑';
-      message.error({ content: `${actionText}失败，请重试`, key: 'counselor_submit' });
-    } finally {
+    }finally {
       // 关闭loading
       counselorModalApi.setState({ loading: false });
     }
