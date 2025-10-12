@@ -23,6 +23,10 @@ const modalVisible = ref(false);
 const modalLoading = ref(false);
 const editingId = ref<number | null>(null);
 
+// 查看活动内容弹窗
+const contentModalVisible = ref(false);
+const currentActivityContent = ref('');
+
 // 编辑器key，用于强制重新渲染编辑器
 const editorKey = ref(0);
 
@@ -393,6 +397,17 @@ const handleEdit = (row: ActivityData) => {
   openEditModal(row);
 };
 
+// 查看活动内容
+const handleViewContent = (content: string) => {
+  currentActivityContent.value = content;
+  contentModalVisible.value = true;
+};
+
+const closeContentModal = () => {
+  contentModalVisible.value = false;
+  currentActivityContent.value = '';
+};
+
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
@@ -405,8 +420,8 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'activityContent',
       title: '活动内容',
-      minWidth: 250,
-      showOverflow: 'tooltip',
+      width: 120,
+      slots: { default: 'activityContent' },
     },
     {
       field: 'activityTime',
@@ -501,6 +516,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
         <template #toolbar-actions>
           <Button type="primary" class="mr-4" @click="handleCreate">
             新建
+          </Button>
+        </template>
+
+        <template #activityContent="{ row }">
+          <Button type="link" size="small" @click="handleViewContent(row.activityContent)">
+            查看内容
           </Button>
         </template>
 
@@ -719,6 +740,20 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </Radio.Group>
         </Form.Item>
       </Form>
+    </Modal>
+
+    <!-- 查看活动内容弹窗 -->
+    <Modal
+      v-model:open="contentModalVisible"
+      title="活动内容"
+      width="800px"
+      :footer="null"
+      @cancel="closeContentModal"
+    >
+      <div 
+        v-html="currentActivityContent" 
+        style="padding: 20px 0; max-height: 70vh; overflow-y: auto;"
+      ></div>
     </Modal>
   </Spin>
 </template>
