@@ -495,10 +495,6 @@ const handleToggleStatus = async (row: CounselorData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    message.error({
-      content: `${action}失败，请重试`,
-    });
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -519,10 +515,6 @@ const handleDelete = async (row: CounselorData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error) {
-    message.error({
-      content: '删除失败，请重试',
-    });
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -1191,9 +1183,7 @@ const [DurationModal, durationModalApi] = useVbenModal({
 
       // 刷新列表
       durationGridApi.query();
-    } catch (error) {
-      message.error({ content: '提交失败，请重试', key: 'add_duration' });
-    } finally {
+    }  finally {
       // 关闭loading
       durationModalApi.setState({ loading: false });
     }
@@ -1256,8 +1246,6 @@ const [AuditModal, auditModalApi] = useVbenModal({
 
       // 刷新列表
       durationGridApi.query();
-    } catch (error) {
-      message.error({ content: '审核失败，请重试', key: 'audit' });
     } finally {
       // 关闭loading
       auditModalApi.setState({ loading: false });
@@ -1339,7 +1327,7 @@ const [CounselorModal, counselorModalApi] = useVbenModal({
 
       // 刷新列表
       gridApi.query();
-    }finally {
+    } finally {
       // 关闭loading
       counselorModalApi.setState({ loading: false });
     }

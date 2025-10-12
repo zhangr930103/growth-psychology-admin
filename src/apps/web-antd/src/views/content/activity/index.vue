@@ -23,6 +23,10 @@ const modalVisible = ref(false);
 const modalLoading = ref(false);
 const editingId = ref<number | null>(null);
 
+// 查看活动内容弹窗
+const contentModalVisible = ref(false);
+const currentActivityContent = ref('');
+
 // 编辑器key，用于强制重新渲染编辑器
 const editorKey = ref(0);
 
@@ -202,8 +206,6 @@ const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
       total: response.total,
     };
   } catch (error) {
-    console.error('获取活动列表失败:', error);
-    message.error('获取活动列表失败，请稍后重试');
     return {
       list: [],
       total: 0,
@@ -232,11 +234,6 @@ const handleEnable = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '启用失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('启用活动失败:', error);
   } finally {
     // 关闭全屏loading
     spinning.value = false;
@@ -263,12 +260,7 @@ const handleDisable = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '禁用失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('禁用活动失败:', error);
-  } finally {
+  }finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -290,12 +282,7 @@ const handleDelete = async (row: ActivityData) => {
 
     // 刷新列表
     gridApi.query();
-  } catch (error: any) {
-    // 错误处理
-    const errorMsg = error?.response?.data?.message || error?.message || '删除失败，请稍后重试';
-    message.error(errorMsg);
-    console.error('删除活动失败:', error);
-  } finally {
+  }finally {
     // 关闭全屏loading
     spinning.value = false;
   }
@@ -410,6 +397,17 @@ const handleEdit = (row: ActivityData) => {
   openEditModal(row);
 };
 
+// 查看活动内容
+const handleViewContent = (content: string) => {
+  currentActivityContent.value = content;
+  contentModalVisible.value = true;
+};
+
+const closeContentModal = () => {
+  contentModalVisible.value = false;
+  currentActivityContent.value = '';
+};
+
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
@@ -422,8 +420,8 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'activityContent',
       title: '活动内容',
-      minWidth: 250,
-      showOverflow: 'tooltip',
+      width: 120,
+      slots: { default: 'activityContent' },
     },
     {
       field: 'activityTime',
@@ -518,6 +516,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
         <template #toolbar-actions>
           <Button type="primary" class="mr-4" @click="handleCreate">
             新建
+          </Button>
+        </template>
+
+        <template #activityContent="{ row }">
+          <Button type="link" size="small" @click="handleViewContent(row.activityContent)">
+            查看内容
           </Button>
         </template>
 
@@ -736,6 +740,20 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </Radio.Group>
         </Form.Item>
       </Form>
+    </Modal>
+
+    <!-- 查看活动内容弹窗 -->
+    <Modal
+      v-model:open="contentModalVisible"
+      title="活动内容"
+      width="800px"
+      :footer="null"
+      @cancel="closeContentModal"
+    >
+      <div 
+        v-html="currentActivityContent" 
+        style="padding: 20px 0; max-height: 70vh; overflow-y: auto;"
+      ></div>
     </Modal>
   </Spin>
 </template>

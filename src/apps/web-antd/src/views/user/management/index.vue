@@ -154,7 +154,6 @@ const handleExport = async () => {
     }
   } catch (error) {
     console.error('导出失败:', error);
-    message.error('导出失败，请重试');
   } finally {
     // 关闭全屏loading
     spinning.value = false;
