@@ -178,8 +178,6 @@ const getCompanyList = async (params: SearchParams): Promise<ApiResponse> => {
       total: response.total,
     };
   } catch (error) {
-    console.error('获取公司列表失败:', error);
-    message.error('获取公司列表失败，请重试');
     return {
       list: [],
       total: 0,
@@ -207,8 +205,6 @@ const getRechargeList = async (params: RechargeSearchParams): Promise<RechargeAp
       total: response.total,
     };
   } catch (error) {
-    console.error('获取充值记录失败:', error);
-    message.error('获取充值记录失败，请重试');
     return {
       list: [],
       total: 0,
@@ -505,10 +501,6 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
           rechargeGridApi.query();
         } catch (error) {
           console.error('添加充值记录失败:', error);
-          message.error({
-            content: '添加充值记录失败，请重试',
-            key: 'add_recharge_msg',
-          });
         }
       }
     } catch (error) {
@@ -568,10 +560,6 @@ const [CreateModal, createModalApi] = useVbenModal({
           gridApi.query();
         } catch (error) {
           console.error('新增失败:', error);
-          message.error({
-            content: '新增失败，请重试',
-            key: 'create_msg',
-          });
         }
       }
     } catch (error) {
@@ -624,10 +612,6 @@ const [EditModal, editModalApi] = useVbenModal({
           gridApi.query();
         } catch (error) {
           console.error('保存失败:', error);
-          message.error({
-            content: '保存失败，请重试',
-            key: 'edit_msg',
-          });
         }
       }
     } catch (error) {
@@ -939,7 +923,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
           </template>
 
           <template #rechargeRecordAmount="{ row }">
-            <span class="font-semibold text-green-600">
+            <span class="font-semibold text-red-600">
               {{ formatAmount(row.rechargeAmount) }}
             </span>
           </template>
