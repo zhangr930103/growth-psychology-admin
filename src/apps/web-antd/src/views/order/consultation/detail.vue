@@ -142,12 +142,21 @@ onMounted(async () => {
             }}</span>
           </div>
 
-          <div class="flex items-center">
+          <div v-if="orderDetail.consultation_method === 'offline'" class="flex items-center">
             <span class="w-32 text-right text-gray-600 dark:text-gray-300"
               >咨询地址：</span
             >
             <span class="ml-2">{{
               orderDetail.consultation_address || '-'
+            }}</span>
+          </div>
+
+          <div v-else class="flex items-center">
+            <span class="w-32 text-right text-gray-600 dark:text-gray-300"
+              >会议号：</span
+            >
+            <span class="ml-2">{{
+              orderDetail.meeting_id || '-'
             }}</span>
           </div>
 
