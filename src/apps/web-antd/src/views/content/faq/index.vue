@@ -100,8 +100,8 @@ const formOptions: VbenFormProps = {
         placeholder: '全部',
         options: [
           { label: '全部', value: '' },
-          { label: '禁用', value: 'active' },
-          { label: '启用', value: 'inactive' },
+          { label: '已启用', value: 'active' },
+          { label: '禁用', value: 'inactive' },
         ],
       },
     },
@@ -136,8 +136,6 @@ const getFaqList = async (params: SearchParams) => {
     const result = await getFaqListApi(apiParams);
     return result;
   } catch (error) {
-    console.error('获取FAQ列表失败:', error);
-    message.error('获取FAQ列表失败，请稍后重试');
     return {
       list: [],
       total: 0,
@@ -152,9 +150,7 @@ const handleEnable = async (row: FaqData) => {
     await toggleFaqStatusApi({ id: row.id, status: 'active' });
     message.success('FAQ启用成功');
     gridApi.query();
-  } catch (error) {
-    message.error('FAQ启用失败');
-  } finally {
+  }finally {
     spinning.value = false;
   }
 };
@@ -165,8 +161,6 @@ const handleDisable = async (row: FaqData) => {
     await toggleFaqStatusApi({ id: row.id, status: 'inactive' });
     message.success('FAQ禁用成功');
     gridApi.query();
-  } catch (error) {
-    message.error('FAQ禁用失败');
   } finally {
     spinning.value = false;
   }
@@ -178,9 +172,7 @@ const handleDelete = async (row: FaqData) => {
     await deleteFaqApi(row.id);
     message.success('FAQ删除成功');
     gridApi.query();
-  } catch (error) {
-    message.error('FAQ删除失败');
-  } finally {
+  }  finally {
     spinning.value = false;
   }
 };
@@ -408,7 +400,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
         <template #status="{ row }">
           <Tag :color="row.status === 'active' ? 'green' : 'red'">
-            {{ row.status === 'active' ? '已启用' : '未启用' }}
+            {{ row.status === 'active' ? '已启用' : '禁用' }}
           </Tag>
         </template>
 
