@@ -12,4 +12,8 @@ export const overridesPreferences = defineOverridesPreferences({
     // 设置首页为咨询师管理页面
     defaultHomePath: '/content/counselor',
   },
+  // 启用菜单logo
+  logo: {
+    enable: true,
+  },
 });
