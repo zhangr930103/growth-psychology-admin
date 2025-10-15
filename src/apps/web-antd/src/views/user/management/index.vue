@@ -134,10 +134,10 @@ const handleExport = async () => {
     const response = await exportUserListApi(exportParams);
     
     // 处理文件下载
-    if (response && response.download_url) {
+    if (response && response.url) {
       // 创建下载链接
       const link = document.createElement('a');
-      link.href = response.download_url;
+      link.href = response.url;
       link.download = response.filename;
       link.style.display = 'none';
       
