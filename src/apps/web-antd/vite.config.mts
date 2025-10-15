@@ -19,7 +19,7 @@ export default defineConfig(async (config) => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, '/api'),
             // 代理到实际的API服务器
-            target: 'https://tongchengzhang.com',
+            target: 'https://admin.tongchengzhang.com',
             ws: true,
           },
         },
