@@ -47,6 +47,20 @@ defineOptions({
   name: 'CounselorManagement',
 });
 
+// 咨询方式映射
+const consultingMethodMap: Record<string, string> = {
+  video: '视频',
+  voice: '语音',
+  face_to_face: '面对面',
+};
+
+// 咨询方式映射函数 - 处理数组或字符串
+const getConsultingMethodLabels = (methods: string[] | string | undefined): string => {
+  if (!methods) return '-';
+  const methodArray = Array.isArray(methods) ? methods : [methods];
+  return methodArray.map(method => consultingMethodMap[method] || method).join('、');
+};
+
 // 全屏loading状态
 const spinning = ref(false);
 
@@ -1670,6 +1684,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'counselingMethod',
       title: '咨询方式',
+      slots: { default: 'counselingMethod' },
       showOverflow: 'tooltip',
     },
     {
@@ -1852,6 +1867,10 @@ watch(
           <span class="font-medium text-green-600">
             ¥{{ row.settlementPrice }}
           </span>
+        </template>
+
+        <template #counselingMethod="{ row }">
+          <span>{{ getConsultingMethodLabels(row.counselingMethod) }}</span>
         </template>
 
         <template #isOnline="{ row }">
