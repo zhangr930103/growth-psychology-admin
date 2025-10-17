@@ -18,6 +18,7 @@ export interface CompanyListParams {
 export interface CompanyData {
   id: number;
   company_name: string;
+  invite_code?: string;
   notification_method: string;
   banner: string;
   recharge_amount: string;
@@ -44,6 +45,7 @@ export interface CompanyListResponse {
  */
 export interface CreateCompanyParams {
   company_name: string;
+  invite_code: string;
   notification_method?: string;
   banner?: string;
   recharge_amount?: number;
@@ -65,6 +67,7 @@ export interface CreateCompanyResponse {
 export interface UpdateCompanyParams {
   id: number;
   company_name: string;
+  invite_code: string;
   notification_method?: string;
   banner?: string;
   consultation_address?: string;
@@ -171,4 +174,69 @@ export async function getRechargeListApi(params: RechargeListParams): Promise<Re
  */
 export async function createRechargeApi(params: CreateRechargeParams): Promise<CreateRechargeResponse> {
   return requestClient.post<CreateRechargeResponse>('/companies/recharge/create', params);
+}
+
+/**
+ * 扣费记录查询参数类型
+ */
+export interface DeductListParams {
+  page: number;
+  size: number;
+  company_id: number;
+}
+
+/**
+ * 扣费记录数据类型
+ */
+export interface DeductRecord {
+  id: number;
+  company_id: number;
+  company_name: string;
+  deduct_amount: string;
+  deduct_time: number;
+  operator: string;
+  operator_id: number;
+  status: 'success' | 'pending' | 'failed';
+  certificate: string;
+  created_at: string;
+}
+
+/**
+ * 扣费记录列表响应类型
+ */
+export interface DeductListResponse {
+  list: DeductRecord[];
+  total: number;
+}
+
+/**
+ * 新增扣费记录参数类型
+ */
+export interface CreateDeductParams {
+  deduct_amount: number;
+  certificate: string;
+  company_id: number;
+}
+
+/**
+ * 新增扣费记录响应类型
+ */
+export interface CreateDeductResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
+ * 获取扣费记录列表
+ */
+export async function getDeductListApi(params: DeductListParams): Promise<DeductListResponse> {
+  return requestClient.post<DeductListResponse>('/companies/deduct/list', params);
+}
+
+/**
+ * 新增扣费记录
+ */
+export async function createDeductApi(params: CreateDeductParams): Promise<CreateDeductResponse> {
+  return requestClient.post<CreateDeductResponse>('/companies/deduct/create', params);
 }

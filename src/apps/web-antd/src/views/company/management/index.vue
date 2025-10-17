@@ -14,12 +14,17 @@ import {
   createCompanyApi,
   updateCompanyApi,
   createRechargeApi,
+  getDeductListApi,
+  createDeductApi,
   type CompanyData as ApiCompanyData,
   type CompanyListParams,
   type RechargeRecord as ApiRechargeRecord,
   type RechargeListParams,
   type CreateCompanyParams,
-  type CreateRechargeParams
+  type CreateRechargeParams,
+  type DeductRecord as ApiDeductRecord,
+  type DeductListParams,
+  type CreateDeductParams
 } from '#/api/core/company';
 
 import { useVbenForm, z } from '#/adapter/form';
@@ -33,6 +38,7 @@ defineOptions({
 interface CompanyData {
   id: number;
   companyName: string;
+  inviteCode?: string;
   rechargeAmount: number;
   balance: number;
   creator: string;
@@ -49,6 +55,7 @@ const transformCompanyData = (apiData: ApiCompanyData): CompanyData => {
   return {
     id: apiData.id,
     companyName: apiData.company_name,
+    inviteCode: apiData.invite_code,
     rechargeAmount: parseFloat(apiData.recharge_amount) || 0,
     balance: parseFloat(apiData.balance) || 0,
     creator: apiData.creator,
@@ -114,6 +121,45 @@ interface RechargeSearchParams {
 
 interface RechargeApiResponse {
   list: RechargeRecord[];
+  total: number;
+}
+
+// 扣费记录相关类型定义
+interface DeductRecord {
+  id: number;
+  companyId: number;
+  companyName: string;
+  deductAmount: number;
+  deductTime: number;
+  operator: string;
+  operatorId: number;
+  status: 'success' | 'pending' | 'failed';
+  certificate?: string;
+}
+
+// 将API扣费数据转换为页面数据的函数
+const transformDeductData = (apiData: ApiDeductRecord): DeductRecord => {
+  return {
+    id: apiData.id,
+    companyId: apiData.company_id,
+    companyName: apiData.company_name,
+    deductAmount: parseFloat(apiData.deduct_amount) || 0,
+    deductTime: apiData.deduct_time,
+    operator: apiData.operator,
+    operatorId: apiData.operator_id,
+    status: apiData.status,
+    certificate: apiData.certificate || '',
+  };
+};
+
+interface DeductSearchParams {
+  page?: number;
+  size?: number;
+  companyId?: number;
+}
+
+interface DeductApiResponse {
+  list: DeductRecord[];
   total: number;
 }
 
@@ -214,6 +260,33 @@ const getRechargeList = async (params: RechargeSearchParams): Promise<RechargeAp
   }
 };
 
+// 获取扣费记录列表API调用
+const getDeductList = async (params: DeductSearchParams): Promise<DeductApiResponse> => {
+  try {
+    if (!params.companyId) {
+      throw new Error('公司ID不能为空');
+    }
+
+    const apiParams: DeductListParams = {
+      page: params.page || 1,
+      size: params.size || 10,
+      company_id: params.companyId,
+    };
+
+    const response = await getDeductListApi(apiParams);
+    
+    return {
+      list: response.list.map(transformDeductData),
+      total: response.total,
+    };
+  } catch (error) {
+    return {
+      list: [],
+      total: 0,
+    };
+  }
+};
+
 // 新增表单配置（包含充值金额）
 const createFormSchema = [
   {
@@ -223,6 +296,15 @@ const createFormSchema = [
     rules: z.string().min(2, '公司名称最少需要2个字符'),
     componentProps: {
       placeholder: '请输入公司名称',
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'inviteCode',
+    label: '邀请码',
+    rules: z.string().min(1, '请输入邀请码'),
+    componentProps: {
+      placeholder: '请输入邀请码',
     },
   },
   {
@@ -312,6 +394,15 @@ const editFormSchema = [
     rules: z.string().min(2, '公司名称最少需要2个字符'),
     componentProps: {
       placeholder: '请输入公司名称',
+    },
+  },
+  {
+    component: 'Input',
+    fieldName: 'inviteCode',
+    label: '邀请码',
+    rules: z.string().min(1, '请输入邀请码'),
+    componentProps: {
+      placeholder: '请输入邀请码',
     },
   },
   {
@@ -440,6 +531,66 @@ const rechargeFormSchema = [
   },
 ];
 
+// 新增扣费记录表单配置
+const deductFormSchema = [
+  {
+    component: 'InputNumber',
+    fieldName: 'deductAmount',
+    label: '扣除金额',
+    rules: z.number().min(0.01, '请输入扣除金额'),
+    componentProps: {
+      placeholder: '请输入扣除金额',
+      min: 0,
+      style: { width: '100%' },
+      formatter: (value: number) => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+      parser: (value: string) => value.replace(/¥\s?|(,*)/g, ''),
+    },
+  },
+  {
+    component: 'Upload',
+    fieldName: 'certificate',
+    label: '扣费凭证',
+    rules: z.array(z.any()).min(1, '请上传扣费凭证'),
+    componentProps: {
+      customRequest: upload_file,
+      disabled: false,
+      maxCount: 1,
+      multiple: false,
+      showUploadList: true,
+      listType: 'picture-card',
+      beforeUpload: (file: File) => {
+        const isValidSize = file.size / 1024 / 1024 < 10;
+        const validExtensions = ['jpg', 'png', 'jpeg'];
+        const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+        const isValidType = validExtensions.includes(fileExtension || '');
+        if (!isValidSize) {
+          message.error('文件大小不能超过 10MB');
+          return Upload.LIST_IGNORE;
+        }
+        if (!isValidType) {
+          message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+          return Upload.LIST_IGNORE;
+        }
+        return true;
+      },
+      onPreview: (file: any) => {
+        // 获取图片URL进行预览
+        const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+        if (imageUrl) {
+          window.open(imageUrl, '_blank');
+        } else {
+          message.warning('无法预览该图片');
+        }
+      },
+    },
+    renderComponentContent: () => {
+      return {
+        default: () => '上传凭证',
+      };
+    },
+  },
+];
+
 // 充值弹窗相关状态
 const currentCompany = ref<CompanyData | null>(null);
 const currentEditId = ref<number | null>(null);
@@ -467,6 +618,15 @@ const [EditForm, editFormApi] = useVbenForm({
 // 创建新增充值表单
 const [RechargeForm, rechargeFormApi] = useVbenForm({
   schema: rechargeFormSchema,
+  showDefaultActions: false,
+  commonConfig: {
+    labelWidth: 130,
+  },
+});
+
+// 创建新增扣费表单
+const [DeductForm, deductFormApi] = useVbenForm({
+  schema: deductFormSchema,
   showDefaultActions: false,
   commonConfig: {
     labelWidth: 130,
@@ -534,6 +694,67 @@ const [RechargeAddModal, rechargeAddModalApi] = useVbenModal({
   },
 });
 
+// 创建新增扣费弹窗
+const [DeductAddModal, deductAddModalApi] = useVbenModal({
+  title: '扣除费用',
+  onConfirm: async () => {
+    try {
+      const validationResult = await deductFormApi.validate();
+      if (validationResult.valid) {
+        const formValues = await deductFormApi.getValues();
+
+        if (!currentCompany.value) {
+          message.error('公司信息丢失，请重新打开扣费窗口');
+          return;
+        }
+
+        message.loading({
+          content: '正在扣除费用，请稍等...',
+          duration: 0,
+          key: 'add_deduct_msg',
+        });
+
+        try {
+          // 获取上传文件URL
+          const certificateUrl = formValues.certificate?.[0]?.response?.file_url || '';
+
+          if (!certificateUrl) {
+            message.destroy('add_deduct_msg');
+            message.error('请上传扣费凭证');
+            return;
+          }
+
+          const deductParams: CreateDeductParams = {
+            deduct_amount: formValues.deductAmount,
+            certificate: certificateUrl,
+            company_id: currentCompany.value.id,
+          };
+
+          await createDeductApi(deductParams);
+
+          message.success({
+            content: '费用扣除成功',
+            key: 'add_deduct_msg',
+          });
+          deductAddModalApi.close();
+          // 刷新扣费记录列表
+          deductGridApi.query();
+        } catch (error) {
+          // 取消loading提示
+          message.destroy('add_deduct_msg');
+          console.error('扣除费用失败:', error);
+        }
+      }
+    } catch (error) {
+      console.error('表单验证失败:', error);
+    }
+  },
+  onCancel: () => {
+    deductFormApi.resetForm();
+    deductAddModalApi.close();
+  },
+});
+
 // 创建新增弹窗
 const [CreateModal, createModalApi] = useVbenModal({
   title: '新增公司',
@@ -555,6 +776,7 @@ const [CreateModal, createModalApi] = useVbenModal({
 
           const createParams: CreateCompanyParams = {
             company_name: formValues.companyName,
+            invite_code: formValues.inviteCode,
           };
           
           // 只有在有值时才添加可选字段
@@ -627,6 +849,7 @@ const [EditModal, editModalApi] = useVbenModal({
           await updateCompanyApi({
             id: currentEditId.value,
             company_name: formValues.companyName,
+            invite_code: formValues.inviteCode,
             consultation_address: formValues.consultationAddress || '',
             notification_method: formValues.notificationMethod || '',
             banner: bannerUrl,
@@ -677,6 +900,26 @@ const handleRecharge = (row: CompanyData) => {
   }, 100);
 };
 
+const handleDeduct = (row: CompanyData) => {
+  console.log('查看扣费记录:', row);
+
+  // 设置当前公司信息
+  currentCompany.value = row;
+
+  // 设置弹窗标题
+  deductModalApi.setState({
+    title: `${row.companyName} - 扣费记录`
+  });
+
+  // 打开扣费记录弹窗
+  deductModalApi.open();
+
+  // 刷新扣费记录列表
+  setTimeout(() => {
+    deductGridApi.query();
+  }, 100);
+};
+
 const handleEdit = (row: CompanyData) => {
   console.log('编辑公司:', row);
 
@@ -686,6 +929,7 @@ const handleEdit = (row: CompanyData) => {
   // 设置表单数据
   editFormApi.setValues({
     companyName: row.companyName,
+    inviteCode: row.inviteCode || '',
     consultationAddress: row.consultationAddress || '',
     notificationMethod: row.notificationMethod || '',
     banner: row.banner ? [
@@ -782,10 +1026,86 @@ const [RechargeModal, rechargeModalApi] = useVbenModal({
   onConfirm: () => {
     rechargeModalApi.close();
     currentCompany.value = null;
+    // 刷新公司列表
+    gridApi.query();
   },
   onCancel: () => {
     rechargeModalApi.close();
     currentCompany.value = null;
+    // 刷新公司列表
+    gridApi.query();
+  },
+});
+
+// 扣费记录表格配置
+const deductGridOptions: VxeTableGridOptions = {
+  columns: [
+    {
+      field: 'deductTime',
+      title: '扣费时间',
+      slots: { default: 'deductRecordTime' },
+    },
+    {
+      field: 'deductAmount',
+      title: '扣费金额',
+      slots: { default: 'deductRecordAmount' },
+    },
+    {
+      field: 'certificate',
+      title: '扣费凭证',
+      slots: { default: 'deductRecordCertificate' },
+    },
+    {
+      field: 'operator',
+      title: '操作人',
+    },
+  ],
+  height: 400,
+  keepSource: true,
+  autoResize: true,
+  pagerConfig: {},
+  proxyConfig: {
+    response: {
+      result: 'list',
+      total: 'total',
+      list: 'list',
+    },
+    ajax: {
+      query: async ({ page }) => {
+        const result = await getDeductList({
+          page: page.currentPage,
+          size: page.pageSize,
+          companyId: currentCompany.value?.id,
+        });
+        return result;
+      },
+    },
+  },
+  toolbarConfig: {
+    custom: true,
+    refresh: true,
+  },
+};
+
+// 创建扣费记录表格
+const [DeductGrid, deductGridApi] = useVbenVxeGrid({
+  gridOptions: deductGridOptions,
+});
+
+// 创建扣费记录弹窗
+const [DeductModal, deductModalApi] = useVbenModal({
+  title: '扣费记录',
+  onConfirm: () => {
+    deductModalApi.close();
+    currentCompany.value = null;
+    // 刷新公司列表
+    gridApi.query();
+  },
+  onCancel: () => {
+    deductModalApi.close();
+    currentCompany.value = null;
+    // 刷新公司列表
+    gridApi.query();
   },
 });
 
@@ -793,6 +1113,12 @@ const [RechargeModal, rechargeModalApi] = useVbenModal({
 const handleAddRecharge = () => {
   rechargeFormApi.resetForm();
   rechargeAddModalApi.open();
+};
+
+// 处理新增扣费记录
+const handleAddDeduct = () => {
+  deductFormApi.resetForm();
+  deductAddModalApi.open();
 };
 
 // 查看充值凭证
@@ -806,6 +1132,12 @@ const gridOptions: VxeTableGridOptions = {
       field: 'companyName',
       title: '公司名称',
       minWidth: 200,
+      showOverflow: 'tooltip',
+    },
+    {
+      field: 'inviteCode',
+      title: '邀请码',
+      width: 150,
       showOverflow: 'tooltip',
     },
     {
@@ -834,7 +1166,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'actions',
       title: '操作',
-      width: 120,
+      width: 220,
       slots: { default: 'actions' },
     },
   ],
@@ -920,6 +1252,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <Button
             type="link"
             size="small"
+            @click="handleDeduct(row)"
+          >
+            扣除费用
+          </Button>
+          <Button
+            type="link"
+            size="small"
             @click="handleEdit(row)"
           >
             编辑
@@ -973,8 +1312,47 @@ const [Grid, gridApi] = useVbenVxeGrid({
     </RechargeModal>
 
     <!-- 新增充值记录弹窗 -->
-    <RechargeAddModal class="w-[500px]" :overlay-blur="2">
+    <RechargeAddModal class="w-[500px] !z-[2100]" :overlay-blur="2">
       <RechargeForm />
     </RechargeAddModal>
+
+    <!-- 扣费记录弹窗 -->
+    <DeductModal class="w-[900px]" :overlay-blur="2">
+      <div class="p-4">
+        <DeductGrid>
+          <template #toolbar-actions>
+            <Button type="primary" @click="handleAddDeduct">
+              新增
+            </Button>
+          </template>
+
+          <template #deductRecordTime="{ row }">
+            <span>
+              {{ dayjs(row.deductTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+            </span>
+          </template>
+
+          <template #deductRecordAmount="{ row }">
+            <span class="font-semibold text-red-600">
+              {{ formatAmount(row.deductAmount) }}
+            </span>
+          </template>
+
+          <template #deductRecordCertificate="{ row }">
+            <span v-if="row.certificate" class="text-blue-600 cursor-pointer hover:underline" @click="viewCertificate(row.certificate)">
+              查看凭证
+            </span>
+            <span v-else class="text-gray-400">
+              无凭证
+            </span>
+          </template>
+        </DeductGrid>
+      </div>
+    </DeductModal>
+
+    <!-- 新增扣费记录弹窗 -->
+    <DeductAddModal class="w-[500px] !z-[2100]" :overlay-blur="2">
+      <DeductForm />
+    </DeductAddModal>
   </Page>
 </template>
