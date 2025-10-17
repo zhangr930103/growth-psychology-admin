@@ -42,10 +42,9 @@ const formData = reactive({
   instructor: '',
   activityTime: null as any,
   registrationDeadline: null as any,
-  duration: 0,
-  minParticipants: 0,
-  maxRegistrations: 0,
-  consultationMethod: 'VIDEO',
+  duration: undefined as number | undefined,
+  minParticipants: undefined as number | undefined,
+  maxRegistrations: undefined as number | undefined,
   contactInformation: '',
   isEnabled: true,
 });
@@ -96,7 +95,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
 const transformFormDataToApi = (formData: any): CreateActivityParams => {
   // 获取上传图片URL
   const coverUrl = formData.cover?.[0]?.response?.file_url || formData.cover?.[0]?.url || '';
-  
+
   return {
     activity_name: formData.activityName,
     cover: coverUrl,
@@ -117,7 +116,7 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
 const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivityParams => {
   // 获取上传图片URL
   const coverUrl = formData.cover?.[0]?.response?.file_url || formData.cover?.[0]?.url || '';
-  
+
   return {
     id: id,
     activity_name: formData.activityName,
@@ -211,7 +210,7 @@ const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
       size: params.size || 10,
       activity_name: params.activity_name,
       creator: params.creator,
-      is_enabled: params.is_enabled === '' ? undefined : 
+      is_enabled: params.is_enabled === '' ? undefined :
         (typeof params.is_enabled === 'string' ? params.is_enabled === 'true' : params.is_enabled),
       create_start_time: params.create_start_time,
       create_end_time: params.create_end_time,
@@ -219,10 +218,10 @@ const getActivityList = async (params: SearchParams): Promise<ApiResponse> => {
 
     // 调用真实API
     const response = await getActivityListApi(apiParams);
-    
+
     // 转换数据格式
     const transformedList = response.list.map(transformApiData);
-    
+
     return {
       list: transformedList,
       total: response.total,
@@ -318,10 +317,9 @@ const resetFormData = () => {
   formData.instructor = '';
   formData.activityTime = null;
   formData.registrationDeadline = null;
-  formData.duration = 0;
-  formData.minParticipants = 0;
-  formData.maxRegistrations = 0;
-  formData.consultationMethod = 'VIDEO';
+  formData.duration = undefined;
+  formData.minParticipants = undefined;
+  formData.maxRegistrations = undefined;
   formData.contactInformation = '';
   formData.isEnabled = true;
   editingId.value = null;
@@ -341,7 +339,7 @@ const openCreateModal = async () => {
 const openEditModal = async (row: ActivityData) => {
   resetFormData();
   editingId.value = row.id;
-  
+
   // 设置基本表单数据
   formData.activityName = row.activityName;
   formData.cover = row.cover ? [
@@ -363,14 +361,14 @@ const openEditModal = async (row: ActivityData) => {
   formData.consultationMethod = row.consultationMethod || 'VIDEO';
   formData.contactInformation = row.contactInformation || '';
   formData.isEnabled = row.isEnabled;
-  
+
   // 先设置编辑器内容，再打开模态框
   const content = row.activityContent || '';
   formData.activityContent = content;
-  
+
   // 强制重新渲染编辑器，避免 DOM 范围错误
   editorKey.value++;
-  
+
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -770,7 +768,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
                 v-model:value="formData.duration"
                 placeholder="请输入课程时长"
                 :min="30"
-                :max="480"
+                :max="4800"
                 style="flex: 1;"
               />
               <span>分钟</span>
@@ -787,7 +785,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               v-model:value="formData.minParticipants"
               placeholder="请输入开团人数"
               :min="1"
-              :max="50"
+              :max="500"
               style="width: 100%"
             />
           </Form.Item>
@@ -850,8 +848,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       :footer="null"
       @cancel="closeContentModal"
     >
-      <div 
-        v-html="currentActivityContent" 
+      <div
+        v-html="currentActivityContent"
         style="padding: 20px 0; max-height: 70vh; overflow-y: auto;"
       ></div>
     </Modal>
