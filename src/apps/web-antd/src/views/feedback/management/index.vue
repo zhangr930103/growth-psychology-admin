@@ -5,6 +5,8 @@ import { Page } from '@vben/common-ui';
 import { Image } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
+const ImagePreviewGroup = Image.PreviewGroup;
+
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getFeedbackListApi, type FeedbackListResponse } from '#/api/core';
 
@@ -71,6 +73,7 @@ const gridOptions: VxeTableGridOptions = {
     refresh: true,
     zoom: true,
   },
+  showOverflow: false,
 };
 
 const [Grid] = useVbenVxeGrid({
@@ -82,12 +85,16 @@ const [Grid] = useVbenVxeGrid({
   <Page auto-content-height title="意见反馈">
     <Grid>
       <template #image="{ row }">
-        <div class="flex justify-center">
-          <Image
-            v-if="row.image"
-            :src="row.image"
-            style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"
-          />
+        <div class="flex justify-center gap-2">
+          <ImagePreviewGroup v-if="row.image && row.image.length > 0">
+            <Image
+              v-for="(img, index) in row.image"
+              :key="index"
+              :src="img"
+              style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"
+            />
+          </ImagePreviewGroup>
+          <span v-else class="text-gray-400">暂无图片</span>
         </div>
       </template>
 

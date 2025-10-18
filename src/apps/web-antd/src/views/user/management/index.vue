@@ -258,6 +258,7 @@ const gridOptions: VxeTableGridOptions = {
     search: true,
     zoom: true,
   },
+  showOverflow: false,
 };
 
 const [Grid, gridApi] = useVbenVxeGrid({
