@@ -231,12 +231,12 @@ export interface CreateDeductResponse {
  * 获取扣费记录列表
  */
 export async function getDeductListApi(params: DeductListParams): Promise<DeductListResponse> {
-  return requestClient.post<DeductListResponse>('/companies/deduct/list', params);
+  return requestClient.post<DeductListResponse>('/companies/deduction/list', params);
 }
 
 /**
  * 新增扣费记录
  */
 export async function createDeductApi(params: CreateDeductParams): Promise<CreateDeductResponse> {
-  return requestClient.post<CreateDeductResponse>('/companies/deduct/create', params);
+  return requestClient.post<CreateDeductResponse>('/companies/deduction/create', params);
 }

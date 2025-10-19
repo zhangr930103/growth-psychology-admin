@@ -43,7 +43,7 @@ interface CompanyData {
   balance: number;
   creator: string;
   creatorId: number;
-  createTime: number;
+  createTime: string;  // 改为字符串类型
   status: 'active' | 'inactive';
   notificationMethod?: string;
   banner?: string;
@@ -60,7 +60,7 @@ const transformCompanyData = (apiData: ApiCompanyData): CompanyData => {
     balance: parseFloat(apiData.balance) || 0,
     creator: apiData.creator,
     creatorId: apiData.creator_id,
-    createTime: apiData.create_time,
+    createTime: apiData.created_at,  // 使用 created_at 字段
     status: apiData.status,
     notificationMethod: apiData.notification_method,
     banner: apiData.banner,
@@ -89,7 +89,7 @@ interface RechargeRecord {
   companyId: number;
   companyName: string;
   rechargeAmount: number;
-  rechargeTime: number;
+  rechargeTime: string;  // 改为字符串类型
   operator: string;
   operatorId: number;
   status: 'success' | 'pending' | 'failed';
@@ -104,7 +104,7 @@ const transformRechargeData = (apiData: ApiRechargeRecord): RechargeRecord => {
     companyId: apiData.company_id,
     companyName: apiData.company_name,
     rechargeAmount: parseFloat(apiData.recharge_amount) || 0,
-    rechargeTime: apiData.recharge_time,
+    rechargeTime: apiData.created_at,  // 使用 created_at 字段
     operator: apiData.operator,
     operatorId: apiData.operator_id,
     status: apiData.status,
@@ -130,7 +130,7 @@ interface DeductRecord {
   companyId: number;
   companyName: string;
   deductAmount: number;
-  deductTime: number;
+  deductTime: string;  // 改为字符串类型
   operator: string;
   operatorId: number;
   status: 'success' | 'pending' | 'failed';
@@ -144,7 +144,7 @@ const transformDeductData = (apiData: ApiDeductRecord): DeductRecord => {
     companyId: apiData.company_id,
     companyName: apiData.company_name,
     deductAmount: parseFloat(apiData.deduct_amount) || 0,
-    deductTime: apiData.deduct_time,
+    deductTime: apiData.created_at,  // 使用 created_at 字段
     operator: apiData.operator,
     operatorId: apiData.operator_id,
     status: apiData.status,
@@ -1235,7 +1235,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
       <template #createTime="{ row }">
         <span>
-          {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+          {{ dayjs(row.createTime).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
       </template>
 
@@ -1289,7 +1289,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
           <template #rechargeRecordTime="{ row }">
             <span>
-              {{ dayjs(row.rechargeTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+              {{ dayjs(row.rechargeTime).format('YYYY-MM-DD HH:mm:ss') }}
             </span>
           </template>
 
@@ -1328,7 +1328,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
           <template #deductRecordTime="{ row }">
             <span>
-              {{ dayjs(row.deductTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+              {{ dayjs(row.deductTime).format('YYYY-MM-DD HH:mm:ss') }}
             </span>
           </template>
 
