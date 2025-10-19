@@ -825,7 +825,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         >
           <Input
             v-model:value="formData.contactInformation"
-            placeholder="请输入联系方式（如微信号、QQ号等）"
+            placeholder="请输入会议号"
             show-count
             :maxlength="100"
           />
