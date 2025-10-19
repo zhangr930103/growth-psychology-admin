@@ -204,20 +204,13 @@ export interface EvaluationDetailItem {
 }
 
 /**
- * 评价详情响应数据类型
- */
-export interface EvaluationDetailData {
-  list: EvaluationDetailItem[];               // 评价详情数组
-}
-
-/**
  * 评价详情响应类型
  */
 export interface EvaluationDetailResponse {
   code: number;                               // 状态码: 200
   message: string;                            // 响应消息，如: "获取评价详情成功"
   rid: string;                                // 请求ID
-  data: EvaluationDetailData;                 // 评价详情数据
+  list: EvaluationDetailItem[];               // 评价详情数组，直接返回在响应中
 }
 
 /**
