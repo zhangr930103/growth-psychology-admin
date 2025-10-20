@@ -52,14 +52,21 @@ interface EvaluationModule {
 // 弹窗表单数据
 const formData = reactive({
   evaluationName: '',
+  evaluationType: '',
   modules: [] as EvaluationModule[],
   isPublished: false,
 });
 
-// 评价类型选项
+// 评价模块类型选项
 const evaluationTypeOptions = [
   { label: '评分', value: 'rating' },
   { label: '评论', value: 'comment' },
+];
+
+// 评价类型选项
+const evaluationCategoryOptions = [
+  { label: '咨询师评价', value: '咨询师评价' },
+  { label: '团队活动评价', value: '团队活动评价' },
 ];
 
 // 获取评价类型标签
@@ -235,10 +242,10 @@ const handlePublish = async (row: EvaluationData) => {
 
     // 调用切换发布状态API
     const response = await togglePublishApi(row.id);
-    
+
     // 显示成功消息
     message.success(response?.message || `评价${response?.data?.action || '操作'}成功`);
-    
+
     // 刷新列表
     gridApi.query();
   }  finally {
@@ -258,10 +265,10 @@ const handleDelete = async (row: EvaluationData) => {
 
     // 调用删除API
     const response = await deleteEvaluationApi(row.id);
-    
+
     // 显示成功消息
     message.success(response?.message || '评价删除成功');
-    
+
     // 刷新列表
     gridApi.query();
   }  finally {
@@ -323,6 +330,7 @@ const removeModule = (id: string) => {
 // 弹窗相关函数
 const resetFormData = () => {
   formData.evaluationName = '';
+  formData.evaluationType = '';
   formData.modules = [createNewModule()];
   formData.isPublished = false;
   editingId.value = null;
@@ -341,6 +349,7 @@ const openEditModal = async (row: EvaluationData) => {
   resetFormData();
   editingId.value = row.id;
   formData.evaluationName = row.name;
+  formData.evaluationType = row.evaluation_type || '';
   // 判断是否已发布状态
   formData.isPublished = row.publishStatus === 'published' || row.status === 'approved';
 
@@ -393,6 +402,7 @@ const handleSubmit = async () => {
       // 编辑模式 - 使用真实API
       const updateParams: UpdateEvaluationParams = {
         name: formData.evaluationName,
+        evaluation_type: formData.evaluationType,
         items: formData.modules.map(module => ({
           type: getEvaluationTypeLabel(module.evaluationType || ''),
           title: module.title,
@@ -407,6 +417,7 @@ const handleSubmit = async () => {
       // 新增模式 - 使用真实API
       const createParams: CreateEvaluationParams = {
         name: formData.evaluationName,
+        evaluation_type: formData.evaluationType,
         items: formData.modules.map(module => ({
           type: getEvaluationTypeLabel(module.evaluationType || ''),
           title: module.title,
@@ -422,7 +433,7 @@ const handleSubmit = async () => {
     // 成功后立即关闭弹窗
     modalLoading.value = false;
     closeModal();
-    
+
     // 刷新列表
     gridApi.query();
   } catch (error) {
@@ -437,7 +448,7 @@ const handleCreate = () => {
 const getStatusTag = (row: EvaluationData) => {
   // 判断是否已发布状态
   const isPublished = row.publishStatus === 'published' || row.status === 'approved';
-  return isPublished 
+  return isPublished
     ? { color: 'green', text: '已发布' }
     : { color: 'orange', text: '未发布' };
 };
@@ -753,6 +764,18 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
         />
       </Form.Item>
 
+      <Form.Item
+        label="评价类型"
+        name="evaluationType"
+        :rules="[{ required: true, message: '请选择评价类型' }]"
+      >
+        <Select
+          v-model:value="formData.evaluationType"
+          placeholder="请选择评价类型"
+          :options="evaluationCategoryOptions"
+        />
+      </Form.Item>
+
       <!-- 动态模块列表 -->
       <div class="modules-section">
         <div class="modules-header" v-if="!editingId">
@@ -901,7 +924,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
               </span>
             </div>
           </div>
-          
+
           <div v-if="!detailLoading && currentEvaluationDimensions.length === 0" class="text-center text-gray-500 py-10">
             暂无评价详情数据
           </div>

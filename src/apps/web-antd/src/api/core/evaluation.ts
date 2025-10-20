@@ -19,6 +19,7 @@ export interface EvaluationListParams {
 export interface EvaluationRecord {
   id: number;
   name: string;                               // 评价名称
+  evaluation_type?: string;                   // 评价类型 (如: "咨询师评价"、"团队活动评价")
   type: string;                               // 评价类型 (如: "counselor")
   title: string;                              // 评价标题
   content: string;                            // 评价内容
@@ -136,6 +137,7 @@ export interface CreateEvaluationItem {
  */
 export interface CreateEvaluationParams {
   name: string;                               // 评价名称，长度2-200字符
+  evaluation_type: string;                    // 评价类型，如"咨询师评价"、"团队活动评价"
   items: CreateEvaluationItem[];              // 评价项目数组，至少包含一个项目
   publishStatus?: 'published' | 'unpublished'; // 发布状态，默认"unpublished"
 }
@@ -180,6 +182,7 @@ export interface TogglePublishResponse {
  */
 export interface UpdateEvaluationParams {
   name?: string;                              // 评价名称，长度2-200字符
+  evaluation_type?: string;                   // 评价类型，如"咨询师评价"、"团队活动评价"
   items?: CreateEvaluationItem[];             // 评价项目数组，至少包含一个项目
   publishStatus?: 'published' | 'unpublished'; // 发布状态
 }
