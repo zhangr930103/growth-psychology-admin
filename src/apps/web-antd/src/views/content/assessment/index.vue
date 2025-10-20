@@ -4,11 +4,12 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, Form, Input, message, Modal, Popconfirm, Space, Spin, Switch, Tag, Textarea } from 'ant-design-vue';
+import { Button, Form, Image, Input, message, Modal, Popconfirm, Space, Spin, Switch, Tag, Textarea, Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, toggleQuestionnaireStatusApi, getQuestionnaireResponsesApi, type QuestionnaireData, type QuestionnaireListParams, type QuestionnaireResponse } from '#/api/core/assessment';
+import { upload_file } from '#/api/examples/upload';
 
 defineOptions({
   name: 'AssessmentManagement',
@@ -35,7 +36,7 @@ const formData = reactive({
   questionnaireName: '',
   questionnaireIntro: '',
   questionnaireNotice: '',
-  questionnaireUrl: '',
+  questionnaireUrl: [] as any[],
   isPublished: false,
 });
 
@@ -279,7 +280,7 @@ const resetFormData = () => {
   formData.questionnaireName = '';
   formData.questionnaireIntro = '';
   formData.questionnaireNotice = '';
-  formData.questionnaireUrl = '';
+  formData.questionnaireUrl = [];
   formData.isPublished = false;
   editingId.value = null;
 };
@@ -299,7 +300,16 @@ const openEditModal = async (row: AssessmentData) => {
   formData.questionnaireName = row.questionnaireName;
   formData.questionnaireIntro = row.questionnaireIntro;
   formData.questionnaireNotice = row.questionnaireNotice;
-  formData.questionnaireUrl = row.questionnaireUrl;
+  formData.questionnaireUrl = row.questionnaireUrl ? [
+    {
+      uid: Date.now().toString(),
+      status: 'done',
+      url: row.questionnaireUrl,
+      response: {
+        file_url: row.questionnaireUrl,
+      },
+    }
+  ] : [];
   formData.isPublished = row.publishStatus === 'published';
 
   modalVisible.value = true;
@@ -324,13 +334,16 @@ const handleSubmit = async () => {
 
     const action = editingId.value ? '编辑' : '新增';
 
+    // 获取上传图片URL
+    const imageUrl = formData.questionnaireUrl?.[0]?.response?.file_url || formData.questionnaireUrl?.[0]?.url || '';
+
     if (!editingId.value) {
       // 新增操作，调用创建接口
       await createQuestionnaireApi({
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
         status: formData.isPublished ? 'published' : 'unpublished',
-        survey_url: formData.questionnaireUrl, // 问卷星地址
+        survey_url: imageUrl, // 问卷星图片
         notice: formData.questionnaireNotice, // 测评须知
       });
     } else {
@@ -340,7 +353,7 @@ const handleSubmit = async () => {
         title: formData.questionnaireName,
         description: formData.questionnaireIntro,
         status: formData.isPublished ? 'published' : 'unpublished',
-        survey_url: formData.questionnaireUrl, // 问卷星地址
+        survey_url: imageUrl, // 问卷星图片
         notice: formData.questionnaireNotice, // 测评须知
       });
     }
@@ -391,8 +404,8 @@ const gridOptions: VxeTableGridOptions = {
     },
     {
       field: 'questionnaireUrl',
-      title: '问卷星地址',
-      showOverflow: 'tooltip',
+      title: '问卷星图片',
+      width: 120,
       slots: { default: 'questionnaireUrl' },
     },
     {
@@ -452,6 +465,7 @@ const gridOptions: VxeTableGridOptions = {
     search: true,
     zoom: true,
   },
+  showOverflow: false,
 };
 
 const [Grid, gridApi] = useVbenVxeGrid({
@@ -582,14 +596,17 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
       </template>
 
       <template #questionnaireUrl="{ row }">
-        <a
-          :href="row.questionnaireUrl"
-          target="_blank"
-          class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate block max-w-[200px]"
-          :title="row.questionnaireUrl"
-        >
-          {{ row.questionnaireUrl }}
-        </a>
+        <div v-if="row.questionnaireUrl" class="flex justify-center">
+          <Image
+            :src="row.questionnaireUrl"
+            :width="60"
+            :height="60"
+            :preview="true"
+            class="object-cover rounded"
+            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          />
+        </div>
+        <span v-else class="text-gray-400">-</span>
       </template>
 
       <template #actions="{ row }">
@@ -690,17 +707,43 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
       </Form.Item>
 
       <Form.Item
-        label="问卷星地址"
+        label="问卷星图片"
         name="questionnaireUrl"
-        :rules="[
-          { required: true, message: '请输入问卷星地址' },
-          { type: 'url', message: '请输入有效的URL地址' }
-        ]"
+        :rules="[{ required: true, message: '请上传问卷星图片' }]"
       >
-        <Input
-          v-model:value="formData.questionnaireUrl"
-          placeholder="请输入问卷星地址"
-        />
+        <Upload
+          v-model:file-list="formData.questionnaireUrl"
+          :custom-request="upload_file"
+          list-type="picture-card"
+          :max-count="1"
+          :before-upload="(file) => {
+            const isValidSize = file.size / 1024 / 1024 < 10;
+            const validExtensions = ['jpg', 'png', 'jpeg'];
+            const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+            const isValidType = validExtensions.includes(fileExtension || '');
+            if (!isValidSize) {
+              message.error('文件大小不能超过 10MB');
+              return Upload.LIST_IGNORE;
+            }
+            if (!isValidType) {
+              message.error('仅支持 .jpg, .png, .jpeg 格式的图片');
+              return Upload.LIST_IGNORE;
+            }
+            return true;
+          }"
+          @preview="(file) => {
+            const imageUrl = file.url || file.response?.file_url || file.thumbUrl;
+            if (imageUrl) {
+              window.open(imageUrl, '_blank');
+            } else {
+              message.warning('无法预览该图片');
+            }
+          }"
+        >
+          <div v-if="!formData.questionnaireUrl || formData.questionnaireUrl.length === 0">
+            <div style="margin-top: 8px">上传图片</div>
+          </div>
+        </Upload>
       </Form.Item>
 
       <Form.Item label="是否启用">

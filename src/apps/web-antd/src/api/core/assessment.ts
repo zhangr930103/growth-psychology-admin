@@ -9,6 +9,8 @@ export interface QuestionnaireListParams {
   title?: string;
   status?: 'published' | 'unpublished';
   creator?: string;
+  create_start_time?: number;
+  create_end_time?: number;
 }
 
 /**
