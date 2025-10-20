@@ -1741,18 +1741,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions,
 });
 
-// 咨询时长查看弹窗表单配置
-const durationFormOptions: VbenFormProps = {
-  collapsed: true,
-  commonConfig: {
-    labelWidth: 100,
-  },
-  schema: [], // 空数组表示不显示任何搜索条件
-  showCollapseButton: false,
-  submitOnChange: false,
-  submitOnEnter: false,
-};
-
 // 咨询时长查看弹窗表格配置
 const durationGridOptions: VxeTableGridOptions = {
   columns: [
@@ -1818,7 +1806,6 @@ const durationGridOptions: VxeTableGridOptions = {
 };
 
 const [DurationGrid, durationGridApi] = useVbenVxeGrid({
-  formOptions: durationFormOptions,
   gridOptions: durationGridOptions,
 });
 

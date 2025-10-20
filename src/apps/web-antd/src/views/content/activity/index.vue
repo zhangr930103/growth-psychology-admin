@@ -4,13 +4,14 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { nextTick, reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Space, Spin, Tag, Upload } from 'ant-design-vue';
+import { Button, DatePicker, Form, Input, InputNumber, message, Modal, Popconfirm, Radio, Select, Space, Spin, Tag, Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { WangEditor } from '#/components';
 import { upload_file } from '#/api/examples/upload';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getActivityListApi, createActivityApi, updateActivityApi, deleteActivityApi, toggleActivityStatusApi, type ActivityData as ApiActivityData, type ActivityListParams, type CreateActivityParams, type UpdateActivityParams, type ToggleActivityStatusParams } from '#/api';
+import { getCompanyListApi, type CompanyData } from '#/api/core/company';
 
 defineOptions({
   name: 'ActivityManagement',
@@ -34,6 +35,10 @@ const editorKey = ref(0);
 // 表单 ref
 const formRef = ref();
 
+// 公司列表
+const companyList = ref<CompanyData[]>([]);
+const companyLoading = ref(false);
+
 // 弹窗表单数据
 const formData = reactive({
   activityName: '',
@@ -45,7 +50,9 @@ const formData = reactive({
   duration: undefined as number | undefined,
   minParticipants: undefined as number | undefined,
   maxRegistrations: undefined as number | undefined,
+  consultationMethod: 'VIDEO' as string,
   contactInformation: '',
+  companyIds: [] as number[],
   isEnabled: true,
 });
 
@@ -63,6 +70,7 @@ interface ActivityData {
   maxRegistrations: number;
   consultationMethod?: string;
   contactInformation?: string;
+  companyIds?: number[];
   creatorName: string;
   creatorId: number;
   createTime: number;
@@ -84,6 +92,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
     maxRegistrations: apiData.max_registrations,
     consultationMethod: apiData.consultation_method,
     contactInformation: apiData.contact_information,
+    companyIds: apiData.company_ids,
     creatorName: apiData.creator_name,
     creatorId: apiData.creator_id,
     createTime: apiData.create_time,
@@ -108,6 +117,7 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
     max_registrations: formData.maxRegistrations,
     consultation_method: formData.consultationMethod || undefined,
     contact_information: formData.contactInformation || undefined,
+    company_ids: formData.companyIds && formData.companyIds.length > 0 ? formData.companyIds : undefined,
     is_enabled: formData.isEnabled,
   };
 };
@@ -130,6 +140,7 @@ const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivity
     max_registrations: formData.maxRegistrations,
     consultation_method: formData.consultationMethod || undefined,
     contact_information: formData.contactInformation || undefined,
+    company_ids: formData.companyIds && formData.companyIds.length > 0 ? formData.companyIds : undefined,
     is_enabled: formData.isEnabled,
   };
 };
@@ -199,6 +210,24 @@ const formOptions: VbenFormProps = {
   showCollapseButton: true,
   submitOnChange: false,
   submitOnEnter: true,
+};
+
+// 获取公司列表（不分页，获取所有）
+const fetchCompanyList = async () => {
+  try {
+    companyLoading.value = true;
+    const response = await getCompanyListApi({
+      page: 1,
+      size: 9999, // 大数量，相当于获取全部
+    });
+    companyList.value = response.list;
+  } catch (error) {
+    console.error('获取公司列表失败:', error);
+    message.error('获取公司列表失败');
+    companyList.value = [];
+  } finally {
+    companyLoading.value = false;
+  }
 };
 
 // 获取活动列表API
@@ -320,7 +349,9 @@ const resetFormData = () => {
   formData.duration = undefined;
   formData.minParticipants = undefined;
   formData.maxRegistrations = undefined;
+  formData.consultationMethod = 'VIDEO';
   formData.contactInformation = '';
+  formData.companyIds = [];
   formData.isEnabled = true;
   editingId.value = null;
 };
@@ -329,6 +360,10 @@ const openCreateModal = async () => {
   resetFormData();
   // 强制重新渲染编辑器
   editorKey.value++;
+
+  // 获取公司列表
+  await fetchCompanyList();
+
   modalVisible.value = true;
 
   // 等待 DOM 更新后重置表单校验状态
@@ -339,6 +374,9 @@ const openCreateModal = async () => {
 const openEditModal = async (row: ActivityData) => {
   resetFormData();
   editingId.value = row.id;
+
+  // 获取公司列表
+  await fetchCompanyList();
 
   // 设置基本表单数据
   formData.activityName = row.activityName;
@@ -360,6 +398,7 @@ const openEditModal = async (row: ActivityData) => {
   formData.maxRegistrations = row.maxRegistrations;
   formData.consultationMethod = row.consultationMethod || 'VIDEO';
   formData.contactInformation = row.contactInformation || '';
+  formData.companyIds = row.companyIds || [];
   formData.isEnabled = row.isEnabled;
 
   // 先设置编辑器内容，再打开模态框
@@ -828,6 +867,24 @@ const [Grid, gridApi] = useVbenVxeGrid({
             placeholder="请输入会议号"
             show-count
             :maxlength="100"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="所属公司"
+          name="companyIds"
+        >
+          <Select
+            v-model:value="formData.companyIds"
+            mode="multiple"
+            placeholder="请选择所属公司"
+            :loading="companyLoading"
+            :options="companyList.map(c => ({ label: c.company_name, value: c.id }))"
+            style="width: 100%"
+            show-search
+            :filter-option="(input, option) => {
+              return option?.label?.toLowerCase().includes(input.toLowerCase());
+            }"
           />
         </Form.Item>
 

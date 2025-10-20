@@ -29,6 +29,7 @@ export interface ActivityData {
   max_registrations: number;
   consultation_method?: string;
   contact_information?: string;
+  company_ids?: number[];
   is_enabled: boolean;
   creator_name: string;
   creator_id: number;
@@ -61,6 +62,7 @@ export interface CreateActivityParams {
   max_registrations: number;
   consultation_method?: string;
   contact_information?: string;
+  company_ids?: number[];
   is_enabled: boolean;
 }
 
