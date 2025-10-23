@@ -43,10 +43,10 @@ const gridOptions: VxeTableGridOptions = {
       title: '反馈人',
     },
     {
-      field: 'feedback_time',
+      field: 'created_at',
       title: '反馈时间',
       width: 180,
-      slots: { default: 'feedback_time' },
+      slots: { default: 'created_at' },
     },
   ],
   height: 'auto',
@@ -98,9 +98,9 @@ const [Grid] = useVbenVxeGrid({
         </div>
       </template>
 
-      <template #feedback_time="{ row }">
+      <template #created_at="{ row }">
         <span>
-          {{ dayjs(row.feedback_time * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+          {{ dayjs(row.created_at).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
       </template>
     </Grid>

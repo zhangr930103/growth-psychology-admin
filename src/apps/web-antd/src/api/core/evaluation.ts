@@ -44,6 +44,7 @@ export interface EvaluationRecord {
   is_required: boolean;                      // 是否必填
   is_published: boolean;                     // 是否发布
   created_at: string;                        // 创建时间 (ISO格式: "2024-01-01T14:00:00")
+  updated_at: string;                        // 更新时间（发布时间）(ISO格式: "2024-01-02T10:00:00")
 }
 
 /**

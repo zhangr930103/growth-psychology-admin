@@ -166,6 +166,7 @@ const getEvaluationList = async (params: any): Promise<{ list: EvaluationData[];
     status: item.status,
     reviewer_name: item.reviewer_name,
     publish_time: item.publish_time,
+    updated_at: item.updated_at, // 使用 updated_at 作为发布时间
     review_comment: item.review_comment,
     helpful_count: item.helpful_count,
     unhelpful_count: item.unhelpful_count,
@@ -481,7 +482,7 @@ const gridOptions: VxeTableGridOptions = {
       width: 100,
     },
     {
-      field: 'publish_time',
+      field: 'updated_at',
       title: '发布的时间',
       width: 180,
       slots: { default: 'publishTime' },
@@ -673,8 +674,8 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
       </template>
 
       <template #publishTime="{ row }">
-        <span v-if="row.publish_time">
-          {{ dayjs(row.publish_time).format('YYYY-MM-DD HH:mm:ss') }}
+        <span v-if="row.updated_at">
+          {{ dayjs(row.updated_at).format('YYYY-MM-DD HH:mm:ss') }}
         </span>
         <span v-else class="text-gray-400 dark:text-gray-300">-</span>
       </template>

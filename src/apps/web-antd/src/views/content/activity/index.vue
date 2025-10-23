@@ -73,7 +73,7 @@ interface ActivityData {
   companyIds?: number[];
   creatorName: string;
   creatorId: number;
-  createTime: number;
+  createdAt: string; // 创建时间（后端返回的字符串格式）
   isEnabled: boolean; // 是否启用
 }
 
@@ -95,7 +95,7 @@ const transformApiData = (apiData: ApiActivityData): ActivityData => {
     companyIds: apiData.company_ids,
     creatorName: apiData.creator_name,
     creatorId: apiData.creator_id,
-    createTime: apiData.create_time,
+    createdAt: apiData.created_at, // 使用 created_at 字段
     isEnabled: apiData.is_enabled,
   };
 };
@@ -110,8 +110,8 @@ const transformFormDataToApi = (formData: any): CreateActivityParams => {
     cover: coverUrl,
     activity_content: formData.activityContent,
     instructor: formData.instructor,
-    activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
-    registration_deadline: formData.registrationDeadline?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    activity_time: formData.activityTime?.format('YYYY-MM-DD HH:mm:ss'), // 使用本地时间格式
+    registration_deadline: formData.registrationDeadline?.format('YYYY-MM-DD HH:mm:ss'), // 使用本地时间格式
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
@@ -133,8 +133,8 @@ const transformFormDataToUpdateApi = (formData: any, id: number): UpdateActivity
     cover: coverUrl,
     activity_content: formData.activityContent,
     instructor: formData.instructor,
-    activity_time: formData.activityTime?.toISOString(), // dayjs 对象转换为 ISO 字符串
-    registration_deadline: formData.registrationDeadline?.toISOString(), // dayjs 对象转换为 ISO 字符串
+    activity_time: formData.activityTime?.format('YYYY-MM-DD HH:mm:ss'), // 使用本地时间格式
+    registration_deadline: formData.registrationDeadline?.format('YYYY-MM-DD HH:mm:ss'), // 使用本地时间格式
     duration: formData.duration,
     min_participants: formData.minParticipants,
     max_registrations: formData.maxRegistrations,
@@ -613,7 +613,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
         <template #createTime="{ row }">
           <span>
-            {{ dayjs(row.createTime * 1000).format('YYYY-MM-DD HH:mm:ss') }}
+            {{ dayjs(row.createdAt).format('YYYY-MM-DD HH:mm:ss') }}
           </span>
         </template>
 
