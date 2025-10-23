@@ -175,6 +175,7 @@ const getEvaluationList = async (params: any): Promise<{ list: EvaluationData[];
     is_required: item.is_required,
     is_published: item.is_published,
     created_at: item.created_at,
+    evaluation_type: item.evaluation_type, // 添加评价类型字段
   }));
 
   return {
