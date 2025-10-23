@@ -98,14 +98,26 @@ export interface QuestionnaireResponsesListParams {
 }
 
 /**
+ * 问卷选项类型
+ */
+export interface QuestionOption {
+  id: string;
+  text: string;
+  score: number;
+}
+
+/**
  * 问卷答案类型
  */
 export interface QuestionnaireAnswer {
   id: number;
   response_id: number;
   question_id: number;
+  question_title: string; // 问题标题
+  question_type: 'single_choice' | 'multiple_choice' | string; // 问题类型（单选/多选）
+  question_options: QuestionOption[]; // 所有可选项
   answer_text?: string;
-  answer_options?: string[];
+  answer_options?: string[]; // 选中的答案ID数组
   answer_rating?: number;
   created_at: string;
 }

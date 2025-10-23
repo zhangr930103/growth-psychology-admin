@@ -8,7 +8,7 @@ import { Button, Form, Image, Input, message, Modal, Popconfirm, Space, Spin, Sw
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, toggleQuestionnaireStatusApi, getQuestionnaireResponsesApi, type QuestionnaireData, type QuestionnaireListParams, type QuestionnaireResponse } from '#/api/core/assessment';
+import { getQuestionnaireListApi, createQuestionnaireApi, editQuestionnaireApi, deleteQuestionnaireApi, toggleQuestionnaireStatusApi, getQuestionnaireResponsesApi, type QuestionnaireData, type QuestionnaireListParams, type QuestionnaireResponse, type QuestionnaireAnswer } from '#/api/core/assessment';
 import { upload_file } from '#/api/examples/upload';
 
 defineOptions({
@@ -27,6 +27,11 @@ const editingId = ref<number | null>(null);
 const dataModalVisible = ref(false);
 const currentAssessmentId = ref<number | null>(null);
 const currentAssessmentName = ref('');
+
+// 答案详情弹窗相关状态
+const detailModalVisible = ref(false);
+const currentAnswers = ref<QuestionnaireAnswer[]>([]);
+const currentSubmitterName = ref('');
 
 // 表单 ref
 const formRef = ref();
@@ -71,6 +76,7 @@ interface AssessmentDataRecord {
   score?: number;
   assessmentId: number;
   surveyUrl: string; // 问卷星URL，用于跳转
+  answers: QuestionnaireAnswer[]; // 答案详情
 }
 
 interface AssessmentDataSearchParams {
@@ -191,6 +197,7 @@ const getAssessmentDataList = async (params: AssessmentDataSearchParams): Promis
       score: item.average_score, // 直接使用平均评分
       assessmentId: item.questionnaire_id,
       surveyUrl: item.survey_url, // 保存问卷星URL
+      answers: item.answers || [], // 保留答案数据
     };
   });
 
@@ -221,12 +228,21 @@ const closeDataModal = () => {
 
 // 查看提交详情
 const handleViewDetail = (row: AssessmentDataRecord) => {
-  if (row.surveyUrl) {
-    // 直接在新页签中打开问卷星URL
-    window.open(row.surveyUrl, '_blank');
-  } else {
-    message.warning('该记录没有可用的问卷链接');
-  }
+  currentAnswers.value = row.answers || [];
+  currentSubmitterName.value = row.submitterName;
+  detailModalVisible.value = true;
+};
+
+// 关闭答案详情弹窗
+const closeDetailModal = () => {
+  detailModalVisible.value = false;
+  currentAnswers.value = [];
+  currentSubmitterName.value = '';
+};
+
+// 判断选项是否被选中
+const isOptionSelected = (answer: QuestionnaireAnswer, optionId: string): boolean => {
+  return answer.answer_options?.includes(optionId) || false;
 };
 
 const handlePublish = async (row: AssessmentData) => {
@@ -794,6 +810,84 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
         </template>
         </DataGrid>
       </div>
+  </Modal>
+
+  <!-- 答案详情弹窗 -->
+  <Modal
+    v-model:open="detailModalVisible"
+    :title="`${currentSubmitterName} - 答卷详情`"
+    :footer="null"
+    width="800px"
+    @cancel="closeDetailModal"
+  >
+    <div style="padding: 20px 0; max-height: 70vh; overflow-y: auto;">
+      <div v-if="currentAnswers.length === 0" class="text-center text-gray-400 py-8">
+        暂无答题数据
+      </div>
+      <div v-else class="space-y-6">
+        <div
+          v-for="(answer, index) in currentAnswers"
+          :key="answer.id"
+          class="border-b pb-4 last:border-b-0"
+        >
+          <!-- 问题标题 -->
+          <div class="flex items-start mb-3">
+            <span class="text-gray-600 mr-2 font-medium">{{ index + 1 }}.</span>
+            <div class="flex-1">
+              <span class="font-medium text-base">{{ answer.question_title }}</span>
+              <Tag
+                :color="answer.question_type === 'single_choice' ? 'blue' : 'purple'"
+                class="ml-2"
+                size="small"
+              >
+                {{ answer.question_type === 'single_choice' ? '单选题' : '多选题' }}
+              </Tag>
+            </div>
+          </div>
+
+          <!-- 选项列表 -->
+          <div class="ml-6 mt-3">
+            <div v-if="answer.question_options && answer.question_options.length > 0">
+              <div class="space-y-2">
+                <div
+                  v-for="option in answer.question_options"
+                  :key="option.id"
+                  :class="[
+                    'flex items-center px-3 py-2 rounded transition-colors',
+                    isOptionSelected(answer, option.id)
+                      ? 'bg-green-50 border border-green-300'
+                      : 'bg-gray-50 border border-gray-200'
+                  ]"
+                >
+                  <span
+                    v-if="isOptionSelected(answer, option.id)"
+                    class="text-green-600 mr-2 text-lg font-bold"
+                  >✅</span>
+                  <span
+                    v-else
+                    class="mr-2 w-6"
+                  ></span>
+                  <span
+                    :class="[
+                      isOptionSelected(answer, option.id)
+                        ? 'text-green-700 font-medium'
+                        : 'text-gray-700'
+                    ]"
+                  >
+                    {{ option.text }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="answer.answer_text" class="text-gray-700">
+              <div class="text-gray-500 text-sm mb-1">答案：</div>
+              <div class="bg-gray-50 p-3 rounded border border-gray-200">{{ answer.answer_text }}</div>
+            </div>
+            <div v-else class="text-gray-400 text-sm">未作答</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </Modal>
   </Spin>
 
