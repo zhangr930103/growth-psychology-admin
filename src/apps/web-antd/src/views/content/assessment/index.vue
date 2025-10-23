@@ -821,20 +821,20 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
     @cancel="closeDetailModal"
   >
     <div style="padding: 20px 0; max-height: 70vh; overflow-y: auto;">
-      <div v-if="currentAnswers.length === 0" class="text-center text-gray-400 py-8">
+      <div v-if="currentAnswers.length === 0" class="text-center text-gray-400 dark:text-gray-500 py-8">
         暂无答题数据
       </div>
       <div v-else class="space-y-6">
         <div
           v-for="(answer, index) in currentAnswers"
           :key="answer.id"
-          class="border-b pb-4 last:border-b-0"
+          class="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0"
         >
           <!-- 问题标题 -->
           <div class="flex items-start mb-3">
-            <span class="text-gray-600 mr-2 font-medium">{{ index + 1 }}.</span>
+            <span class="text-gray-600 dark:text-gray-400 mr-2 font-medium">{{ index + 1 }}.</span>
             <div class="flex-1">
-              <span class="font-medium text-base">{{ answer.question_title }}</span>
+              <span class="font-medium text-base text-gray-900 dark:text-gray-100">{{ answer.question_title }}</span>
               <Tag
                 :color="answer.question_type === 'single_choice' ? 'blue' : 'purple'"
                 class="ml-2"
@@ -855,13 +855,13 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
                   :class="[
                     'flex items-center px-3 py-2 rounded transition-colors',
                     isOptionSelected(answer, option.id)
-                      ? 'bg-green-50 border border-green-300'
-                      : 'bg-gray-50 border border-gray-200'
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700'
+                      : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                   ]"
                 >
                   <span
                     v-if="isOptionSelected(answer, option.id)"
-                    class="text-green-600 mr-2 text-lg font-bold"
+                    class="text-green-600 dark:text-green-400 mr-2 text-lg font-bold"
                   >✅</span>
                   <span
                     v-else
@@ -870,8 +870,8 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
                   <span
                     :class="[
                       isOptionSelected(answer, option.id)
-                        ? 'text-green-700 font-medium'
-                        : 'text-gray-700'
+                        ? 'text-green-700 dark:text-green-300 font-medium'
+                        : 'text-gray-700 dark:text-gray-300'
                     ]"
                   >
                     {{ option.text }}
@@ -879,11 +879,11 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
                 </div>
               </div>
             </div>
-            <div v-else-if="answer.answer_text" class="text-gray-700">
-              <div class="text-gray-500 text-sm mb-1">答案：</div>
-              <div class="bg-gray-50 p-3 rounded border border-gray-200">{{ answer.answer_text }}</div>
+            <div v-else-if="answer.answer_text" class="text-gray-700 dark:text-gray-300">
+              <div class="text-gray-500 dark:text-gray-400 text-sm mb-1">答案：</div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">{{ answer.answer_text }}</div>
             </div>
-            <div v-else class="text-gray-400 text-sm">未作答</div>
+            <div v-else class="text-gray-400 dark:text-gray-500 text-sm">未作答</div>
           </div>
         </div>
       </div>
