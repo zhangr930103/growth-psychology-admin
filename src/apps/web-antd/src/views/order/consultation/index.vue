@@ -53,7 +53,7 @@ const formOptions: VbenFormProps = {
   commonConfig: {
     labelWidth: 100,
   },
-  fieldMappingTime: [['rangePicker', ['create_start_time', 'create_end_time']]],
+  fieldMappingTime: [['rangePicker', ['created_at_start', 'created_at_end']]],
   schema: [
     {
       component: 'Input',
@@ -109,8 +109,8 @@ const getConsultationList = async (params: SearchParams): Promise<ApiResponse> =
     order_code: params.orderCode,
     consultant: params.consultant,
     status: currentStatus.value || params.status,
-    create_start_time: params.createStartTime,
-    create_end_time: params.createEndTime,
+    created_at_start: params.createStartTime,
+    created_at_end: params.createEndTime,
   };
 
   // 过滤掉未定义的参数，保留必需的page和size
@@ -123,8 +123,8 @@ const getConsultationList = async (params: SearchParams): Promise<ApiResponse> =
   if (apiParams.order_code) filteredParams.order_code = apiParams.order_code;
   if (apiParams.consultant) filteredParams.consultant = apiParams.consultant;
   if (apiParams.status) filteredParams.status = apiParams.status;
-  if (apiParams.create_start_time) filteredParams.create_start_time = apiParams.create_start_time;
-  if (apiParams.create_end_time) filteredParams.create_end_time = apiParams.create_end_time;
+  if (apiParams.created_at_start) filteredParams.created_at_start = apiParams.created_at_start;
+  if (apiParams.created_at_end) filteredParams.created_at_end = apiParams.created_at_end;
 
   return await getConsultationOrderListApi(filteredParams);
 };
@@ -322,7 +322,7 @@ const gridOptions: VxeTableGridOptions = {
       slots: { default: 'situation' },
     },
     {
-      field: 'create_time',
+      field: 'created_at',
       title: '下单时间',
       minWidth: 150,
       slots: { default: 'createTime' },
@@ -361,11 +361,11 @@ const gridOptions: VxeTableGridOptions = {
           page: page.currentPage,
           size: page.pageSize,
           ...formValues,
-          createStartTime: formValues.create_start_time
-            ? (Date.parse(formValues.create_start_time) - 28800000) / 1000
+          createStartTime: formValues.created_at_start
+            ? (Date.parse(formValues.created_at_start) - 28800000) / 1000
             : undefined,
-          createEndTime: formValues.create_end_time
-            ? (Date.parse(formValues.create_end_time) - 28800000) / 1000 + 86399
+          createEndTime: formValues.created_at_end
+            ? (Date.parse(formValues.created_at_end) - 28800000) / 1000 + 86399
             : undefined,
         });
         return result;
@@ -419,7 +419,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #createTime="{ row }">
-        <span>{{ dayjs(row.create_time * 1000).format('YYYY-MM-DD HH:mm:ss') }}</span>
+        <span> {{ dayjs(row.created_at).format('YYYY-MM-DD HH:mm:ss') }}</span>
+       
       </template>
 
       <template #consultationMethod="{ row }">
