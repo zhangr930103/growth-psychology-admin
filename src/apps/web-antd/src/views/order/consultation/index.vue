@@ -497,7 +497,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #actions="{ row }">
-        <div class="flex flex-nowrap items-center gap-1">
+        <div class="flex flex-nowrap items-center justify-center gap-1">
           <Button
             v-if="['online', 'phone'].includes(row.consultation_method)"
             type="link"

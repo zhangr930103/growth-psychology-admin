@@ -4,7 +4,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { ref } from 'vue';
 import { Page } from '@vben/common-ui';
-import { Button } from 'ant-design-vue';
+import { Button, message, Modal } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
@@ -162,6 +162,58 @@ const handleViewDetail = (row: ActivityOrder) => {
   router.push(`/order/activity/detail/${row.id}`);
 };
 
+// 检查状态是否匹配（不区分大小写）
+const isStatus = (status: string, ...targets: string[]) => {
+  const lowerStatus = status.toLowerCase();
+  return targets.some(target => target.toLowerCase() === lowerStatus);
+};
+
+// 处理活动完成
+const handleCompleteActivity = (row: ActivityOrder) => {
+  Modal.confirm({
+    title: '确认操作',
+    content: '确认将此活动标记为已完成吗？',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // TODO: 调用完成活动的API
+        console.log('完成活动订单:', row.id);
+        // await completeActivityApi({ order_id: row.id });
+        
+        message.success('活动已完成');
+        // 刷新列表
+        gridApi.query();
+      } catch (error) {
+        console.error('操作失败:', error);
+      }
+    },
+  });
+};
+
+// 处理取消活动
+const handleCancelActivity = (row: ActivityOrder) => {
+  Modal.confirm({
+    title: '确认操作',
+    content: '确认取消此活动吗？',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // TODO: 调用取消活动的API
+        console.log('取消活动订单:', row.id);
+        // await cancelActivityApi({ order_id: row.id });
+        
+        message.success('活动已取消');
+        // 刷新列表
+        gridApi.query();
+      } catch (error) {
+        console.error('操作失败:', error);
+      }
+    },
+  });
+};
+
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
@@ -215,7 +267,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'actions',
       title: '操作',
-      width: 80,
+      width: 240,
       slots: { default: 'actions' },
     },
   ],
@@ -313,13 +365,32 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #actions="{ row }">
-        <Button
-          type="link"
-          size="small"
-          @click="handleViewDetail(row)"
-        >
-          详情
-        </Button>
+        <div class="flex flex-nowrap items-center justify-center gap-1">
+          <Button
+            v-if="isStatus(row.status, 'formed')"
+            type="link"
+            size="small"
+            @click="handleCompleteActivity(row)"
+          >
+            活动完成
+          </Button>
+          <Button
+            v-if="isStatus(row.status, 'waiting', 'formed')"
+            type="link"
+            size="small"
+            danger
+            @click="handleCancelActivity(row)"
+          >
+            取消活动
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            @click="handleViewDetail(row)"
+          >
+            详情
+          </Button>
+        </div>
       </template>
 
     </Grid>
