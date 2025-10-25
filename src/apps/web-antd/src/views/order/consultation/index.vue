@@ -4,7 +4,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { ref } from 'vue';
 import { Page, useVbenModal } from '@vben/common-ui';
-import { Button, message } from 'ant-design-vue';
+import { Button, message, Modal } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
@@ -283,6 +283,52 @@ const handleFillMeetingNumber = (row: ConsultationOrder) => {
   meetingModalApi.open();
 };
 
+// 处理咨询完成
+const handleCompleteConsultation = (row: ConsultationOrder) => {
+  Modal.confirm({
+    title: '确认操作',
+    content: '确认将此咨询订单标记为已完成吗？',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // TODO: 调用完成咨询的API
+        console.log('完成咨询订单:', row.id);
+        // await completeConsultationApi({ order_id: row.id });
+        
+        message.success('咨询已完成');
+        // 刷新列表
+        gridApi.query();
+      } catch (error) {
+        console.error('操作失败:', error);
+      }
+    },
+  });
+};
+
+// 处理取消咨询
+const handleCancelConsultation = (row: ConsultationOrder) => {
+  Modal.confirm({
+    title: '确认操作',
+    content: '确认取消此咨询订单吗？',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // TODO: 调用取消咨询的API
+        console.log('取消咨询订单:', row.id);
+        // await cancelConsultationApi({ order_id: row.id });
+        
+        message.success('咨询已取消');
+        // 刷新列表
+        gridApi.query();
+      } catch (error) {
+        console.error('操作失败:', error);
+      }
+    },
+  });
+};
+
 // 表格配置
 const gridOptions: VxeTableGridOptions = {
   columns: [
@@ -341,7 +387,7 @@ const gridOptions: VxeTableGridOptions = {
     {
       field: 'actions',
       title: '操作',
-      width: 180,
+      width: 320,
       slots: { default: 'actions' },
     },
   ],
@@ -451,7 +497,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       </template>
 
       <template #actions="{ row }">
-        <div class="flex gap-2">
+        <div class="flex flex-nowrap items-center gap-1">
           <Button
             v-if="['online', 'phone'].includes(row.consultation_method)"
             type="link"
@@ -459,6 +505,23 @@ const [Grid, gridApi] = useVbenVxeGrid({
             @click="handleFillMeetingNumber(row)"
           >
             填写会议号
+          </Button>
+          <Button
+            v-if="row.status === 'pending'"
+            type="link"
+            size="small"
+            @click="handleCompleteConsultation(row)"
+          >
+            咨询完成
+          </Button>
+          <Button
+            v-if="row.status === 'pending'"
+            type="link"
+            size="small"
+            danger
+            @click="handleCancelConsultation(row)"
+          >
+            取消咨询
           </Button>
           <Button
             type="link"
