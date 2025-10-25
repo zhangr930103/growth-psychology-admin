@@ -138,11 +138,11 @@ onMounted(async () => {
               </h3>
             </div>
 
-            <div class="mb-4">
+            <!-- <div class="mb-4">
               <p class="leading-relaxed text-gray-700 dark:text-gray-300">
                 问题：{{ item.content }}
               </p>
-            </div>
+            </div> -->
 
             <div class="flex items-center">
               <Rate :value="item.rating" disabled />
