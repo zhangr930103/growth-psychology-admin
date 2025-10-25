@@ -179,3 +179,55 @@ export async function updateMeetingNumberApi(
 ): Promise<UpdateMeetingNumberResponse> {
   return requestClient.post<UpdateMeetingNumberResponse>('/orders/consultation/update-meeting', params);
 }
+
+/**
+ * 咨询订单操作参数类型
+ */
+export interface ConsultationOrderActionParams {
+  action: 'complete' | 'cancel';
+}
+
+/**
+ * 咨询订单操作响应类型
+ */
+export interface ConsultationOrderActionResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
+ * 咨询订单操作（完成/取消）
+ */
+export async function consultationOrderActionApi(
+  orderId: number,
+  params: ConsultationOrderActionParams
+): Promise<ConsultationOrderActionResponse> {
+  return requestClient.post<ConsultationOrderActionResponse>(`/orders/consultation/${orderId}/action`, params);
+}
+
+/**
+ * 团队活动订单操作参数类型
+ */
+export interface ActivityOrderActionParams {
+  action: 'complete' | 'cancel';
+}
+
+/**
+ * 团队活动订单操作响应类型
+ */
+export interface ActivityOrderActionResponse {
+  code: number;
+  message: string;
+  rid: string;
+}
+
+/**
+ * 团队活动订单操作（完成/取消）
+ */
+export async function activityOrderActionApi(
+  orderId: number,
+  params: ActivityOrderActionParams
+): Promise<ActivityOrderActionResponse> {
+  return requestClient.post<ActivityOrderActionResponse>(`/orders/activity/${orderId}/action`, params);
+}

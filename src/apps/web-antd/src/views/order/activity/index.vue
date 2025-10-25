@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { 
   getActivityOrderListApi,
+  activityOrderActionApi,
   type ActivityOrderListParams,
   type ActivityOrderData,
   type ActivityOrderListResponse 
@@ -177,15 +178,13 @@ const handleCompleteActivity = (row: ActivityOrder) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // TODO: 调用完成活动的API
-        console.log('完成活动订单:', row.id);
-        // await completeActivityApi({ order_id: row.id });
-        
+        await activityOrderActionApi(row.id, { action: 'complete' });
         message.success('活动已完成');
         // 刷新列表
         gridApi.query();
       } catch (error) {
         console.error('操作失败:', error);
+        message.error('操作失败，请稍后重试');
       }
     },
   });
@@ -200,15 +199,13 @@ const handleCancelActivity = (row: ActivityOrder) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // TODO: 调用取消活动的API
-        console.log('取消活动订单:', row.id);
-        // await cancelActivityApi({ order_id: row.id });
-        
+        await activityOrderActionApi(row.id, { action: 'cancel' });
         message.success('活动已取消');
         // 刷新列表
         gridApi.query();
       } catch (error) {
         console.error('操作失败:', error);
+        message.error('操作失败，请稍后重试');
       }
     },
   });

@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { useVbenForm, z } from '#/adapter/form';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import type { ConsultationOrderData } from '#/api/core/order';
-import { getConsultationOrderListApi, updateMeetingNumberApi } from '#/api/core/order';
+import { getConsultationOrderListApi, updateMeetingNumberApi, consultationOrderActionApi } from '#/api/core/order';
 
 defineOptions({
   name: 'ConsultationOrderList',
@@ -292,15 +292,13 @@ const handleCompleteConsultation = (row: ConsultationOrder) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // TODO: 调用完成咨询的API
-        console.log('完成咨询订单:', row.id);
-        // await completeConsultationApi({ order_id: row.id });
-        
+        await consultationOrderActionApi(row.id, { action: 'complete' });
         message.success('咨询已完成');
         // 刷新列表
         gridApi.query();
       } catch (error) {
         console.error('操作失败:', error);
+        message.error('操作失败，请稍后重试');
       }
     },
   });
@@ -315,10 +313,7 @@ const handleCancelConsultation = (row: ConsultationOrder) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // TODO: 调用取消咨询的API
-        console.log('取消咨询订单:', row.id);
-        // await cancelConsultationApi({ order_id: row.id });
-        
+        await consultationOrderActionApi(row.id, { action: 'cancel' });
         message.success('咨询已取消');
         // 刷新列表
         gridApi.query();
