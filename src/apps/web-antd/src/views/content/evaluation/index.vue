@@ -911,10 +911,6 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
               {{ index + 1 }}、{{ dimension.title }}
             </div>
 
-            <div class="mb-5 text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-              <span class="font-medium dark:text-gray-200">内容：</span>{{ dimension.question }}
-            </div>
-
             <div class="flex justify-center my-5">
               <span
                 v-for="star in 5"
