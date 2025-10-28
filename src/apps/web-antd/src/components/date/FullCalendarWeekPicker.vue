@@ -84,7 +84,7 @@ const convertTimeSlotsToEvents = (timeSlots: TimeSlot[]): EventInput[] => {
     
     return {
       id: `slot-${index}`,
-      title: `${weekLabels[slot.day]} ${String(slot.startHour).padStart(2, '0')}:${String(slot.startMinute || 0).padStart(2, '0')}-${String(slot.endHour).padStart(2, '0')}:${String(slot.endMinute || 0).padStart(2, '0')}`,
+      title: `${String(slot.startHour).padStart(2, '0')}:${String(slot.startMinute || 0).padStart(2, '0')} - ${String(slot.endHour).padStart(2, '0')}:${String(slot.endMinute || 0).padStart(2, '0')}`,
       start: startTime.toISOString(),
       end: endTime.toISOString(),
       backgroundColor: '#3B82F6',
@@ -105,7 +105,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   locale: 'zh-cn',
   firstDay: 1, // 周一为第一天
   weekends: true,
-  height: 600,
+  height: 500, // 减少高度
   slotMinTime: '00:00:00',
   slotMaxTime: '24:00:00',
   slotDuration: '00:30:00', // 30分钟间隔
@@ -162,7 +162,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   }
 }));
 
-// 应用自定义样式（飞书风格）
+// 应用自定义样式（优化版）
 const applyCustomStyles = () => {
   const calendarEl = calendarRef.value?.$el;
   if (!calendarEl) return;
@@ -174,26 +174,27 @@ const applyCustomStyles = () => {
   const table = calendarEl.querySelector('.fc-scrollgrid');
   if (table) {
     table.style.border = '0.5px solid #e5e7eb';
-    table.style.borderRadius = '8px';
+    table.style.borderRadius = '6px';
     table.style.overflow = 'hidden';
   }
 
-  // 设置时间轴样式
+  // 设置时间轴样式 - 更紧凑
   const timeSlots = calendarEl.querySelectorAll('.fc-timegrid-slot');
   timeSlots.forEach((slot: Element) => {
     const element = slot as HTMLElement;
     element.style.borderBottom = '0.5px solid #f3f4f6';
-    element.style.height = '48px';
+    element.style.height = '40px'; // 减少高度
   });
 
-  // 设置日期头部样式
+  // 设置日期头部样式 - 更美观
   const dayHeaders = calendarEl.querySelectorAll('.fc-col-header-cell');
   dayHeaders.forEach((header: Element) => {
     const element = header as HTMLElement;
-    element.style.backgroundColor = '#f9fafb';
+    element.style.backgroundColor = '#fafafa';
     element.style.borderBottom = '1px solid #e5e7eb';
-    element.style.padding = '12px';
+    element.style.padding = '8px';
     element.style.fontWeight = '500';
+    element.style.fontSize = '13px';
   });
 };
 
@@ -388,22 +389,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="fullcalendar-week-picker min-w-[900px]">
+  <div class="fullcalendar-week-picker min-w-[750px]">
     <!-- 头部导航 -->
-    <div class="flex items-center justify-between mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm" style="border: 0.5px solid rgb(191 219 254);">
-      <div class="flex items-center space-x-4">
+    <div class="flex items-center justify-between mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg" style="border: 0.5px solid rgb(191 219 254);">
+      <div class="flex items-center space-x-3">
         <!-- 本周按钮 -->
-        <Button @click="handleToday">
+        <Button size="small" @click="handleToday">
           本周
         </Button>
         
         <!-- 左右导航 -->
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1">
           <Button type="text" size="small" @click="handlePrevWeek">
-            <ChevronLeft />
+            <ChevronLeft class="w-4 h-4" />
           </Button>
           <Button type="text" size="small" @click="handleNextWeek">
-            <ChevronRight />
+            <ChevronRight class="w-4 h-4" />
           </Button>
         </div>
         
@@ -412,6 +413,7 @@ onMounted(() => {
           <DatePicker 
             v-model:value="selectedWeekDate"
             picker="date"
+            size="small"
             :placeholder="'选择开始日期'"
             :format="dateRangeFormat"
             :value-format="'YYYY-MM-DD'"
@@ -424,13 +426,13 @@ onMounted(() => {
       </div>
       
       <!-- 清空选择按钮 -->
-      <Button @click="clearAllSelections" size="small">
+      <Button @click="clearAllSelections" size="small" danger>
         清空选择
       </Button>
     </div>
     
     <!-- FullCalendar 组件 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden" style="border: 0.5px solid rgb(229 231 235);">
+    <div class="bg-white dark:bg-gray-800 rounded-lg overflow-hidden" style="border: 0.5px solid rgb(229 231 235); box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);">
       <FullCalendar
         ref="calendarRef"
         :options="calendarOptions"
@@ -448,21 +450,58 @@ onMounted(() => {
 }
 
 .week-date-picker {
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .week-date-picker :deep(.ant-picker) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #cbd5e1;
+  transition: all 0.2s ease;
 }
 
 .week-date-picker :deep(.ant-picker:hover) {
-  border-color: #2563eb;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
 }
 
 .week-date-picker :deep(.ant-picker-focused) {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* 优化事件样式 */
+.fullcalendar-week-picker :deep(.fc-event) {
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fullcalendar-week-picker :deep(.fc-event:hover) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* 优化时间轴标签 */
+.fullcalendar-week-picker :deep(.fc-timegrid-slot-label) {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 优化日期头部 */
+.fullcalendar-week-picker :deep(.fc-col-header-cell) {
+  text-align: center;
+}
+
+.fullcalendar-week-picker :deep(.fc-day-today) {
+  color: #3b82f6 !important;
+  font-weight: 600;
+}
+
+/* 优化选择效果 */
+.fullcalendar-week-picker :deep(.fc-highlight) {
+  background: rgba(59, 130, 246, 0.1);
 }
 </style>
 
