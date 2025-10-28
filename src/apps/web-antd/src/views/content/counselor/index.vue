@@ -17,6 +17,8 @@ import {
   auditCounselingDurationApi,
   importCounselorExcelApi,
   searchCitiesApi,
+  getExpertiseAreasApi,
+  getSpecializationsApi,
   type ImportCounselorResponse,
   type CounselorListParams,
   type CreateCounselorParams,
@@ -103,6 +105,10 @@ const counselorAvailableTimeSlots = ref<TimeSlot[]>([]);
 // 城市搜索相关状态
 const cityOptions = ref<{ value: string }[]>([]);
 const citySearchLoading = ref(false);
+
+// 擅长领域和流派选项数据
+const expertiseAreasOptions = ref<{ label: string; value: string }[]>([]);
+const specializationsOptions = ref<{ label: string; value: string }[]>([]);
 
 // 时间段数据结构
 interface TimeSlot {
@@ -242,10 +248,10 @@ const adaptFormDataToApi = (formData: any): CreateCounselorParams => {
 
   // 处理其他擅长流派
   let finalSpecializations = formData.specializations || [];
-  if (finalSpecializations.includes('other') && formData.otherSpecialization) {
-    // 如果选择了其他，则用用户输入的内容替换'other'
+  if (finalSpecializations.includes('其他') && formData.otherSpecialization) {
+    // 如果选择了其他，则用用户输入的内容替换'其他'
     finalSpecializations = finalSpecializations.map((spec: string) =>
-      spec === 'other' ? formData.otherSpecialization : spec
+      spec === '其他' ? formData.otherSpecialization : spec
     );
   }
 
@@ -290,10 +296,10 @@ const adaptFormDataToEditApi = (formData: any, counselorId: number): EditCounsel
 
   // 处理其他擅长流派
   let finalSpecializations = formData.specializations || [];
-  if (finalSpecializations.includes('other') && formData.otherSpecialization) {
-    // 如果选择了其他，则用用户输入的内容替换'other'
+  if (finalSpecializations.includes('其他') && formData.otherSpecialization) {
+    // 如果选择了其他，则用用户输入的内容替换'其他'
     finalSpecializations = finalSpecializations.map((spec: string) =>
-      spec === 'other' ? formData.otherSpecialization : spec
+      spec === '其他' ? formData.otherSpecialization : spec
     );
   }
 
@@ -603,15 +609,8 @@ const handleEdit = (row: CounselorData) => {
     specializations: string[];
     otherSpecialization: string;
   } {
-    // 预定义的擅长流派选项
-    const predefinedSpecializations = [
-      'cbt',
-      'postmodern',
-      'psychoanalysis',
-      'humanistic',
-      'family_therapy',
-      'other'
-    ];
+    // 从动态加载的流派选项中获取预定义的value列表
+    const predefinedSpecializations = specializationsOptions.value.map(opt => opt.value);
 
     const resultSpecializations: string[] = [];
     let otherSpecialization = '';
@@ -622,8 +621,8 @@ const handleEdit = (row: CounselorData) => {
         resultSpecializations.push(spec);
       } else {
         // 如果不是预定义选项，认为是自定义的"其他"流派
-        if (!resultSpecializations.includes('other')) {
-          resultSpecializations.push('other');
+        if (!resultSpecializations.includes('其他')) {
+          resultSpecializations.push('其他');
         }
         // 将自定义流派名称保存到 otherSpecialization（如果有多个自定义的，用逗号分隔）
         if (otherSpecialization) {
@@ -827,6 +826,30 @@ const handleCitySearch = async (searchText: string) => {
   }
 };
 
+// 获取擅长领域和流派选项数据
+const fetchExpertiseAreasAndSpecializations = async () => {
+  try {
+    // 并行获取擅长领域和擅长流派
+    const [expertiseAreasRes, specializationsRes] = await Promise.all([
+      getExpertiseAreasApi(),
+      getSpecializationsApi()
+    ]);
+
+    // 设置擅长领域选项
+    if (expertiseAreasRes?.list) {
+      expertiseAreasOptions.value = expertiseAreasRes.list;
+    }
+
+    // 设置擅长流派选项（直接使用后端返回的数据，包含"其他"选项）
+    if (specializationsRes?.list) {
+      specializationsOptions.value = specializationsRes.list;
+    }
+  } catch (error) {
+    console.error('获取擅长领域和流派失败:', error);
+    message.error('获取擅长领域和流派失败');
+  }
+};
+
 // 咨询师表单 Schema 配置 - 使用函数返回动态Schema
 const getCounselorFormSchema = () => [
   {
@@ -1021,14 +1044,7 @@ const getCounselorFormSchema = () => [
     label: '擅长流派（最多四个）',
     rules: z.array(z.string()).min(1, '请选择擅长流派').max(4, '最多选择四个'),
     componentProps: {
-      options: [
-        { label: '认知行为疗法(CBT)', value: 'cbt' },
-        { label: '后现代疗法', value: 'postmodern' },
-        { label: '精神分析/动力学', value: 'psychoanalysis' },
-        { label: '人本存在疗法', value: 'humanistic' },
-        { label: '家庭治疗', value: 'family_therapy' },
-        { label: '其他', value: 'other' },
-      ],
+      options: specializationsOptions.value,
     },
   },
   {
@@ -1037,7 +1053,7 @@ const getCounselorFormSchema = () => [
     label: '',
     dependencies: {
       triggerFields: ['specializations'],
-      show: (values: any) => values.specializations?.includes('other'),
+      show: (values: any) => values.specializations?.includes('其他'),
     },
     componentProps: {
       placeholder: '请输入',
@@ -1053,13 +1069,7 @@ const getCounselorFormSchema = () => [
     label: '擅长领域（最多四个）',
     rules: z.array(z.string()).min(1, '请选择擅长领域').max(4, '最多选择四个'),
     componentProps: {
-      options: [
-        { label: '情绪与压力困扰', value: 'emotion_stress' },
-        { label: '人际与亲密关系', value: 'relationship' },
-        { label: '生涯规划', value: 'career_planning' },
-        { label: '自我成长与探索', value: 'self_growth' },
-        { label: '家庭关系（家庭咨询）', value: 'family_relations' },
-      ],
+      options: expertiseAreasOptions.value,
     },
   },
   {
@@ -1833,6 +1843,20 @@ watch(
   },
   { deep: true },
 );
+
+// 监听擅长领域和流派选项变化，更新表单schema
+watch(
+  () => [expertiseAreasOptions.value, specializationsOptions.value],
+  () => {
+    if (counselorFormApi) {
+      counselorFormApi.updateSchema(getCounselorFormSchema());
+    }
+  },
+  { deep: true }
+);
+
+// 页面加载时获取擅长领域和流派选项
+fetchExpertiseAreasAndSpecializations();
 </script>
 
 <template>

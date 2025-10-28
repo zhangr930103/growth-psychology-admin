@@ -346,6 +346,50 @@ export async function searchCitiesApi(params: CitySearchParams): Promise<CitySea
 }
 
 /**
+ * 擅长领域选项类型
+ */
+export interface ExpertiseAreaOption {
+  label: string;
+  value: string;
+}
+
+/**
+ * 擅长领域列表响应类型
+ */
+export interface ExpertiseAreasResponse {
+  list: ExpertiseAreaOption[];
+}
+
+/**
+ * 擅长流派选项类型
+ */
+export interface SpecializationOption {
+  label: string;
+  value: string;
+}
+
+/**
+ * 擅长流派列表响应类型
+ */
+export interface SpecializationsResponse {
+  list: SpecializationOption[];
+}
+
+/**
+ * 获取擅长领域列表
+ */
+export async function getExpertiseAreasApi(): Promise<ExpertiseAreasResponse> {
+  return requestClient.get<ExpertiseAreasResponse>('/counselors/expertise-areas');
+}
+
+/**
+ * 获取擅长流派列表
+ */
+export async function getSpecializationsApi(): Promise<SpecializationsResponse> {
+  return requestClient.get<SpecializationsResponse>('/counselors/specializations');
+}
+
+/**
  * Excel 批量导入咨询师
  */
 export async function importCounselorExcelApi(file: File): Promise<ImportCounselorResponse> {
