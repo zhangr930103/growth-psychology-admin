@@ -173,7 +173,7 @@ const applyCustomStyles = () => {
   // 设置表格样式
   const table = calendarEl.querySelector('.fc-scrollgrid');
   if (table) {
-    table.style.border = '1px solid #e5e7eb';
+    table.style.border = '0.5px solid #e5e7eb';
     table.style.borderRadius = '8px';
     table.style.overflow = 'hidden';
   }
@@ -182,7 +182,7 @@ const applyCustomStyles = () => {
   const timeSlots = calendarEl.querySelectorAll('.fc-timegrid-slot');
   timeSlots.forEach((slot: Element) => {
     const element = slot as HTMLElement;
-    element.style.borderBottom = '1px solid #f3f4f6';
+    element.style.borderBottom = '0.5px solid #f3f4f6';
     element.style.height = '48px';
   });
 
@@ -191,7 +191,7 @@ const applyCustomStyles = () => {
   dayHeaders.forEach((header: Element) => {
     const element = header as HTMLElement;
     element.style.backgroundColor = '#f9fafb';
-    element.style.borderBottom = '2px solid #e5e7eb';
+    element.style.borderBottom = '1px solid #e5e7eb';
     element.style.padding = '12px';
     element.style.fontWeight = '500';
   });
@@ -213,8 +213,8 @@ const handleDateSelect = (selectInfo: DateSelectArg) => {
     endMinute: endDate.minute(),
   };
 
-  // 清空现有选择，只允许一个时间段
-  selectedTimeSlots.value = [timeSlot];
+  // 添加新时间段到现有选择中（支持多个时间段）
+  selectedTimeSlots.value = [...selectedTimeSlots.value, timeSlot];
   emit('update:modelValue', selectedTimeSlots.value);
   
   // 取消选择状态
@@ -224,16 +224,24 @@ const handleDateSelect = (selectInfo: DateSelectArg) => {
   refreshEvents();
 };
 
-// 处理事件点击
-const handleEventClick = () => {
-  // 删除事件
-  selectedTimeSlots.value = [];
+// 处理事件点击（删除单个时间段）
+const handleEventClick = (clickInfo: any) => {
+  // 获取点击事件的索引
+  const eventId = clickInfo.event.id;
+  const index = parseInt(eventId.replace('slot-', ''));
+  
+  // 删除指定的时间段
+  selectedTimeSlots.value.splice(index, 1);
   emit('update:modelValue', selectedTimeSlots.value);
   refreshEvents();
 };
 
 // 处理事件拖拽
 const handleEventDrop = (info: any) => {
+  // 获取事件的索引
+  const eventId = info.event.id;
+  const index = parseInt(eventId.replace('slot-', ''));
+  
   const newStart = dayjs(info.event.start);
   const newEnd = dayjs(info.event.end);
   
@@ -248,12 +256,17 @@ const handleEventDrop = (info: any) => {
     endMinute: newEnd.minute(),
   };
 
-  selectedTimeSlots.value = [timeSlot];
+  // 更新指定索引的时间段
+  selectedTimeSlots.value[index] = timeSlot;
   emit('update:modelValue', selectedTimeSlots.value);
 };
 
 // 处理事件大小调整
 const handleEventResize = (info: any) => {
+  // 获取事件的索引
+  const eventId = info.event.id;
+  const index = parseInt(eventId.replace('slot-', ''));
+  
   const newStart = dayjs(info.event.start);
   const newEnd = dayjs(info.event.end);
   
@@ -268,7 +281,8 @@ const handleEventResize = (info: any) => {
     endMinute: newEnd.minute(),
   };
 
-  selectedTimeSlots.value = [timeSlot];
+  // 更新指定索引的时间段
+  selectedTimeSlots.value[index] = timeSlot;
   emit('update:modelValue', selectedTimeSlots.value);
 };
 
@@ -376,7 +390,7 @@ onMounted(() => {
 <template>
   <div class="fullcalendar-week-picker min-w-[900px]">
     <!-- 头部导航 -->
-    <div class="flex items-center justify-between mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow-sm" style="border: 0.5px solid rgb(191 219 254);">
       <div class="flex items-center space-x-4">
         <!-- 本周按钮 -->
         <Button @click="handleToday">
@@ -416,7 +430,7 @@ onMounted(() => {
     </div>
     
     <!-- FullCalendar 组件 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden" style="border: 0.5px solid rgb(229 231 235);">
       <FullCalendar
         ref="calendarRef"
         :options="calendarOptions"
