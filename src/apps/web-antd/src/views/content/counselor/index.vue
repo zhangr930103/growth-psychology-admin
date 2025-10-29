@@ -1054,9 +1054,44 @@ const getCounselorFormSchema = () => [
     dependencies: {
       triggerFields: ['specializations'],
       show: (values: any) => values.specializations?.includes('其他'),
+      rules: (values: any) => {
+        // 当选择了"其他"时，应用必填和重复值校验
+        if (values.specializations?.includes('其他')) {
+          return z.string()
+            .min(1, '请输入其他擅长流派')
+            .refine((value) => {
+              if (!value) return true;
+              
+              // 获取当前已选择的流派（排除"其他"选项）
+              const selectedSpecializations = (values.specializations || [])
+                .filter((spec: string) => spec !== '其他');
+              
+              // 检查是否与已选择的流派重复
+              if (selectedSpecializations.includes(value)) {
+                return false;
+              }
+              
+              // 获取所有预定义的流派选项（排除"其他"选项）
+              const predefinedSpecializations = specializationsOptions.value
+                .map(opt => opt.value)
+                .filter((spec: string) => spec !== '其他');
+              
+              // 检查是否与预定义的流派重复
+              if (predefinedSpecializations.includes(value)) {
+                return false;
+              }
+              
+              return true;
+            }, {
+              message: '输入的流派与已有流派重复，请重新输入',
+            });
+        }
+        // 如果没有选择"其他"，则不需要校验
+        return z.string().optional();
+      },
     },
     componentProps: {
-      placeholder: '请输入',
+      placeholder: '请输入其他擅长流派',
       style: {
         width: '70%',
         boxSizing: 'border-box',

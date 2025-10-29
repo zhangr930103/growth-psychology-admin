@@ -155,47 +155,22 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   },
   eventClassNames: 'custom-event',
   viewDidMount: () => {
-    // 应用自定义样式
-    nextTick(() => {
-      applyCustomStyles();
-    });
+    // 应用自定义样式 - 只添加CSS类
+    applyCustomStyles();
+  },
+  windowResize: () => {
+    // 窗口大小改变时确保CSS类存在
+    applyCustomStyles();
   }
 }));
 
-// 应用自定义样式（优化版）
+// 应用自定义样式（简化版 - 所有样式都在CSS中）
 const applyCustomStyles = () => {
   const calendarEl = calendarRef.value?.$el;
   if (!calendarEl) return;
-
-  // 添加自定义CSS类
-  calendarEl.classList.add('feishu-style-calendar');
   
-  // 设置表格样式
-  const table = calendarEl.querySelector('.fc-scrollgrid');
-  if (table) {
-    table.style.border = '0.5px solid #e5e7eb';
-    table.style.borderRadius = '6px';
-    table.style.overflow = 'hidden';
-  }
-
-  // 设置时间轴样式 - 更紧凑
-  const timeSlots = calendarEl.querySelectorAll('.fc-timegrid-slot');
-  timeSlots.forEach((slot: Element) => {
-    const element = slot as HTMLElement;
-    element.style.borderBottom = '0.5px solid #f3f4f6';
-    element.style.height = '40px'; // 减少高度
-  });
-
-  // 设置日期头部样式 - 更美观
-  const dayHeaders = calendarEl.querySelectorAll('.fc-col-header-cell');
-  dayHeaders.forEach((header: Element) => {
-    const element = header as HTMLElement;
-    element.style.backgroundColor = '#fafafa';
-    element.style.borderBottom = '1px solid #e5e7eb';
-    element.style.padding = '8px';
-    element.style.fontWeight = '500';
-    element.style.fontSize = '13px';
-  });
+  // 只添加自定义CSS类，样式全部由CSS处理
+  calendarEl.classList.add('feishu-style-calendar');
 };
 
 // 处理日期选择
@@ -360,6 +335,11 @@ const clearAllSelections = () => {
   refreshEvents();
 };
 
+// 处理窗口大小变化
+const handleResize = () => {
+  calendarRef.value?.getApi()?.updateSize();
+};
+
 
 // 监听props变化
 watch(() => props.modelValue, (newValue) => {
@@ -385,13 +365,25 @@ watch(() => props.currentWeek, (newValue) => {
 // 初始化
 onMounted(() => {
   emitWeekChange();
+  // 应用自定义CSS类并确保尺寸正确
+  nextTick(() => {
+    applyCustomStyles();
+    // 强制更新日历尺寸，确保线条正确渲染
+    setTimeout(() => {
+      calendarRef.value?.getApi()?.updateSize();
+    }, 100);
+  });
+});
+
+defineExpose({
+  handleResize,
 });
 </script>
 
 <template>
-  <div class="fullcalendar-week-picker min-w-[750px]">
+  <div class="fullcalendar-week-picker">
     <!-- 头部导航 -->
-    <div class="flex items-center justify-between mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg" style="border: 0.5px solid rgb(191 219 254);">
+    <div class="flex items-center justify-between mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg" style="border: 1px solid rgb(191 219 254);">
       <div class="flex items-center space-x-3">
         <!-- 本周按钮 -->
         <Button size="small" @click="handleToday">
@@ -432,7 +424,7 @@ onMounted(() => {
     </div>
     
     <!-- FullCalendar 组件 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg overflow-hidden" style="border: 0.5px solid rgb(229 231 235); box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);">
+    <div class="bg-white dark:bg-gray-800 rounded-lg overflow-hidden" style="border: 1px solid rgb(229 231 235);">
       <FullCalendar
         ref="calendarRef"
         :options="calendarOptions"
@@ -447,6 +439,7 @@ onMounted(() => {
 <style scoped>
 .fullcalendar-week-picker {
   @apply w-full;
+  min-width: 690px;
 }
 
 .week-date-picker {
@@ -455,6 +448,7 @@ onMounted(() => {
 
 .week-date-picker :deep(.ant-picker) {
   border-color: #cbd5e1;
+  border-width: 1px;
   transition: all 0.2s ease;
 }
 
@@ -503,6 +497,127 @@ onMounted(() => {
 .fullcalendar-week-picker :deep(.fc-highlight) {
   background: rgba(59, 130, 246, 0.1);
 }
-</style>
 
+/* 避免边框重合 - 只保留右边框和下边框 */
+.fullcalendar-week-picker :deep(.fc-theme-standard td),
+.fullcalendar-week-picker :deep(.fc-theme-standard th) {
+  border-left: none !important;
+  border-top: none !important;
+}
+
+/* 表格整体边框 */
+.fullcalendar-week-picker :deep(.fc-scrollgrid) {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+/* 确保单元格边框一致性 */
+.fullcalendar-week-picker :deep(.fc-timegrid-slot),
+.fullcalendar-week-picker :deep(.fc-timegrid-col) {
+  border-width: 0 1px 1px 0 !important;
+  border-style: solid !important;
+  border-color: #e5e7eb !important;
+}
+
+/* 时间格子样式 */
+.fullcalendar-week-picker :deep(.fc-timegrid-slot) {
+  height: 40px !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+  border-right: none !important;
+}
+
+/* 时间格子lane的右边框 */
+.fullcalendar-week-picker :deep(.fc-timegrid-slot-lane) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* 移除最右列的右边框 */
+.fullcalendar-week-picker :deep(.fc-timegrid-col:last-child),
+.fullcalendar-week-picker :deep(.fc-timegrid-slot-lane:last-child) {
+  border-right: none !important;
+}
+
+/* 时间格子列的右边框 */
+.fullcalendar-week-picker :deep(.fc-timegrid-col) {
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* 日期头部样式 - 固定样式立即生效，避免闪烁 */
+.fullcalendar-week-picker :deep(.fc-col-header-cell) {
+  border-left: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-right: 1px solid #e5e7eb !important;
+  background-color: #fafafa !important;
+  padding: 8px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+/* 移除最后一个日期头部单元格的右边框 */
+.fullcalendar-week-picker :deep(.fc-col-header-cell:last-child) {
+  border-right: none !important;
+}
+
+/* 时间轴头部单元格保留左边框 */
+.fullcalendar-week-picker :deep(.fc-timegrid-axis-cushion) {
+  padding-left: 4px !important;
+}
+
+.fullcalendar-week-picker :deep(.fc-col-header-cell.fc-timegrid-axis) {
+  border-left: 1px solid #e5e7eb !important;
+}
+
+/* 时间轴边框 - 保留左边框确保表格左侧完整 */
+.fullcalendar-week-picker :deep(.fc-timegrid-axis) {
+  border-left: 1px solid #e5e7eb !important;
+  border-top: none !important;
+  border-right: 1px solid #e5e7eb !important;
+}
+
+/* 确保表格底部边框完整 */
+.fullcalendar-week-picker :deep(.fc-scrollgrid-section:last-child .fc-timegrid-slot:last-child) {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.fullcalendar-week-picker :deep(.fc-timegrid-body) {
+  border-bottom: none !important;
+}
+
+/* 超细滚动条样式 */
+.fullcalendar-week-picker :deep(.fc-scroller),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid-absolute) {
+  scrollbar-width: thin; /* Firefox - 细滚动条 */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* Firefox - 滑块颜色和轨道颜色 */
+}
+
+/* Chrome, Safari, Edge 滚动条样式 */
+.fullcalendar-week-picker :deep(.fc-scroller::-webkit-scrollbar),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid::-webkit-scrollbar),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid-absolute::-webkit-scrollbar) {
+  width: 6px;
+  height: 6px;
+}
+
+.fullcalendar-week-picker :deep(.fc-scroller::-webkit-scrollbar-track),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid::-webkit-scrollbar-track),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid-absolute::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.fullcalendar-week-picker :deep(.fc-scroller::-webkit-scrollbar-thumb),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid::-webkit-scrollbar-thumb),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid-absolute::-webkit-scrollbar-thumb) {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.fullcalendar-week-picker :deep(.fc-scroller::-webkit-scrollbar-thumb:hover),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid::-webkit-scrollbar-thumb:hover),
+.fullcalendar-week-picker :deep(.fc-scroller-liquid-absolute::-webkit-scrollbar-thumb:hover) {
+  background: rgba(0, 0, 0, 0.25);
+}
+</style>
 
