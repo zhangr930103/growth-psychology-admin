@@ -210,7 +210,7 @@ const handleViewDetail = async (row: any) => {
     detailLoading.value = true;
 
     // 调用真实API获取评价详情
-    const response = await getEvaluationDetailApi(row.id);
+    const response = await getEvaluationDetailApi(row.evaluation_id);
 
     currentEvaluationDimensions.value = response.list || [];
   } catch (error) {
