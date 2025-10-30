@@ -168,7 +168,7 @@ const getEvaluationList = async (params: any): Promise<{ list: EvaluationData[];
     publish_time: item.publish_time,
     updated_at: item.updated_at, // 使用 updated_at 作为发布时间
     review_comment: item.review_comment,
-    helpful_count: item.helpful_count,
+    data_count: item.data_count,
     unhelpful_count: item.unhelpful_count,
     reply_count: item.reply_count,
     is_anonymous: item.is_anonymous,
@@ -495,7 +495,7 @@ const gridOptions: VxeTableGridOptions = {
       slots: { default: 'publishStatus' },
     },
     {
-      field: 'helpful_count',
+      field: 'data_count',
       title: '评价数',
       width: 100,
       slots: { default: 'evaluationCount' },
@@ -689,7 +689,7 @@ const [DataGrid, dataGridApi] = useVbenVxeGrid({
 
       <template #evaluationCount="{ row }">
         <span class="font-semibold text-blue-600 dark:text-blue-400">
-          {{ row.helpful_count }}
+          {{ row.data_count }}
         </span>
       </template>
 

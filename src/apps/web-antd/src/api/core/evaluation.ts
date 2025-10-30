@@ -37,7 +37,7 @@ export interface EvaluationRecord {
   reviewer_name: string;                     // 审核人名称 (如: "管理员")
   publish_time: string;                      // 发布时间 (ISO格式: "2024-01-02T10:00:00")
   review_comment: string;                    // 审核意见 (如: "评价客观真实")
-  helpful_count: number;                     // 有用投票数
+  data_count: number;                        // 数据统计数
   unhelpful_count: number;                   // 无用投票数
   reply_count: number;                       // 回复数量
   is_anonymous: boolean;                     // 是否匿名
