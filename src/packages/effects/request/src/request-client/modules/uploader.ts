@@ -1,6 +1,12 @@
 import type { RequestClient } from '../request-client';
 import type { RequestClientConfig } from '../types';
 
+import {
+  hideFullscreenLoading,
+  showFullscreenLoading,
+  showSuccessMessage,
+} from './fullscreen-loading';
+
 class FileUploader {
   private client: RequestClient;
 
@@ -13,27 +19,44 @@ class FileUploader {
     data: Record<string, any> & { file: Blob | File },
     config?: RequestClientConfig,
   ): Promise<T> {
-    const formData = new FormData();
+    // 显示全屏loading
+    showFullscreenLoading('文件上传中...');
 
-    Object.entries(data).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-          formData.append(`${key}[${index}]`, item);
-        });
-      } else {
-        formData.append(key, value);
-      }
-    });
+    try {
+      const formData = new FormData();
 
-    const finalConfig: RequestClientConfig = {
-      ...config,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        ...config?.headers,
-      },
-    };
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((item, index) => {
+            formData.append(`${key}[${index}]`, item);
+          });
+        } else {
+          formData.append(key, value);
+        }
+      });
 
-    return this.client.post(url, formData, finalConfig);
+      const finalConfig: RequestClientConfig = {
+        ...config,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...config?.headers,
+        },
+      };
+
+      const result = await this.client.post(url, formData, finalConfig);
+
+      // 隐藏全屏loading
+      hideFullscreenLoading();
+
+      // 显示成功提示
+      showSuccessMessage('文件上传成功');
+
+      return result;
+    } catch (error) {
+      // 出错时也要隐藏loading
+      hideFullscreenLoading();
+      throw error;
+    }
   }
 }
 
